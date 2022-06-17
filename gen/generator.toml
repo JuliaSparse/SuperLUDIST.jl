@@ -1,5 +1,5 @@
 [general]
-library_name = "libsuperlu_ddefs"
+library_name = "libsuperlu_dist_Int64"
 library_names = {"superlu_ddefs.h" = "libsuperlu_ddefs"}
 
 use_julia_native_enum_type = true
