@@ -13,9 +13,8 @@ SuperLU_DIST_dir = Pkg.Artifacts.ensure_artifact_installed("SuperLU_DIST", Super
 
 include_dir = joinpath(SuperLU_DIST_dir, "include") |> normpath
 
-cholmod_h = joinpath(include_dir, "cholmod.h") # Int64 vs Int32
-@assert isfile(cholmod_h)
-
+superlu_ddefs_h = joinpath(include_dir, "superlu_ddefs.h") # Int64 vs Int32
+@assert isfile(superlu_ddefs_h)
 # Which other header files do we need?
 
 options = load_options(joinpath(@__DIR__, "generator.toml"))
@@ -32,7 +31,7 @@ for target in JLLEnvs.JLL_ENV_TRIPLES
         #push!(args, "-DSUN64 -DLONGBLAS='long long' -D'SuiteSparse_long_max=9223372036854775801'")
     end
 
-    #header_files = [cholmod_h]
+    header_files = [superlu_ddefs_h]
 
     ctx = create_context(header_files, args, options)
 
