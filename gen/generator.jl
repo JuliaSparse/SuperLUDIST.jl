@@ -19,18 +19,12 @@ superlu_ddefs_h = joinpath(include_dir, "superlu_ddefs.h") # Int64 vs Int32
 # Which other header files do we need?
 
 options = load_options(joinpath(@__DIR__, "generator.toml"))
-
+options["general"]["output_file_path"] = joinpath(@__DIR__, "..", "lib", "libsuperlu_dist.jl")
 mpi_includedir = joinpath(MPICH_jll.find_artifact_dir(), "include") |> normpath
 mpi_h = joinpath(mpi_includedir, "mpi.h")
-for target in JLLEnvs.JLL_ENV_TRIPLES
-    @info "processing $target"
+args = get_default_args()
+push!(args, "-isystem$mpi_includedir")
+header_files = [superlu_ddefs_h]
+ctx = create_context(header_files, args, options)
 
-    options["general"]["output_file_path"] = joinpath(@__DIR__, "..", "lib", "$target.jl")
-
-    args = get_default_args(target)
-    push!(args, "-isystem$mpi_includedir")
-    header_files = [superlu_ddefs_h]
-    ctx = create_context(header_files, args, options)
-
-    build!(ctx)
-end
+build!(ctx)
