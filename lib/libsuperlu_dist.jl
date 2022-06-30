@@ -1,8 +1,567 @@
+module Libsuperlu_dist
+
+const libsuperlu_dist_Int64 = :libsuperlu_dist_Int64
+
+mutable struct ADIOI_FileD end
+
+mutable struct MPIR_T_enum_s end
+
+mutable struct MPIR_T_cvar_handle_s end
+
+mutable struct MPIR_T_pvar_handle_s end
+
+mutable struct MPIR_T_pvar_session_s end
+
+mutable struct MPIR_T_event_registration_s end
+
+mutable struct MPIR_T_event_instance_s end
+
+@enum QMPI_Functions_enum::UInt32 begin
+    MPI_ATTR_DELETE_T = 0
+    MPI_ATTR_GET_T = 1
+    MPI_ATTR_PUT_T = 2
+    MPI_COMM_CREATE_KEYVAL_T = 3
+    MPI_COMM_DELETE_ATTR_T = 4
+    MPI_COMM_FREE_KEYVAL_T = 5
+    MPI_COMM_GET_ATTR_T = 6
+    MPI_COMM_SET_ATTR_T = 7
+    MPI_KEYVAL_CREATE_T = 8
+    MPI_KEYVAL_FREE_T = 9
+    MPI_TYPE_CREATE_KEYVAL_T = 10
+    MPI_TYPE_DELETE_ATTR_T = 11
+    MPI_TYPE_FREE_KEYVAL_T = 12
+    MPI_TYPE_GET_ATTR_T = 13
+    MPI_TYPE_SET_ATTR_T = 14
+    MPI_WIN_CREATE_KEYVAL_T = 15
+    MPI_WIN_DELETE_ATTR_T = 16
+    MPI_WIN_FREE_KEYVAL_T = 17
+    MPI_WIN_GET_ATTR_T = 18
+    MPI_WIN_SET_ATTR_T = 19
+    MPI_ALLGATHER_T = 20
+    MPI_ALLGATHER_C_T = 21
+    MPI_ALLGATHER_INIT_T = 22
+    MPI_ALLGATHER_INIT_C_T = 23
+    MPI_ALLGATHERV_T = 24
+    MPI_ALLGATHERV_C_T = 25
+    MPI_ALLGATHERV_INIT_T = 26
+    MPI_ALLGATHERV_INIT_C_T = 27
+    MPI_ALLREDUCE_T = 28
+    MPI_ALLREDUCE_C_T = 29
+    MPI_ALLREDUCE_INIT_T = 30
+    MPI_ALLREDUCE_INIT_C_T = 31
+    MPI_ALLTOALL_T = 32
+    MPI_ALLTOALL_C_T = 33
+    MPI_ALLTOALL_INIT_T = 34
+    MPI_ALLTOALL_INIT_C_T = 35
+    MPI_ALLTOALLV_T = 36
+    MPI_ALLTOALLV_C_T = 37
+    MPI_ALLTOALLV_INIT_T = 38
+    MPI_ALLTOALLV_INIT_C_T = 39
+    MPI_ALLTOALLW_T = 40
+    MPI_ALLTOALLW_C_T = 41
+    MPI_ALLTOALLW_INIT_T = 42
+    MPI_ALLTOALLW_INIT_C_T = 43
+    MPI_BARRIER_T = 44
+    MPI_BARRIER_INIT_T = 45
+    MPI_BCAST_T = 46
+    MPI_BCAST_C_T = 47
+    MPI_BCAST_INIT_T = 48
+    MPI_BCAST_INIT_C_T = 49
+    MPI_EXSCAN_T = 50
+    MPI_EXSCAN_C_T = 51
+    MPI_EXSCAN_INIT_T = 52
+    MPI_EXSCAN_INIT_C_T = 53
+    MPI_GATHER_T = 54
+    MPI_GATHER_C_T = 55
+    MPI_GATHER_INIT_T = 56
+    MPI_GATHER_INIT_C_T = 57
+    MPI_GATHERV_T = 58
+    MPI_GATHERV_C_T = 59
+    MPI_GATHERV_INIT_T = 60
+    MPI_GATHERV_INIT_C_T = 61
+    MPI_IALLGATHER_T = 62
+    MPI_IALLGATHER_C_T = 63
+    MPI_IALLGATHERV_T = 64
+    MPI_IALLGATHERV_C_T = 65
+    MPI_IALLREDUCE_T = 66
+    MPI_IALLREDUCE_C_T = 67
+    MPI_IALLTOALL_T = 68
+    MPI_IALLTOALL_C_T = 69
+    MPI_IALLTOALLV_T = 70
+    MPI_IALLTOALLV_C_T = 71
+    MPI_IALLTOALLW_T = 72
+    MPI_IALLTOALLW_C_T = 73
+    MPI_IBARRIER_T = 74
+    MPI_IBCAST_T = 75
+    MPI_IBCAST_C_T = 76
+    MPI_IEXSCAN_T = 77
+    MPI_IEXSCAN_C_T = 78
+    MPI_IGATHER_T = 79
+    MPI_IGATHER_C_T = 80
+    MPI_IGATHERV_T = 81
+    MPI_IGATHERV_C_T = 82
+    MPI_INEIGHBOR_ALLGATHER_T = 83
+    MPI_INEIGHBOR_ALLGATHER_C_T = 84
+    MPI_INEIGHBOR_ALLGATHERV_T = 85
+    MPI_INEIGHBOR_ALLGATHERV_C_T = 86
+    MPI_INEIGHBOR_ALLTOALL_T = 87
+    MPI_INEIGHBOR_ALLTOALL_C_T = 88
+    MPI_INEIGHBOR_ALLTOALLV_T = 89
+    MPI_INEIGHBOR_ALLTOALLV_C_T = 90
+    MPI_INEIGHBOR_ALLTOALLW_T = 91
+    MPI_INEIGHBOR_ALLTOALLW_C_T = 92
+    MPI_IREDUCE_T = 93
+    MPI_IREDUCE_C_T = 94
+    MPI_IREDUCE_SCATTER_T = 95
+    MPI_IREDUCE_SCATTER_C_T = 96
+    MPI_IREDUCE_SCATTER_BLOCK_T = 97
+    MPI_IREDUCE_SCATTER_BLOCK_C_T = 98
+    MPI_ISCAN_T = 99
+    MPI_ISCAN_C_T = 100
+    MPI_ISCATTER_T = 101
+    MPI_ISCATTER_C_T = 102
+    MPI_ISCATTERV_T = 103
+    MPI_ISCATTERV_C_T = 104
+    MPI_NEIGHBOR_ALLGATHER_T = 105
+    MPI_NEIGHBOR_ALLGATHER_C_T = 106
+    MPI_NEIGHBOR_ALLGATHER_INIT_T = 107
+    MPI_NEIGHBOR_ALLGATHER_INIT_C_T = 108
+    MPI_NEIGHBOR_ALLGATHERV_T = 109
+    MPI_NEIGHBOR_ALLGATHERV_C_T = 110
+    MPI_NEIGHBOR_ALLGATHERV_INIT_T = 111
+    MPI_NEIGHBOR_ALLGATHERV_INIT_C_T = 112
+    MPI_NEIGHBOR_ALLTOALL_T = 113
+    MPI_NEIGHBOR_ALLTOALL_C_T = 114
+    MPI_NEIGHBOR_ALLTOALL_INIT_T = 115
+    MPI_NEIGHBOR_ALLTOALL_INIT_C_T = 116
+    MPI_NEIGHBOR_ALLTOALLV_T = 117
+    MPI_NEIGHBOR_ALLTOALLV_C_T = 118
+    MPI_NEIGHBOR_ALLTOALLV_INIT_T = 119
+    MPI_NEIGHBOR_ALLTOALLV_INIT_C_T = 120
+    MPI_NEIGHBOR_ALLTOALLW_T = 121
+    MPI_NEIGHBOR_ALLTOALLW_C_T = 122
+    MPI_NEIGHBOR_ALLTOALLW_INIT_T = 123
+    MPI_NEIGHBOR_ALLTOALLW_INIT_C_T = 124
+    MPI_REDUCE_T = 125
+    MPI_REDUCE_C_T = 126
+    MPI_REDUCE_INIT_T = 127
+    MPI_REDUCE_INIT_C_T = 128
+    MPI_REDUCE_LOCAL_T = 129
+    MPI_REDUCE_LOCAL_C_T = 130
+    MPI_REDUCE_SCATTER_T = 131
+    MPI_REDUCE_SCATTER_C_T = 132
+    MPI_REDUCE_SCATTER_BLOCK_T = 133
+    MPI_REDUCE_SCATTER_BLOCK_C_T = 134
+    MPI_REDUCE_SCATTER_BLOCK_INIT_T = 135
+    MPI_REDUCE_SCATTER_BLOCK_INIT_C_T = 136
+    MPI_REDUCE_SCATTER_INIT_T = 137
+    MPI_REDUCE_SCATTER_INIT_C_T = 138
+    MPI_SCAN_T = 139
+    MPI_SCAN_C_T = 140
+    MPI_SCAN_INIT_T = 141
+    MPI_SCAN_INIT_C_T = 142
+    MPI_SCATTER_T = 143
+    MPI_SCATTER_C_T = 144
+    MPI_SCATTER_INIT_T = 145
+    MPI_SCATTER_INIT_C_T = 146
+    MPI_SCATTERV_T = 147
+    MPI_SCATTERV_C_T = 148
+    MPI_SCATTERV_INIT_T = 149
+    MPI_SCATTERV_INIT_C_T = 150
+    MPI_COMM_COMPARE_T = 151
+    MPI_COMM_CREATE_T = 152
+    MPI_COMM_CREATE_GROUP_T = 153
+    MPI_COMM_DUP_T = 154
+    MPI_COMM_DUP_WITH_INFO_T = 155
+    MPI_COMM_FREE_T = 156
+    MPI_COMM_GET_INFO_T = 157
+    MPI_COMM_GET_NAME_T = 158
+    MPI_COMM_GROUP_T = 159
+    MPI_COMM_IDUP_T = 160
+    MPI_COMM_IDUP_WITH_INFO_T = 161
+    MPI_COMM_RANK_T = 162
+    MPI_COMM_REMOTE_GROUP_T = 163
+    MPI_COMM_REMOTE_SIZE_T = 164
+    MPI_COMM_SET_INFO_T = 165
+    MPI_COMM_SET_NAME_T = 166
+    MPI_COMM_SIZE_T = 167
+    MPI_COMM_SPLIT_T = 168
+    MPI_COMM_SPLIT_TYPE_T = 169
+    MPI_COMM_TEST_INTER_T = 170
+    MPI_INTERCOMM_CREATE_T = 171
+    MPI_INTERCOMM_CREATE_FROM_GROUPS_T = 172
+    MPI_INTERCOMM_MERGE_T = 173
+    MPIX_COMM_REVOKE_T = 174
+    MPIX_COMM_SHRINK_T = 175
+    MPIX_COMM_FAILURE_ACK_T = 176
+    MPIX_COMM_FAILURE_GET_ACKED_T = 177
+    MPIX_COMM_AGREE_T = 178
+    MPI_GET_ADDRESS_T = 179
+    MPI_GET_COUNT_T = 180
+    MPI_GET_COUNT_C_T = 181
+    MPI_GET_ELEMENTS_T = 182
+    MPI_GET_ELEMENTS_C_T = 183
+    MPI_GET_ELEMENTS_X_T = 184
+    MPI_PACK_T = 185
+    MPI_PACK_C_T = 186
+    MPI_PACK_EXTERNAL_T = 187
+    MPI_PACK_EXTERNAL_C_T = 188
+    MPI_PACK_EXTERNAL_SIZE_T = 189
+    MPI_PACK_EXTERNAL_SIZE_C_T = 190
+    MPI_PACK_SIZE_T = 191
+    MPI_PACK_SIZE_C_T = 192
+    MPI_STATUS_SET_ELEMENTS_T = 193
+    MPI_STATUS_SET_ELEMENTS_X_T = 194
+    MPI_TYPE_COMMIT_T = 195
+    MPI_TYPE_CONTIGUOUS_T = 196
+    MPI_TYPE_CONTIGUOUS_C_T = 197
+    MPI_TYPE_CREATE_DARRAY_T = 198
+    MPI_TYPE_CREATE_DARRAY_C_T = 199
+    MPI_TYPE_CREATE_HINDEXED_T = 200
+    MPI_TYPE_CREATE_HINDEXED_C_T = 201
+    MPI_TYPE_CREATE_HINDEXED_BLOCK_T = 202
+    MPI_TYPE_CREATE_HINDEXED_BLOCK_C_T = 203
+    MPI_TYPE_CREATE_HVECTOR_T = 204
+    MPI_TYPE_CREATE_HVECTOR_C_T = 205
+    MPI_TYPE_CREATE_INDEXED_BLOCK_T = 206
+    MPI_TYPE_CREATE_INDEXED_BLOCK_C_T = 207
+    MPI_TYPE_CREATE_RESIZED_T = 208
+    MPI_TYPE_CREATE_RESIZED_C_T = 209
+    MPI_TYPE_CREATE_STRUCT_T = 210
+    MPI_TYPE_CREATE_STRUCT_C_T = 211
+    MPI_TYPE_CREATE_SUBARRAY_T = 212
+    MPI_TYPE_CREATE_SUBARRAY_C_T = 213
+    MPI_TYPE_DUP_T = 214
+    MPI_TYPE_FREE_T = 215
+    MPI_TYPE_GET_CONTENTS_T = 216
+    MPI_TYPE_GET_CONTENTS_C_T = 217
+    MPI_TYPE_GET_ENVELOPE_T = 218
+    MPI_TYPE_GET_ENVELOPE_C_T = 219
+    MPI_TYPE_GET_EXTENT_T = 220
+    MPI_TYPE_GET_EXTENT_C_T = 221
+    MPI_TYPE_GET_EXTENT_X_T = 222
+    MPI_TYPE_GET_NAME_T = 223
+    MPI_TYPE_GET_TRUE_EXTENT_T = 224
+    MPI_TYPE_GET_TRUE_EXTENT_C_T = 225
+    MPI_TYPE_GET_TRUE_EXTENT_X_T = 226
+    MPI_TYPE_INDEXED_T = 227
+    MPI_TYPE_INDEXED_C_T = 228
+    MPI_TYPE_MATCH_SIZE_T = 229
+    MPI_TYPE_SET_NAME_T = 230
+    MPI_TYPE_SIZE_T = 231
+    MPI_TYPE_SIZE_C_T = 232
+    MPI_TYPE_SIZE_X_T = 233
+    MPI_TYPE_VECTOR_T = 234
+    MPI_TYPE_VECTOR_C_T = 235
+    MPI_UNPACK_T = 236
+    MPI_UNPACK_C_T = 237
+    MPI_UNPACK_EXTERNAL_T = 238
+    MPI_UNPACK_EXTERNAL_C_T = 239
+    MPI_ADDRESS_T = 240
+    MPI_TYPE_EXTENT_T = 241
+    MPI_TYPE_LB_T = 242
+    MPI_TYPE_UB_T = 243
+    MPI_TYPE_HINDEXED_T = 244
+    MPI_TYPE_HVECTOR_T = 245
+    MPI_TYPE_STRUCT_T = 246
+    MPI_ADD_ERROR_CLASS_T = 247
+    MPI_ADD_ERROR_CODE_T = 248
+    MPI_ADD_ERROR_STRING_T = 249
+    MPI_COMM_CALL_ERRHANDLER_T = 250
+    MPI_COMM_CREATE_ERRHANDLER_T = 251
+    MPI_COMM_GET_ERRHANDLER_T = 252
+    MPI_COMM_SET_ERRHANDLER_T = 253
+    MPI_ERRHANDLER_FREE_T = 254
+    MPI_ERROR_CLASS_T = 255
+    MPI_ERROR_STRING_T = 256
+    MPI_FILE_CALL_ERRHANDLER_T = 257
+    MPI_FILE_CREATE_ERRHANDLER_T = 258
+    MPI_FILE_GET_ERRHANDLER_T = 259
+    MPI_FILE_SET_ERRHANDLER_T = 260
+    MPI_SESSION_CALL_ERRHANDLER_T = 261
+    MPI_SESSION_CREATE_ERRHANDLER_T = 262
+    MPI_SESSION_GET_ERRHANDLER_T = 263
+    MPI_SESSION_SET_ERRHANDLER_T = 264
+    MPI_WIN_CALL_ERRHANDLER_T = 265
+    MPI_WIN_CREATE_ERRHANDLER_T = 266
+    MPI_WIN_GET_ERRHANDLER_T = 267
+    MPI_WIN_SET_ERRHANDLER_T = 268
+    MPIX_DELETE_ERROR_CLASS_T = 269
+    MPIX_DELETE_ERROR_CODE_T = 270
+    MPIX_DELETE_ERROR_STRING_T = 271
+    MPI_ERRHANDLER_CREATE_T = 272
+    MPI_ERRHANDLER_GET_T = 273
+    MPI_ERRHANDLER_SET_T = 274
+    MPI_GROUP_COMPARE_T = 275
+    MPI_GROUP_DIFFERENCE_T = 276
+    MPI_GROUP_EXCL_T = 277
+    MPI_GROUP_FREE_T = 278
+    MPI_GROUP_INCL_T = 279
+    MPI_GROUP_INTERSECTION_T = 280
+    MPI_GROUP_RANGE_EXCL_T = 281
+    MPI_GROUP_RANGE_INCL_T = 282
+    MPI_GROUP_RANK_T = 283
+    MPI_GROUP_SIZE_T = 284
+    MPI_GROUP_TRANSLATE_RANKS_T = 285
+    MPI_GROUP_UNION_T = 286
+    MPI_INFO_CREATE_T = 287
+    MPI_INFO_CREATE_ENV_T = 288
+    MPI_INFO_DELETE_T = 289
+    MPI_INFO_DUP_T = 290
+    MPI_INFO_FREE_T = 291
+    MPI_INFO_GET_T = 292
+    MPI_INFO_GET_NKEYS_T = 293
+    MPI_INFO_GET_NTHKEY_T = 294
+    MPI_INFO_GET_STRING_T = 295
+    MPI_INFO_GET_VALUELEN_T = 296
+    MPI_INFO_SET_T = 297
+    MPI_ABORT_T = 298
+    MPI_COMM_CREATE_FROM_GROUP_T = 299
+    MPI_FINALIZE_T = 300
+    MPI_FINALIZED_T = 301
+    MPI_GROUP_FROM_SESSION_PSET_T = 302
+    MPI_INIT_T = 303
+    MPI_INIT_THREAD_T = 304
+    MPI_INITIALIZED_T = 305
+    MPI_IS_THREAD_MAIN_T = 306
+    MPI_QUERY_THREAD_T = 307
+    MPI_SESSION_FINALIZE_T = 308
+    MPI_SESSION_GET_INFO_T = 309
+    MPI_SESSION_GET_NTH_PSET_T = 310
+    MPI_SESSION_GET_NUM_PSETS_T = 311
+    MPI_SESSION_GET_PSET_INFO_T = 312
+    MPI_SESSION_INIT_T = 313
+    MPI_AINT_ADD_T = 314
+    MPI_AINT_DIFF_T = 315
+    MPI_GET_LIBRARY_VERSION_T = 316
+    MPI_GET_PROCESSOR_NAME_T = 317
+    MPI_GET_VERSION_T = 318
+    MPI_PCONTROL_T = 319
+    MPIX_GPU_QUERY_SUPPORT_T = 320
+    MPIX_QUERY_CUDA_SUPPORT_T = 321
+    MPIX_QUERY_ZE_SUPPORT_T = 322
+    MPIX_QUERY_HIP_SUPPORT_T = 323
+    MPI_T_CATEGORY_CHANGED_T = 324
+    MPI_T_CATEGORY_GET_CATEGORIES_T = 325
+    MPI_T_CATEGORY_GET_CVARS_T = 326
+    MPI_T_CATEGORY_GET_EVENTS_T = 327
+    MPI_T_CATEGORY_GET_INDEX_T = 328
+    MPI_T_CATEGORY_GET_INFO_T = 329
+    MPI_T_CATEGORY_GET_NUM_T = 330
+    MPI_T_CATEGORY_GET_NUM_EVENTS_T = 331
+    MPI_T_CATEGORY_GET_PVARS_T = 332
+    MPI_T_CVAR_GET_INDEX_T = 333
+    MPI_T_CVAR_GET_INFO_T = 334
+    MPI_T_CVAR_GET_NUM_T = 335
+    MPI_T_CVAR_HANDLE_ALLOC_T = 336
+    MPI_T_CVAR_HANDLE_FREE_T = 337
+    MPI_T_CVAR_READ_T = 338
+    MPI_T_CVAR_WRITE_T = 339
+    MPI_T_ENUM_GET_INFO_T = 340
+    MPI_T_ENUM_GET_ITEM_T = 341
+    MPI_T_EVENT_CALLBACK_GET_INFO_T = 342
+    MPI_T_EVENT_CALLBACK_SET_INFO_T = 343
+    MPI_T_EVENT_COPY_T = 344
+    MPI_T_EVENT_GET_INDEX_T = 345
+    MPI_T_EVENT_GET_INFO_T = 346
+    MPI_T_EVENT_GET_NUM_T = 347
+    MPI_T_EVENT_GET_SOURCE_T = 348
+    MPI_T_EVENT_GET_TIMESTAMP_T = 349
+    MPI_T_EVENT_HANDLE_ALLOC_T = 350
+    MPI_T_EVENT_HANDLE_FREE_T = 351
+    MPI_T_EVENT_HANDLE_GET_INFO_T = 352
+    MPI_T_EVENT_HANDLE_SET_INFO_T = 353
+    MPI_T_EVENT_READ_T = 354
+    MPI_T_EVENT_REGISTER_CALLBACK_T = 355
+    MPI_T_EVENT_SET_DROPPED_HANDLER_T = 356
+    MPI_T_FINALIZE_T = 357
+    MPI_T_INIT_THREAD_T = 358
+    MPI_T_PVAR_GET_INDEX_T = 359
+    MPI_T_PVAR_GET_INFO_T = 360
+    MPI_T_PVAR_GET_NUM_T = 361
+    MPI_T_PVAR_HANDLE_ALLOC_T = 362
+    MPI_T_PVAR_HANDLE_FREE_T = 363
+    MPI_T_PVAR_READ_T = 364
+    MPI_T_PVAR_READRESET_T = 365
+    MPI_T_PVAR_RESET_T = 366
+    MPI_T_PVAR_SESSION_CREATE_T = 367
+    MPI_T_PVAR_SESSION_FREE_T = 368
+    MPI_T_PVAR_START_T = 369
+    MPI_T_PVAR_STOP_T = 370
+    MPI_T_PVAR_WRITE_T = 371
+    MPI_T_SOURCE_GET_INFO_T = 372
+    MPI_T_SOURCE_GET_NUM_T = 373
+    MPI_T_SOURCE_GET_TIMESTAMP_T = 374
+    MPI_OP_COMMUTATIVE_T = 375
+    MPI_OP_CREATE_T = 376
+    MPI_OP_CREATE_C_T = 377
+    MPI_OP_FREE_T = 378
+    MPI_PARRIVED_T = 379
+    MPI_PREADY_T = 380
+    MPI_PREADY_LIST_T = 381
+    MPI_PREADY_RANGE_T = 382
+    MPI_PRECV_INIT_T = 383
+    MPI_PSEND_INIT_T = 384
+    MPI_BSEND_T = 385
+    MPI_BSEND_C_T = 386
+    MPI_BSEND_INIT_T = 387
+    MPI_BSEND_INIT_C_T = 388
+    MPI_BUFFER_ATTACH_T = 389
+    MPI_BUFFER_ATTACH_C_T = 390
+    MPI_BUFFER_DETACH_T = 391
+    MPI_BUFFER_DETACH_C_T = 392
+    MPI_IBSEND_T = 393
+    MPI_IBSEND_C_T = 394
+    MPI_IMPROBE_T = 395
+    MPI_IMRECV_T = 396
+    MPI_IMRECV_C_T = 397
+    MPI_IPROBE_T = 398
+    MPI_IRECV_T = 399
+    MPI_IRECV_C_T = 400
+    MPI_IRSEND_T = 401
+    MPI_IRSEND_C_T = 402
+    MPI_ISEND_T = 403
+    MPI_ISEND_C_T = 404
+    MPI_ISENDRECV_T = 405
+    MPI_ISENDRECV_C_T = 406
+    MPI_ISENDRECV_REPLACE_T = 407
+    MPI_ISENDRECV_REPLACE_C_T = 408
+    MPI_ISSEND_T = 409
+    MPI_ISSEND_C_T = 410
+    MPI_MPROBE_T = 411
+    MPI_MRECV_T = 412
+    MPI_MRECV_C_T = 413
+    MPI_PROBE_T = 414
+    MPI_RECV_T = 415
+    MPI_RECV_C_T = 416
+    MPI_RECV_INIT_T = 417
+    MPI_RECV_INIT_C_T = 418
+    MPI_RSEND_T = 419
+    MPI_RSEND_C_T = 420
+    MPI_RSEND_INIT_T = 421
+    MPI_RSEND_INIT_C_T = 422
+    MPI_SEND_T = 423
+    MPI_SEND_C_T = 424
+    MPI_SEND_INIT_T = 425
+    MPI_SEND_INIT_C_T = 426
+    MPI_SENDRECV_T = 427
+    MPI_SENDRECV_C_T = 428
+    MPI_SENDRECV_REPLACE_T = 429
+    MPI_SENDRECV_REPLACE_C_T = 430
+    MPI_SSEND_T = 431
+    MPI_SSEND_C_T = 432
+    MPI_SSEND_INIT_T = 433
+    MPI_SSEND_INIT_C_T = 434
+    MPI_CANCEL_T = 435
+    MPI_GREQUEST_COMPLETE_T = 436
+    MPI_GREQUEST_START_T = 437
+    MPI_REQUEST_FREE_T = 438
+    MPI_REQUEST_GET_STATUS_T = 439
+    MPI_START_T = 440
+    MPI_STARTALL_T = 441
+    MPI_STATUS_SET_CANCELLED_T = 442
+    MPI_TEST_T = 443
+    MPI_TEST_CANCELLED_T = 444
+    MPI_TESTALL_T = 445
+    MPI_TESTANY_T = 446
+    MPI_TESTSOME_T = 447
+    MPI_WAIT_T = 448
+    MPI_WAITALL_T = 449
+    MPI_WAITANY_T = 450
+    MPI_WAITSOME_T = 451
+    MPIX_GREQUEST_START_T = 452
+    MPIX_GREQUEST_CLASS_CREATE_T = 453
+    MPIX_GREQUEST_CLASS_ALLOCATE_T = 454
+    MPI_ACCUMULATE_T = 455
+    MPI_ACCUMULATE_C_T = 456
+    MPI_ALLOC_MEM_T = 457
+    MPI_COMPARE_AND_SWAP_T = 458
+    MPI_FETCH_AND_OP_T = 459
+    MPI_FREE_MEM_T = 460
+    MPI_GET_T = 461
+    MPI_GET_C_T = 462
+    MPI_GET_ACCUMULATE_T = 463
+    MPI_GET_ACCUMULATE_C_T = 464
+    MPI_PUT_T = 465
+    MPI_PUT_C_T = 466
+    MPI_RACCUMULATE_T = 467
+    MPI_RACCUMULATE_C_T = 468
+    MPI_RGET_T = 469
+    MPI_RGET_C_T = 470
+    MPI_RGET_ACCUMULATE_T = 471
+    MPI_RGET_ACCUMULATE_C_T = 472
+    MPI_RPUT_T = 473
+    MPI_RPUT_C_T = 474
+    MPI_WIN_ALLOCATE_T = 475
+    MPI_WIN_ALLOCATE_C_T = 476
+    MPI_WIN_ALLOCATE_SHARED_T = 477
+    MPI_WIN_ALLOCATE_SHARED_C_T = 478
+    MPI_WIN_ATTACH_T = 479
+    MPI_WIN_COMPLETE_T = 480
+    MPI_WIN_CREATE_T = 481
+    MPI_WIN_CREATE_C_T = 482
+    MPI_WIN_CREATE_DYNAMIC_T = 483
+    MPI_WIN_DETACH_T = 484
+    MPI_WIN_FENCE_T = 485
+    MPI_WIN_FLUSH_T = 486
+    MPI_WIN_FLUSH_ALL_T = 487
+    MPI_WIN_FLUSH_LOCAL_T = 488
+    MPI_WIN_FLUSH_LOCAL_ALL_T = 489
+    MPI_WIN_FREE_T = 490
+    MPI_WIN_GET_GROUP_T = 491
+    MPI_WIN_GET_INFO_T = 492
+    MPI_WIN_GET_NAME_T = 493
+    MPI_WIN_LOCK_T = 494
+    MPI_WIN_LOCK_ALL_T = 495
+    MPI_WIN_POST_T = 496
+    MPI_WIN_SET_INFO_T = 497
+    MPI_WIN_SET_NAME_T = 498
+    MPI_WIN_SHARED_QUERY_T = 499
+    MPI_WIN_SHARED_QUERY_C_T = 500
+    MPI_WIN_START_T = 501
+    MPI_WIN_SYNC_T = 502
+    MPI_WIN_TEST_T = 503
+    MPI_WIN_UNLOCK_T = 504
+    MPI_WIN_UNLOCK_ALL_T = 505
+    MPI_WIN_WAIT_T = 506
+    MPI_CLOSE_PORT_T = 507
+    MPI_COMM_ACCEPT_T = 508
+    MPI_COMM_CONNECT_T = 509
+    MPI_COMM_DISCONNECT_T = 510
+    MPI_COMM_GET_PARENT_T = 511
+    MPI_COMM_JOIN_T = 512
+    MPI_COMM_SPAWN_T = 513
+    MPI_COMM_SPAWN_MULTIPLE_T = 514
+    MPI_LOOKUP_NAME_T = 515
+    MPI_OPEN_PORT_T = 516
+    MPI_PUBLISH_NAME_T = 517
+    MPI_UNPUBLISH_NAME_T = 518
+    MPI_WTICK_T = 519
+    MPI_WTIME_T = 520
+    MPI_CART_COORDS_T = 521
+    MPI_CART_CREATE_T = 522
+    MPI_CART_GET_T = 523
+    MPI_CART_MAP_T = 524
+    MPI_CART_RANK_T = 525
+    MPI_CART_SHIFT_T = 526
+    MPI_CART_SUB_T = 527
+    MPI_CARTDIM_GET_T = 528
+    MPI_DIMS_CREATE_T = 529
+    MPI_DIST_GRAPH_CREATE_T = 530
+    MPI_DIST_GRAPH_CREATE_ADJACENT_T = 531
+    MPI_DIST_GRAPH_NEIGHBORS_T = 532
+    MPI_DIST_GRAPH_NEIGHBORS_COUNT_T = 533
+    MPI_GRAPH_CREATE_T = 534
+    MPI_GRAPH_GET_T = 535
+    MPI_GRAPH_MAP_T = 536
+    MPI_GRAPH_NEIGHBORS_T = 537
+    MPI_GRAPH_NEIGHBORS_COUNT_T = 538
+    MPI_GRAPHDIMS_GET_T = 539
+    MPI_TOPO_TEST_T = 540
+    MPI_LAST_FUNC_T = 541
+end
+
 const MPI_Datatype = Cint
-
-const MPI_Comm = Cint
-
-const MPI_Request = Cint
 
 function superlu_abort_and_exit_dist(arg1)
     @ccall libsuperlu_dist_Int64.superlu_abort_and_exit_dist(arg1::Ptr{Cchar})::Cvoid
@@ -15,6 +574,8 @@ end
 function superlu_free_dist(arg1)
     @ccall libsuperlu_dist_Int64.superlu_free_dist(arg1::Ptr{Cvoid})::Cvoid
 end
+
+const MPI_Request = Cint
 
 const int_t = Int64
 
@@ -494,6 +1055,8 @@ mutable struct psymbfact_stat_t
     allocMem::Cfloat
     psymbfact_stat_t() = new()
 end
+
+const MPI_Comm = Cint
 
 mutable struct superlu_scope_t
     comm::MPI_Comm
@@ -2585,6 +3148,293 @@ function checkRecvLDiag(k, comReqs, arg3, arg4)
     @ccall libsuperlu_ddefs.checkRecvLDiag(k::int_t, comReqs::Ptr{commRequests_t}, arg3::Ptr{gridinfo_t}, arg4::Ptr{SCT_t})::int_t
 end
 
+const MPI_Op = Cint
+
+const MPI_Group = Cint
+
+const MPI_Errhandler = Cint
+
+const MPI_Message = Cint
+
+const MPI_Win = Cint
+
+const MPI_Session = Cint
+
+const MPI_File = Ptr{ADIOI_FileD}
+
+# typedef int ( MPI_Copy_function ) ( MPI_Comm , int , void * , void * , void * , int * )
+const MPI_Copy_function = Cvoid
+
+# typedef int ( MPI_Delete_function ) ( MPI_Comm , int , void * , void * )
+const MPI_Delete_function = Cvoid
+
+# typedef int ( MPI_Comm_copy_attr_function ) ( MPI_Comm , int , void * , void * , void * , int * )
+const MPI_Comm_copy_attr_function = Cvoid
+
+# typedef int ( MPI_Comm_delete_attr_function ) ( MPI_Comm , int , void * , void * )
+const MPI_Comm_delete_attr_function = Cvoid
+
+# typedef int ( MPI_Win_copy_attr_function ) ( MPI_Win , int , void * , void * , void * , int * )
+const MPI_Win_copy_attr_function = Cvoid
+
+# typedef int ( MPI_Win_delete_attr_function ) ( MPI_Win , int , void * , void * )
+const MPI_Win_delete_attr_function = Cvoid
+
+# typedef int ( MPI_Type_copy_attr_function ) ( MPI_Datatype , int , void * , void * , void * , int * )
+const MPI_Type_copy_attr_function = Cvoid
+
+# typedef int ( MPI_Type_delete_attr_function ) ( MPI_Datatype , int , void * , void * )
+const MPI_Type_delete_attr_function = Cvoid
+
+const MPI_Info = Cint
+
+const MPI_T_enum = Ptr{MPIR_T_enum_s}
+
+const MPI_T_cvar_handle = Ptr{MPIR_T_cvar_handle_s}
+
+const MPI_T_pvar_handle = Ptr{MPIR_T_pvar_handle_s}
+
+const MPI_T_pvar_session = Ptr{MPIR_T_pvar_session_s}
+
+const MPI_Fint = Cint
+
+mutable struct MPI_Status
+    count_lo::Cint
+    count_hi_and_cancelled::Cint
+    MPI_SOURCE::Cint
+    MPI_TAG::Cint
+    MPI_ERROR::Cint
+    MPI_Status() = new()
+end
+
+# typedef int ( MPI_Datarep_conversion_function ) ( void * , MPI_Datatype , int , void * , MPI_Offset , void * )
+const MPI_Datarep_conversion_function = Cvoid
+
+# typedef int ( MPI_Datarep_conversion_function_c ) ( void * , MPI_Datatype , MPI_Count , void * , MPI_Offset , void * )
+const MPI_Datarep_conversion_function_c = Cvoid
+
+@enum MPIR_Win_flavor::UInt32 begin
+    MPI_WIN_FLAVOR_CREATE = 1
+    MPI_WIN_FLAVOR_ALLOCATE = 2
+    MPI_WIN_FLAVOR_DYNAMIC = 3
+    MPI_WIN_FLAVOR_SHARED = 4
+end
+
+const MPIR_Win_flavor_t = MPIR_Win_flavor
+
+@enum MPIR_Win_model::UInt32 begin
+    MPI_WIN_SEPARATE = 1
+    MPI_WIN_UNIFIED = 2
+end
+
+const MPIR_Win_model_t = MPIR_Win_model
+
+@enum MPIR_Topo_type::UInt32 begin
+    MPI_GRAPH = 1
+    MPI_CART = 2
+    MPI_DIST_GRAPH = 3
+end
+
+# typedef void ( MPI_Handler_function ) ( MPI_Comm * , int * , ... )
+const MPI_Handler_function = Cvoid
+
+# typedef void ( MPI_Comm_errhandler_function ) ( MPI_Comm * , int * , ... )
+const MPI_Comm_errhandler_function = Cvoid
+
+# typedef void ( MPI_File_errhandler_function ) ( MPI_File * , int * , ... )
+const MPI_File_errhandler_function = Cvoid
+
+# typedef void ( MPI_Win_errhandler_function ) ( MPI_Win * , int * , ... )
+const MPI_Win_errhandler_function = Cvoid
+
+# typedef void ( MPI_Session_errhandler_function ) ( MPI_Session * , int * , ... )
+const MPI_Session_errhandler_function = Cvoid
+
+# typedef MPI_Comm_errhandler_function MPI_Comm_errhandler_fn
+const MPI_Comm_errhandler_fn = MPI_Comm_errhandler_function
+
+# typedef MPI_File_errhandler_function MPI_File_errhandler_fn
+const MPI_File_errhandler_fn = MPI_File_errhandler_function
+
+# typedef MPI_Win_errhandler_function MPI_Win_errhandler_fn
+const MPI_Win_errhandler_fn = MPI_Win_errhandler_function
+
+# typedef MPI_Session_errhandler_function MPI_Session_errhandler_fn
+const MPI_Session_errhandler_fn = MPI_Session_errhandler_function
+
+const MPIX_Grequest_class = Cint
+
+@enum MPIR_Combiner_enum::UInt32 begin
+    MPI_COMBINER_NAMED = 1
+    MPI_COMBINER_DUP = 2
+    MPI_COMBINER_CONTIGUOUS = 3
+    MPI_COMBINER_VECTOR = 4
+    MPI_COMBINER_HVECTOR_INTEGER = 5
+    MPI_COMBINER_HVECTOR = 6
+    MPI_COMBINER_INDEXED = 7
+    MPI_COMBINER_HINDEXED_INTEGER = 8
+    MPI_COMBINER_HINDEXED = 9
+    MPI_COMBINER_INDEXED_BLOCK = 10
+    MPI_COMBINER_STRUCT_INTEGER = 11
+    MPI_COMBINER_STRUCT = 12
+    MPI_COMBINER_SUBARRAY = 13
+    MPI_COMBINER_DARRAY = 14
+    MPI_COMBINER_F90_REAL = 15
+    MPI_COMBINER_F90_COMPLEX = 16
+    MPI_COMBINER_F90_INTEGER = 17
+    MPI_COMBINER_RESIZED = 18
+    MPI_COMBINER_HINDEXED_BLOCK = 19
+end
+
+const MPI_Aint = Clong
+
+const MPI_Count = Clong
+
+const MPI_Offset = Clong
+
+# typedef void ( MPI_User_function ) ( void * , void * , int * , MPI_Datatype * )
+const MPI_User_function = Cvoid
+
+# typedef void ( MPI_User_function_c ) ( void * , void * , MPI_Count * , MPI_Datatype * )
+const MPI_User_function_c = Cvoid
+
+const MPI_T_event_registration = Ptr{MPIR_T_event_registration_s}
+
+const MPI_T_event_instance = Ptr{MPIR_T_event_instance_s}
+
+@enum MPIR_T_verbosity_t::UInt32 begin
+    MPI_T_VERBOSITY_INVALID = 0
+    MPI_T_VERBOSITY_USER_BASIC = 221
+    MPI_T_VERBOSITY_USER_DETAIL = 222
+    MPI_T_VERBOSITY_USER_ALL = 223
+    MPI_T_VERBOSITY_TUNER_BASIC = 224
+    MPI_T_VERBOSITY_TUNER_DETAIL = 225
+    MPI_T_VERBOSITY_TUNER_ALL = 226
+    MPI_T_VERBOSITY_MPIDEV_BASIC = 227
+    MPI_T_VERBOSITY_MPIDEV_DETAIL = 228
+    MPI_T_VERBOSITY_MPIDEV_ALL = 229
+end
+
+@enum MPIR_T_bind_t::UInt32 begin
+    MPI_T_BIND_INVALID = 0
+    MPI_T_BIND_NO_OBJECT = 9700
+    MPI_T_BIND_MPI_COMM = 9701
+    MPI_T_BIND_MPI_DATATYPE = 9702
+    MPI_T_BIND_MPI_ERRHANDLER = 9703
+    MPI_T_BIND_MPI_FILE = 9704
+    MPI_T_BIND_MPI_GROUP = 9705
+    MPI_T_BIND_MPI_OP = 9706
+    MPI_T_BIND_MPI_REQUEST = 9707
+    MPI_T_BIND_MPI_WIN = 9708
+    MPI_T_BIND_MPI_MESSAGE = 9709
+    MPI_T_BIND_MPI_INFO = 9710
+end
+
+@enum MPIR_T_scope_t::UInt32 begin
+    MPI_T_SCOPE_INVALID = 0
+    MPI_T_SCOPE_CONSTANT = 60438
+    MPI_T_SCOPE_READONLY = 60439
+    MPI_T_SCOPE_LOCAL = 60440
+    MPI_T_SCOPE_GROUP = 60441
+    MPI_T_SCOPE_GROUP_EQ = 60442
+    MPI_T_SCOPE_ALL = 60443
+    MPI_T_SCOPE_ALL_EQ = 60444
+end
+
+@enum MPIR_T_pvar_class_t::UInt32 begin
+    MPI_T_PVAR_CLASS_INVALID = 0
+    MPIR_T_PVAR_CLASS_FIRST = 240
+    # MPI_T_PVAR_CLASS_STATE = 240
+    MPI_T_PVAR_CLASS_LEVEL = 241
+    MPI_T_PVAR_CLASS_SIZE = 242
+    MPI_T_PVAR_CLASS_PERCENTAGE = 243
+    MPI_T_PVAR_CLASS_HIGHWATERMARK = 244
+    MPI_T_PVAR_CLASS_LOWWATERMARK = 245
+    MPI_T_PVAR_CLASS_COUNTER = 246
+    MPI_T_PVAR_CLASS_AGGREGATE = 247
+    MPI_T_PVAR_CLASS_TIMER = 248
+    MPI_T_PVAR_CLASS_GENERIC = 249
+    MPIR_T_PVAR_CLASS_LAST = 250
+    MPIR_T_PVAR_CLASS_NUMBER = 10
+end
+
+@enum MPI_T_cb_safety::UInt32 begin
+    MPI_T_CB_REQUIRE_NONE = 0
+    MPI_T_CB_REQUIRE_MPI_RESTRICTED = 1
+    MPI_T_CB_REQUIRE_THREAD_SAFE = 2
+    MPI_T_CB_REQUIRE_ASYNC_SIGNAL_SAFE = 3
+end
+
+@enum MPI_T_source_order::UInt32 begin
+    MPI_T_SOURCE_ORDERED = 0
+    MPI_T_SOURCE_UNORDERED = 1
+end
+
+# typedef void ( MPI_T_event_cb_function ) ( MPI_T_event_instance event_instance , MPI_T_event_registration event_registration , MPI_T_cb_safety cb_safety , void * user_data )
+const MPI_T_event_cb_function = Cvoid
+
+# typedef void ( MPI_T_event_free_cb_function ) ( MPI_T_event_registration event_registration , MPI_T_cb_safety cb_safety , void * user_data )
+const MPI_T_event_free_cb_function = Cvoid
+
+# typedef void ( MPI_T_event_dropped_cb_function ) ( MPI_Count count , MPI_T_event_registration event_registration , int source_index , MPI_T_cb_safety cb_safety , void * user_data )
+const MPI_T_event_dropped_cb_function = Cvoid
+
+mutable struct MPI_F08_status
+    count_lo::MPI_Fint
+    count_hi_and_cancelled::MPI_Fint
+    MPI_SOURCE::MPI_Fint
+    MPI_TAG::MPI_Fint
+    MPI_ERROR::MPI_Fint
+    MPI_F08_status() = new()
+end
+
+# typedef int ( MPI_Grequest_cancel_function ) ( void * , int )
+const MPI_Grequest_cancel_function = Cvoid
+
+# typedef int ( MPI_Grequest_free_function ) ( void * )
+const MPI_Grequest_free_function = Cvoid
+
+# typedef int ( MPI_Grequest_query_function ) ( void * , MPI_Status * )
+const MPI_Grequest_query_function = Cvoid
+
+# typedef int ( MPIX_Grequest_poll_function ) ( void * , MPI_Status * )
+const MPIX_Grequest_poll_function = Cvoid
+
+# typedef int ( MPIX_Grequest_wait_function ) ( int , void * * , double , MPI_Status * )
+const MPIX_Grequest_wait_function = Cvoid
+
+# typedef int ( MPI_Datarep_extent_function ) ( MPI_Datatype datatype , MPI_Aint * , void * )
+const MPI_Datarep_extent_function = Cvoid
+
+mutable struct QMPI_Context
+    storage_stack::Ptr{Ptr{Cvoid}}
+    QMPI_Context() = new()
+end
+
+function QMPI_Register_tool_name(tool_name, init_function_ptr)
+    @ccall libsuperlu_dist_Int64.QMPI_Register_tool_name(tool_name::Ptr{Cchar}, init_function_ptr::Ptr{Cvoid})::Cint
+end
+
+function QMPI_Register_tool_storage(tool_id, tool_storage)
+    @ccall libsuperlu_dist_Int64.QMPI_Register_tool_storage(tool_id::Cint, tool_storage::Ptr{Cvoid})::Cint
+end
+
+function QMPI_Register_function(calling_tool_id, function_enum, function_ptr)
+    @ccall libsuperlu_dist_Int64.QMPI_Register_function(calling_tool_id::Cint, function_enum::QMPI_Functions_enum, function_ptr::Ptr{Cvoid})::Cint
+end
+
+function QMPI_Get_function(calling_tool_id, function_enum, function_ptr, next_tool_id)
+    @ccall libsuperlu_dist_Int64.QMPI_Get_function(calling_tool_id::Cint, function_enum::QMPI_Functions_enum, function_ptr::Ptr{Ptr{Cvoid}}, next_tool_id::Ptr{Cint})::Cint
+end
+
+function QMPI_Get_tool_storage(context, tool_id, storage)
+    @ccall libsuperlu_dist_Int64.QMPI_Get_tool_storage(context::QMPI_Context, tool_id::Cint, storage::Ptr{Ptr{Cvoid}})::Cint
+end
+
+function QMPI_Get_calling_address(context, address)
+    @ccall libsuperlu_dist_Int64.QMPI_Get_calling_address(context::QMPI_Context, address::Ptr{Ptr{Cvoid}})::Cint
+end
+
 const SUPERLU_DIST_MAJOR_VERSION = 8
 
 const SUPERLU_DIST_MINOR_VERSION = 0
@@ -2601,273 +3451,21 @@ const XSDK_INDEX_SIZE = 64
 
 const _LONGINT = 1
 
+const MPI_LONG_LONG_INT = MPI_Datatype(0x4c000809)
+
 const mpi_int_t = MPI_LONG_LONG_INT
 
 const IFMT = "%lld"
 
+const MPI_C_FLOAT_COMPLEX = MPI_Datatype(0x4c000840)
+
+const MPI_C_COMPLEX = MPI_C_FLOAT_COMPLEX
+
 const SuperLU_MPI_COMPLEX = MPI_C_COMPLEX
 
+const MPI_C_DOUBLE_COMPLEX = MPI_Datatype(0x4c001041)
+
 const SuperLU_MPI_DOUBLE_COMPLEX = MPI_C_DOUBLE_COMPLEX
-
-const f_create_gridinfo_handle = FC_GLOBAL(f_create_gridinfo_handle, F_CREATE_GRIDINFO_HANDLE)
-
-const f_create_gridinfo3d_handle = FC_GLOBAL(f_create_gridinfo3d_handle, F_CREATE_GRIDINFO3D_HANDLE)
-
-const f_create_options_handle = FC_GLOBAL(f_create_options_handle, F_CREATE_OPTIONS_HANDLE)
-
-const f_create_SuperMatrix_handle = FC_GLOBAL(f_create_supermatrix_handle, F_CREATE_SUPERMATRIX_HANDLE)
-
-const f_destroy_gridinfo_handle = FC_GLOBAL(f_destroy_gridinfo_handle, F_DESTROY_GRIDINFO_HANDLE)
-
-const f_destroy_options_handle = FC_GLOBAL(f_destroy_options_handle, F_DESTROY_OPTIONS_HANDLE)
-
-const f_destroy_ScalePerm_handle = FC_GLOBAL(f_destroy_scaleperm_handle, F_DESTROY_SCALEPERM_HANDLE)
-
-const f_destroy_LUstruct_handle = FC_GLOBAL(f_destroy_lustruct_handle, F_DESTROY_LUSTRUCT_HANDLE)
-
-const f_destroy_SOLVEstruct_handle = FC_GLOBAL(f_destroy_solvestruct_handle, F_DESTROY_SOLVESTRUCT_HANDLE)
-
-const f_destroy_SuperMatrix_handle = FC_GLOBAL(f_destroy_supermatrix_handle, F_DESTROY_SUPERMATRIX_HANDLE)
-
-const f_create_SuperLUStat_handle = FC_GLOBAL(f_create_superlustat_handle, F_CREATE_SUPERLUSTAT_HANDLE)
-
-const f_destroy_SuperLUStat_handle = FC_GLOBAL(f_destroy_superlustat_handle, F_DESTROY_SUPERLUSTAT_HANDLE)
-
-const f_get_gridinfo = FC_GLOBAL(f_get_gridinfo, F_GET_GRIDINFO)
-
-const f_get_gridinfo3d = FC_GLOBAL(f_get_gridinfo3d, F_GET_GRIDINFO3D)
-
-const f_get_SuperMatrix = FC_GLOBAL(f_get_supermatrix, F_GET_SUPERMATRIX)
-
-const f_set_SuperMatrix = FC_GLOBAL(f_set_supermatrix, F_SET_SUPERMATRIX)
-
-const f_get_CompRowLoc_Matrix = FC_GLOBAL(f_get_comprowloc_matrix, F_GET_COMPROWLOC_MATRIX)
-
-const f_set_CompRowLoc_Matrix = FC_GLOBAL(f_set_comprowloc_matrix, F_SET_COMPROWLOC_MATRIX)
-
-const f_get_superlu_options = FC_GLOBAL(f_get_superlu_options, F_GET_SUPERLU_OPTIONS)
-
-const f_set_superlu_options = FC_GLOBAL(f_set_superlu_options, F_SET_SUPERLU_OPTIONS)
-
-const f_set_default_options = FC_GLOBAL(f_set_default_options, F_SET_DEFAULT_OPTIONS)
-
-const f_superlu_gridinit = FC_GLOBAL(f_superlu_gridinit, F_SUPERLU_GRIDINIT)
-
-const f_superlu_gridinit3d = FC_GLOBAL(f_superlu_gridinit3d, F_SUPERLU_GRIDINIT3D)
-
-const f_superlu_gridmap = FC_GLOBAL(f_superlu_gridmap, F_SUPERLU_GRIDMAP)
-
-const f_superlu_gridexit = FC_GLOBAL(f_superlu_gridexit, F_SUPERLU_GRIDEXIT)
-
-const f_PStatInit = FC_GLOBAL(f_pstatinit, F_PSTATINIT)
-
-const f_PStatFree = FC_GLOBAL(f_pstatfree, F_PSTATFREE)
-
-const f_Destroy_CompRowLoc_Mat_dist = FC_GLOBAL(f_destroy_comprowloc_mat_dist, F_DESTROY_COMPROWLOC_MAT_DIST)
-
-const f_Destroy_SuperMat_Store_dist = FC_GLOBAL(f_destroy_supermat_store_dist, F_DESTROY_SUPERMAT_STORE_DIST)
-
-const f_check_malloc = FC_GLOBAL(f_check_malloc, F_CHECK_MALLOC)
-
-const f_dcreate_ScalePerm_handle = FC_GLOBAL(f_dcreate_scaleperm_handle, F_DCREATE_SCALEPERM_HANDLE)
-
-const f_dcreate_LUstruct_handle = FC_GLOBAL(f_dcreate_lustruct_handle, F_DCREATE_LUSTRUCT_HANDLE)
-
-const f_dcreate_SOLVEstruct_handle = FC_GLOBAL(f_dcreate_solvestruct_handle, F_DCREATE_SOLVESTRUCT_HANDLE)
-
-const f_dScalePermstructInit = FC_GLOBAL(f_dscalepermstructinit, F_DSCALEPERMSTRUCTINIT)
-
-const f_dScalePermstructFree = FC_GLOBAL(f_dscalepermstructfree, F_DSCALEPERMSTRUCTFREE)
-
-const f_dLUstructInit = FC_GLOBAL(f_dlustructinit, F_DLUSTRUCTINIT)
-
-const f_dLUstructFree = FC_GLOBAL(f_dlustructfree, F_DLUSTRUCTFREE)
-
-const f_dDestroy_LU_SOLVE_struct = FC_GLOBAL(f_ddestroy_lu_solve_struct, F_DDESTROY_LU_SOLVE_STRUCT)
-
-const f_dDestroy_LU_SOLVE_struct_3d = FC_GLOBAL(f_ddestroy_lu_solve_struct_3d, F_DDESTROY_LU_SOLVE_STRUCT_3D)
-
-const f_dDestroy_A3d_gathered_on_2d = FC_GLOBAL(f_ddestroy_a3d_gathered_on_2d, F_DDESTROY_A3D_GATHERED_ON_2D)
-
-const f_dCreate_CompRowLoc_Mat_dist = FC_GLOBAL(f_dcreate_comprowloc_mat_dist, F_DCREATE_COMPROWLOC_MAT_DIST)
-
-const f_dSolveFinalize = FC_GLOBAL(f_dsolvefinalize, F_DSOLVEFINALIZE)
-
-const f_pdgssvx = FC_GLOBAL(f_pdgssvx, F_PDGSSVX)
-
-const f_pdgssvx3d = FC_GLOBAL(f_pdgssvx3d, F_PDGSSVX3D)
-
-const f_dcreate_dist_matrix = FC_GLOBAL(f_dcreate_dist_matrix, F_DCREATE_DIST_MATRIX)
-
-const f_dcreate_matrix_x_b = FC_GLOBAL(f_dcreate_matrix_x_b, F_DCREATE_MATRIX_X_B)
-
-const f_dcreate_matrix_x_b_3d = FC_GLOBAL(f_dcreate_matrix_x_b_3d, F_DCREATE_MATRIX_X_B_3D)
-
-const f_zcreate_ScalePerm_handle = FC_GLOBAL(f_zcreate_scaleperm_handle, F_ZCREATE_SCALEPERM_HANDLE)
-
-const f_zcreate_LUstruct_handle = FC_GLOBAL(f_zcreate_lustruct_handle, F_ZCREATE_LUSTRUCT_HANDLE)
-
-const f_zcreate_SOLVEstruct_handle = FC_GLOBAL(f_zcreate_solvestruct_handle, F_ZCREATE_SOLVESTRUCT_HANDLE)
-
-const f_zScalePermstructInit = FC_GLOBAL(f_zscalepermstructinit, F_ZSCALEPERMSTRUCTINIT)
-
-const f_zScalePermstructFree = FC_GLOBAL(f_zscalepermstructfree, F_ZSCALEPERMSTRUCTFREE)
-
-const f_zLUstructInit = FC_GLOBAL(f_zlustructinit, F_ZLUSTRUCTINIT)
-
-const f_zLUstructFree = FC_GLOBAL(f_zlustructfree, F_ZLUSTRUCTFREE)
-
-const f_zDestroy_LU_SOLVE_struct = FC_GLOBAL(f_zdestroy_lu_solve_struct, F_ZDESTROY_LU_SOLVE_STRUCT)
-
-const f_zDestroy_LU_SOLVE_struct_3d = FC_GLOBAL(f_zdestroy_lu_solve_struct_3d, F_ZDESTROY_LU_SOLVE_STRUCT_3D)
-
-const f_zDestroy_A3d_gathered_on_2d = FC_GLOBAL(f_zdestroy_a3d_gathered_on_2d, F_ZDESTROY_A3D_GATHERED_ON_2D)
-
-const f_zCreate_CompRowLoc_Mat_dist = FC_GLOBAL(f_zcreate_comprowloc_mat_dist, F_ZCREATE_COMPROWLOC_MAT_DIST)
-
-const f_zSolveFinalize = FC_GLOBAL(f_zsolvefinalize, F_ZSOLVEFINALIZE)
-
-const f_pzgssvx = FC_GLOBAL(f_pzgssvx, F_PZGSSVX)
-
-const f_pzgssvx3d = FC_GLOBAL(f_pzgssvx3d, F_PZGSSVX3D)
-
-const f_zcreate_matrix_x_b = FC_GLOBAL(f_zcreate_matrix_x_b, F_ZCREATE_MATRIX_X_B)
-
-const f_zcreate_matrix_x_b_3d = FC_GLOBAL(f_zcreate_matrix_x_b_3d, F_ZCREATE_MATRIX_X_B_3D)
-
-const sasum_ = FC_GLOBAL(sasum, SASUM)
-
-const isamax_ = FC_GLOBAL(isamax, ISAMAX)
-
-const scopy_ = FC_GLOBAL(scopy, SCOPY)
-
-const sscal_ = FC_GLOBAL(sscal, SSCAL)
-
-const sger_ = FC_GLOBAL(sger, SGER)
-
-const snrm2_ = FC_GLOBAL(snrm2, SNRM2)
-
-const ssymv_ = FC_GLOBAL(ssymv, SSYMV)
-
-const sdot_ = FC_GLOBAL(sdot, SDOT)
-
-const saxpy_ = FC_GLOBAL(saxpy, SAXPY)
-
-const ssyr2_ = FC_GLOBAL(ssyr2, SSYR2)
-
-const srot_ = FC_GLOBAL(srot, SROT)
-
-const sgemv_ = FC_GLOBAL(sgemv, SGEMV)
-
-const strsv_ = FC_GLOBAL(strsv, STRSV)
-
-const sgemm_ = FC_GLOBAL(sgemm, SGEMM)
-
-const strsm_ = FC_GLOBAL(strsm, STRSM)
-
-const dasum_ = FC_GLOBAL(dasum, DASUM)
-
-const idamax_ = FC_GLOBAL(damax, DAMAX)
-
-const dcopy_ = FC_GLOBAL(dcopy, DCOPY)
-
-const dscal_ = FC_GLOBAL(dscal, DSCAL)
-
-const dger_ = FC_GLOBAL(dger, DGER)
-
-const dnrm2_ = FC_GLOBAL(dnrm2, DNRM2)
-
-const dsymv_ = FC_GLOBAL(dsymv, DSYMV)
-
-const ddot_ = FC_GLOBAL(ddot, DDOT)
-
-const daxpy_ = FC_GLOBAL(daxpy, DAXPY)
-
-const dsyr2_ = FC_GLOBAL(dsyr2, DSYR2)
-
-const drot_ = FC_GLOBAL(drot, DROT)
-
-const dgemv_ = FC_GLOBAL(dgemv, DGEMV)
-
-const dtrsv_ = FC_GLOBAL(dtrsv, DTRSV)
-
-const dgemm_ = FC_GLOBAL(dgemm, DGEMM)
-
-const dtrsm_ = FC_GLOBAL(dtrsm, DTRSM)
-
-const scasum_ = FC_GLOBAL(scasum, SCASUM)
-
-const icamax_ = FC_GLOBAL(icamax, ICAMAX)
-
-const ccopy_ = FC_GLOBAL(ccopy, CCOPY)
-
-const cscal_ = FC_GLOBAL(cscal, CSCAL)
-
-const scnrm2_ = FC_GLOBAL(scnrm2, SCNRM2)
-
-const caxpy_ = FC_GLOBAL(caxpy, CAXPY)
-
-const cgemv_ = FC_GLOBAL(cgemv, CGEMV)
-
-const ctrsv_ = FC_GLOBAL(ctrsv, CTRSV)
-
-const cgemm_ = FC_GLOBAL(cgemm, CGEMM)
-
-const ctrsm_ = FC_GLOBAL(ctrsm, CTRSM)
-
-const cgerc_ = FC_GLOBAL(cgerc, CGERC)
-
-const chemv_ = FC_GLOBAL(chemv, CHEMV)
-
-const cher2_ = FC_GLOBAL(cher2, CHER2)
-
-const dzasum_ = FC_GLOBAL(dzasum, DZASUM)
-
-const izamax_ = FC_GLOBAL(izamax, IZAMAX)
-
-const zcopy_ = FC_GLOBAL(zcopy, ZCOPY)
-
-const zscal_ = FC_GLOBAL(zscal, ZSCAL)
-
-const dznrm2_ = FC_GLOBAL(dznrm2, DZNRM2)
-
-const zaxpy_ = FC_GLOBAL(zaxpy, ZAXPY)
-
-const zgemv_ = FC_GLOBAL(zgemv, ZGEMV)
-
-const ztrsv_ = FC_GLOBAL(ztrsv, ZTRSV)
-
-const zgemm_ = FC_GLOBAL(zgemm, ZGEMM)
-
-const ztrsm_ = FC_GLOBAL(ztrsm, ZTRSM)
-
-const zgerc_ = FC_GLOBAL(zgerc, ZGERC)
-
-const zhemv_ = FC_GLOBAL(zhemv, ZHEMV)
-
-const zher2_ = FC_GLOBAL(zher2, ZHER2)
-
-const zgeru_ = FC_GLOBAL(zgeru, ZGERU)
-
-const strtri_ = FC_GLOBAL(strtri, STRTRI)
-
-const dtrtri_ = FC_GLOBAL(dtrtri, DTRTRI)
-
-const ctrtri_ = FC_GLOBAL(ctrtri, CTRTRI)
-
-const ztrtri_ = FC_GLOBAL(ztrtri, ZTRTRI)
-
-const c_bridge_dgssv_ = FC_GLOBAL(c_bridge_dgssv, C_BRIDGE_DGSSV)
-
-const c_fortran_slugrid_ = FC_GLOBAL(c_fortran_slugrid, C_FORTRAN_SLUGRID)
-
-const c_fortran_pdgssvx_ = FC_GLOBAL(c_fortran_pdgssvx, C_FORTRAN_PDGSSVX)
-
-const c_fortran_pdgssvx_ABglobal_ = FC_GLOBAL(c_fortran_pdgssvx_ABglobal, C_FORTRAN_PDGSSVX_ABGLOBAL)
-
-const c_fortran_pzgssvx_ = FC_GLOBAL(c_fortran_pzgssvx, C_FORTRAN_PZGSSVX)
-
-const c_fortran_pzgssvx_ABglobal_ = FC_GLOBAL(c_fortran_pzgssvx_ABglobal, C_FORTRAN_PZGSSVX_ABGLOBAL)
 
 const LargeDiag_AWPM = LargeDiag_HWPM
 
@@ -2939,7 +3537,8 @@ const UB_DESCRIPTOR = 2
 
 const NBUFFERS = 5
 
-const NTAGS = INT_MAX
+#TODO INT_MAX
+const NTAGS = 2^31-1
 
 const UjROW = 10
 
@@ -3001,3 +3600,598 @@ const DEG_TREE = 2
 
 const MAX_LOOKAHEADS = 50
 
+const NO_TAGS_WITH_MODIFIERS = 1
+
+const MPI_COMM_NULL = MPI_Comm(0x04000000)
+
+const MPI_OP_NULL = MPI_Op(0x18000000)
+
+const MPI_GROUP_NULL = MPI_Group(0x08000000)
+
+const MPI_DATATYPE_NULL = MPI_Datatype(0x0c000000)
+
+const MPI_REQUEST_NULL = MPI_Request(0x2c000000)
+
+const MPI_ERRHANDLER_NULL = MPI_Errhandler(0x14000000)
+
+const MPI_MESSAGE_NULL = MPI_Message(0x2c000000)
+
+const MPI_MESSAGE_NO_PROC = MPI_Message(0x6c000000)
+
+const MPI_IDENT = 0
+
+const MPI_CONGRUENT = 1
+
+const MPI_SIMILAR = 2
+
+const MPI_UNEQUAL = 3
+
+const MPI_CHAR = MPI_Datatype(0x4c000101)
+
+const MPI_SIGNED_CHAR = MPI_Datatype(0x4c000118)
+
+const MPI_UNSIGNED_CHAR = MPI_Datatype(0x4c000102)
+
+const MPI_BYTE = MPI_Datatype(0x4c00010d)
+
+const MPI_WCHAR = MPI_Datatype(0x4c00040e)
+
+const MPI_SHORT = MPI_Datatype(0x4c000203)
+
+const MPI_UNSIGNED_SHORT = MPI_Datatype(0x4c000204)
+
+const MPI_INT = MPI_Datatype(0x4c000405)
+
+const MPI_UNSIGNED = MPI_Datatype(0x4c000406)
+
+const MPI_LONG = MPI_Datatype(0x4c000807)
+
+const MPI_UNSIGNED_LONG = MPI_Datatype(0x4c000808)
+
+const MPI_FLOAT = MPI_Datatype(0x4c00040a)
+
+const MPI_DOUBLE = MPI_Datatype(0x4c00080b)
+
+const MPI_LONG_DOUBLE = MPI_Datatype(0x4c00100c)
+
+const MPI_UNSIGNED_LONG_LONG = MPI_Datatype(0x4c000819)
+
+const MPI_LONG_LONG = MPI_LONG_LONG_INT
+
+const MPI_PACKED = MPI_Datatype(0x4c00010f)
+
+const MPI_LB = MPI_Datatype(0x4c000010)
+
+const MPI_UB = MPI_Datatype(0x4c000011)
+
+# TODO const MPI_FLOAT_INT = MPI_Datatype(0x8c000000)
+
+#const MPI_DOUBLE_INT = MPI_Datatype(0x8c000001)
+
+#const MPI_LONG_INT = MPI_Datatype(0x8c000002)
+
+#const MPI_SHORT_INT = MPI_Datatype(0x8c000003)
+
+const MPI_2INT = MPI_Datatype(0x4c000816)
+
+#const MPI_LONG_DOUBLE_INT = MPI_Datatype(0x8c000004)
+
+const MPI_COMPLEX = MPI_Datatype(0x4c00081e)
+
+const MPI_DOUBLE_COMPLEX = MPI_Datatype(0x4c001022)
+
+const MPI_LOGICAL = MPI_Datatype(0x4c00041d)
+
+const MPI_REAL = MPI_Datatype(0x4c00041c)
+
+const MPI_DOUBLE_PRECISION = MPI_Datatype(0x4c00081f)
+
+const MPI_INTEGER = MPI_Datatype(0x4c00041b)
+
+const MPI_2INTEGER = MPI_Datatype(0x4c000820)
+
+const MPI_2REAL = MPI_Datatype(0x4c000821)
+
+const MPI_2DOUBLE_PRECISION = MPI_Datatype(0x4c001023)
+
+const MPI_CHARACTER = MPI_Datatype(0x4c00011a)
+
+const MPI_REAL4 = MPI_Datatype(0x4c000427)
+
+const MPI_REAL8 = MPI_Datatype(0x4c000829)
+
+const MPI_REAL16 = MPI_Datatype(0x4c00102b)
+
+const MPI_COMPLEX8 = MPI_Datatype(0x4c000828)
+
+const MPI_COMPLEX16 = MPI_Datatype(0x4c00102a)
+
+const MPI_COMPLEX32 = MPI_Datatype(0x4c00202c)
+
+const MPI_INTEGER1 = MPI_Datatype(0x4c00012d)
+
+const MPI_INTEGER2 = MPI_Datatype(0x4c00022f)
+
+const MPI_INTEGER4 = MPI_Datatype(0x4c000430)
+
+const MPI_INTEGER8 = MPI_Datatype(0x4c000831)
+
+const MPI_INTEGER16 = MPI_Datatype(MPI_DATATYPE_NULL)
+
+const MPI_INT8_T = MPI_Datatype(0x4c000137)
+
+const MPI_INT16_T = MPI_Datatype(0x4c000238)
+
+const MPI_INT32_T = MPI_Datatype(0x4c000439)
+
+const MPI_INT64_T = MPI_Datatype(0x4c00083a)
+
+const MPI_UINT8_T = MPI_Datatype(0x4c00013b)
+
+const MPI_UINT16_T = MPI_Datatype(0x4c00023c)
+
+const MPI_UINT32_T = MPI_Datatype(0x4c00043d)
+
+const MPI_UINT64_T = MPI_Datatype(0x4c00083e)
+
+const MPI_C_BOOL = MPI_Datatype(0x4c00013f)
+
+const MPI_C_LONG_DOUBLE_COMPLEX = MPI_Datatype(0x4c002042)
+
+const MPIX_C_FLOAT16 = MPI_Datatype(0x4c000246)
+
+const MPI_AINT = MPI_Datatype(0x4c000843)
+
+const MPI_OFFSET = MPI_Datatype(0x4c000844)
+
+const MPI_COUNT = MPI_Datatype(0x4c000845)
+
+const MPI_CXX_BOOL = MPI_Datatype(0x4c000133)
+
+const MPI_CXX_FLOAT_COMPLEX = MPI_Datatype(0x4c000834)
+
+const MPI_CXX_DOUBLE_COMPLEX = MPI_Datatype(0x4c001035)
+
+const MPI_CXX_LONG_DOUBLE_COMPLEX = MPI_Datatype(0x4c002036)
+
+const MPI_TYPECLASS_REAL = 1
+
+const MPI_TYPECLASS_INTEGER = 2
+
+const MPI_TYPECLASS_COMPLEX = 3
+
+const MPI_COMM_WORLD = MPI_Comm(0x44000000)
+
+const MPI_COMM_SELF = MPI_Comm(0x44000001)
+
+const MPI_GROUP_EMPTY = MPI_Group(0x48000000)
+
+const MPI_WIN_NULL = MPI_Win(0x20000000)
+
+const MPI_SESSION_NULL = MPI_Session(0x38000000)
+
+const MPI_FILE_NULL = MPI_File(0)
+
+const MPI_MAX = MPI_Op(0x58000001)
+
+const MPI_MIN = MPI_Op(0x58000002)
+
+const MPI_SUM = MPI_Op(0x58000003)
+
+const MPI_PROD = MPI_Op(0x58000004)
+
+const MPI_LAND = MPI_Op(0x58000005)
+
+const MPI_BAND = MPI_Op(0x58000006)
+
+const MPI_LOR = MPI_Op(0x58000007)
+
+const MPI_BOR = MPI_Op(0x58000008)
+
+const MPI_LXOR = MPI_Op(0x58000009)
+
+const MPI_BXOR = MPI_Op(0x5800000a)
+
+const MPI_MINLOC = MPI_Op(0x5800000b)
+
+const MPI_MAXLOC = MPI_Op(0x5800000c)
+
+const MPI_REPLACE = MPI_Op(0x5800000d)
+
+const MPI_NO_OP = MPI_Op(0x5800000e)
+
+const MPI_TAG_UB = 0x64400001
+
+const MPI_HOST = 0x64400003
+
+const MPI_IO = 0x64400005
+
+const MPI_WTIME_IS_GLOBAL = 0x64400007
+
+const MPI_UNIVERSE_SIZE = 0x64400009
+
+const MPI_LASTUSEDCODE = 0x6440000b
+
+const MPI_APPNUM = 0x6440000d
+
+const MPI_WIN_BASE = 0x66000001
+
+const MPI_WIN_SIZE = 0x66000003
+
+const MPI_WIN_DISP_UNIT = 0x66000005
+
+const MPI_WIN_CREATE_FLAVOR = 0x66000007
+
+const MPI_WIN_MODEL = 0x66000009
+
+const MPI_MAX_PROCESSOR_NAME = 128
+
+const MPI_MAX_LIBRARY_VERSION_STRING = 8192
+
+const MPI_MAX_ERROR_STRING = 512
+
+const MPI_MAX_PORT_NAME = 256
+
+const MPI_MAX_OBJECT_NAME = 128
+
+const MPI_MAX_STRINGTAG_LEN = 256
+
+const MPI_MAX_PSET_NAME_LEN = 256
+
+const MPI_UNDEFINED = -32766
+
+const MPI_KEYVAL_INVALID = 0x24000000
+
+const MPI_BSEND_OVERHEAD = 96
+
+# Skipping MacroDefinition: MPI_BOTTOM ( void * ) 0
+
+const MPI_PROC_NULL = -1
+
+const MPI_ANY_SOURCE = -2
+
+const MPI_ROOT = -3
+
+const MPI_ANY_TAG = -1
+
+const MPI_LOCK_EXCLUSIVE = 234
+
+const MPI_LOCK_SHARED = 235
+
+const MPI_ERRORS_ARE_FATAL = MPI_Errhandler(0x54000000)
+
+const MPI_ERRORS_RETURN = MPI_Errhandler(0x54000001)
+
+const MPI_ERRORS_ABORT = MPI_Errhandler(0x54000003)
+
+const MPIR_ERRORS_THROW_EXCEPTIONS = MPI_Errhandler(0x54000002)
+
+# Skipping MacroDefinition: MPI_NULL_COPY_FN ( ( MPI_Copy_function * ) 0 )
+
+# Skipping MacroDefinition: MPI_NULL_DELETE_FN ( ( MPI_Delete_function * ) 0 )
+
+# TODO const MPI_DUP_FN = MPIR_Dup_fn
+
+# Skipping MacroDefinition: MPI_COMM_NULL_COPY_FN ( ( MPI_Comm_copy_attr_function * ) 0 )
+
+# Skipping MacroDefinition: MPI_COMM_NULL_DELETE_FN ( ( MPI_Comm_delete_attr_function * ) 0 )
+
+# Skipping MacroDefinition: MPI_COMM_DUP_FN ( ( MPI_Comm_copy_attr_function * ) MPI_DUP_FN )
+
+# Skipping MacroDefinition: MPI_WIN_NULL_COPY_FN ( ( MPI_Win_copy_attr_function * ) 0 )
+
+# Skipping MacroDefinition: MPI_WIN_NULL_DELETE_FN ( ( MPI_Win_delete_attr_function * ) 0 )
+
+# Skipping MacroDefinition: MPI_WIN_DUP_FN ( ( MPI_Win_copy_attr_function * ) MPI_DUP_FN )
+
+# Skipping MacroDefinition: MPI_TYPE_NULL_COPY_FN ( ( MPI_Type_copy_attr_function * ) 0 )
+
+# Skipping MacroDefinition: MPI_TYPE_NULL_DELETE_FN ( ( MPI_Type_delete_attr_function * ) 0 )
+
+# Skipping MacroDefinition: MPI_TYPE_DUP_FN ( ( MPI_Type_copy_attr_function * ) MPI_DUP_FN )
+
+const MPI_VERSION = 4
+
+const MPI_SUBVERSION = 0
+
+const MPICH_NAME = 4
+
+const MPICH = 1
+
+const MPICH_HAS_C2F = 1
+
+const MPICH_VERSION = "4.0.1"
+
+const MPICH_NUMVERSION = 40001300
+
+const MPICH_RELEASE_TYPE_ALPHA = 0
+
+const MPICH_RELEASE_TYPE_BETA = 1
+
+const MPICH_RELEASE_TYPE_RC = 2
+
+const MPICH_RELEASE_TYPE_PATCH = 3
+
+const MPI_INFO_NULL = MPI_Info(0x1c000000)
+
+const MPI_INFO_ENV = MPI_Info(0x5c000001)
+
+const MPI_MAX_INFO_KEY = 255
+
+const MPI_MAX_INFO_VAL = 1024
+
+const MPI_ORDER_C = 56
+
+const MPI_ORDER_FORTRAN = 57
+
+const MPI_DISTRIBUTE_BLOCK = 121
+
+const MPI_DISTRIBUTE_CYCLIC = 122
+
+const MPI_DISTRIBUTE_NONE = 123
+
+const MPI_DISTRIBUTE_DFLT_DARG = -49767
+
+# Skipping MacroDefinition: MPI_IN_PLACE ( void * ) - 1
+
+const MPI_MODE_NOCHECK = 1024
+
+const MPI_MODE_NOSTORE = 2048
+
+const MPI_MODE_NOPUT = 4096
+
+const MPI_MODE_NOPRECEDE = 8192
+
+const MPI_MODE_NOSUCCEED = 16384
+
+const MPI_COMM_TYPE_SHARED = 1
+
+const MPI_COMM_TYPE_HW_GUIDED = 2
+
+const MPI_COMM_TYPE_HW_UNGUIDED = 3
+
+const MPIX_COMM_TYPE_NEIGHBORHOOD = 4
+
+const MPI_AINT_FMT_DEC_SPEC = "%ld"
+
+const MPI_AINT_FMT_HEX_SPEC = "%lx"
+
+#TODO const MPI_T_ENUM_NULL = MPI_T_enum(NULL)
+
+#const MPI_T_CVAR_HANDLE_NULL = MPI_T_cvar_handle(NULL)
+#
+#const MPI_T_PVAR_HANDLE_NULL = MPI_T_pvar_handle(NULL)
+#
+#const MPI_T_PVAR_SESSION_NULL = MPI_T_pvar_session(NULL)
+
+# Skipping MacroDefinition: MPI_STATUS_IGNORE ( MPI_Status * ) 1
+
+# Skipping MacroDefinition: MPI_STATUSES_IGNORE ( MPI_Status * ) 1
+
+# Skipping MacroDefinition: MPI_ERRCODES_IGNORE ( int * ) 0
+
+# TODO const MPI_ARGV_NULL = (Cchar * (*))(0)
+
+# Skipping MacroDefinition: MPI_ARGVS_NULL ( char * * * ) 0
+
+const MPI_F_STATUS_SIZE = 5
+
+const MPI_F_SOURCE = 2
+
+const MPI_F_TAG = 3
+
+const MPI_F_ERROR = 4
+
+const MPI_THREAD_SINGLE = 0
+
+const MPI_THREAD_FUNNELED = 1
+
+const MPI_THREAD_SERIALIZED = 2
+
+const MPI_THREAD_MULTIPLE = 3
+
+const MPI_SUCCESS = 0
+
+const MPI_ERR_BUFFER = 1
+
+const MPI_ERR_COUNT = 2
+
+const MPI_ERR_TYPE = 3
+
+const MPI_ERR_TAG = 4
+
+const MPI_ERR_COMM = 5
+
+const MPI_ERR_RANK = 6
+
+const MPI_ERR_ROOT = 7
+
+const MPI_ERR_TRUNCATE = 14
+
+const MPI_ERR_GROUP = 8
+
+const MPI_ERR_OP = 9
+
+const MPI_ERR_REQUEST = 19
+
+const MPI_ERR_TOPOLOGY = 10
+
+const MPI_ERR_DIMS = 11
+
+const MPI_ERR_ARG = 12
+
+const MPI_ERR_OTHER = 15
+
+const MPI_ERR_UNKNOWN = 13
+
+const MPI_ERR_INTERN = 16
+
+const MPI_ERR_IN_STATUS = 17
+
+const MPI_ERR_PENDING = 18
+
+const MPI_ERR_ACCESS = 20
+
+const MPI_ERR_AMODE = 21
+
+const MPI_ERR_BAD_FILE = 22
+
+const MPI_ERR_CONVERSION = 23
+
+const MPI_ERR_DUP_DATAREP = 24
+
+const MPI_ERR_FILE_EXISTS = 25
+
+const MPI_ERR_FILE_IN_USE = 26
+
+const MPI_ERR_FILE = 27
+
+const MPI_ERR_IO = 32
+
+const MPI_ERR_NO_SPACE = 36
+
+const MPI_ERR_NO_SUCH_FILE = 37
+
+const MPI_ERR_READ_ONLY = 40
+
+const MPI_ERR_UNSUPPORTED_DATAREP = 43
+
+const MPI_ERR_INFO = 28
+
+const MPI_ERR_INFO_KEY = 29
+
+const MPI_ERR_INFO_VALUE = 30
+
+const MPI_ERR_INFO_NOKEY = 31
+
+const MPI_ERR_NAME = 33
+
+const MPI_ERR_NO_MEM = 34
+
+const MPI_ERR_NOT_SAME = 35
+
+const MPI_ERR_PORT = 38
+
+const MPI_ERR_QUOTA = 39
+
+const MPI_ERR_SERVICE = 41
+
+const MPI_ERR_SPAWN = 42
+
+const MPI_ERR_UNSUPPORTED_OPERATION = 44
+
+const MPI_ERR_WIN = 45
+
+const MPI_ERR_BASE = 46
+
+const MPI_ERR_LOCKTYPE = 47
+
+const MPI_ERR_KEYVAL = 48
+
+const MPI_ERR_RMA_CONFLICT = 49
+
+const MPI_ERR_RMA_SYNC = 50
+
+const MPI_ERR_SIZE = 51
+
+const MPI_ERR_DISP = 52
+
+const MPI_ERR_ASSERT = 53
+
+const MPI_ERR_RMA_RANGE = 55
+
+const MPI_ERR_RMA_ATTACH = 56
+
+const MPI_ERR_RMA_SHARED = 57
+
+const MPI_ERR_RMA_FLAVOR = 58
+
+const MPI_T_ERR_MEMORY = 59
+
+const MPI_T_ERR_NOT_INITIALIZED = 60
+
+const MPI_T_ERR_CANNOT_INIT = 61
+
+const MPI_T_ERR_INVALID_INDEX = 62
+
+const MPI_T_ERR_INVALID_ITEM = 63
+
+const MPI_T_ERR_INVALID_HANDLE = 64
+
+const MPI_T_ERR_OUT_OF_HANDLES = 65
+
+const MPI_T_ERR_OUT_OF_SESSIONS = 66
+
+const MPI_T_ERR_INVALID_SESSION = 67
+
+const MPI_T_ERR_CVAR_SET_NOT_NOW = 68
+
+const MPI_T_ERR_CVAR_SET_NEVER = 69
+
+const MPI_T_ERR_PVAR_NO_STARTSTOP = 70
+
+const MPI_T_ERR_PVAR_NO_WRITE = 71
+
+const MPI_T_ERR_PVAR_NO_ATOMIC = 72
+
+const MPI_T_ERR_INVALID_NAME = 73
+
+const MPI_T_ERR_INVALID = 74
+
+const MPI_ERR_SESSION = 75
+
+const MPI_ERR_PROC_ABORTED = 76
+
+const MPI_ERR_VALUE_TOO_LARGE = 77
+
+const MPI_T_ERR_NOT_SUPPORTED = 78
+
+const MPI_ERR_LASTCODE = 0x3fffffff
+
+const MPICH_ERR_LAST_CLASS = 78
+
+const MPICH_ERR_FIRST_MPIX = 100
+
+const MPIX_ERR_PROC_FAILED = MPICH_ERR_FIRST_MPIX + 1
+
+const MPIX_ERR_PROC_FAILED_PENDING = MPICH_ERR_FIRST_MPIX + 2
+
+const MPIX_ERR_REVOKED = MPICH_ERR_FIRST_MPIX + 3
+
+const MPIX_ERR_EAGAIN = MPICH_ERR_FIRST_MPIX + 4
+
+const MPIX_ERR_NOREQ = MPICH_ERR_FIRST_MPIX + 5
+
+const MPICH_ERR_LAST_MPIX = MPICH_ERR_FIRST_MPIX + 5
+
+# Skipping MacroDefinition: MPI_CONVERSION_FN_NULL ( ( MPI_Datarep_conversion_function * ) 0 )
+
+# Skipping MacroDefinition: MPI_CONVERSION_FN_NULL_C ( ( MPI_Datarep_conversion_function_c * ) 0 )
+
+const QMPI_MAX_TOOL_NAME_LENGTH = 256
+
+const MPIX_GPU_SUPPORT_CUDA = 0
+
+const MPIX_GPU_SUPPORT_ZE = 1
+
+const MPIX_GPU_SUPPORT_HIP = 2
+
+const MPIIMPL_ADVERTISES_FEATURES = 1
+
+const MPIIMPL_HAVE_MPI_INFO = 1
+
+const MPIIMPL_HAVE_MPI_COMBINER_DARRAY = 1
+
+const MPIIMPL_HAVE_MPI_TYPE_CREATE_DARRAY = 1
+
+const MPIIMPL_HAVE_MPI_COMBINER_SUBARRAY = 1
+
+const MPIIMPL_HAVE_MPI_COMBINER_DUP = 1
+
+const MPIIMPL_HAVE_MPI_GREQUEST = 1
+
+const MPIIMPL_HAVE_STATUS_SET_BYTES = 1
+
+const MPIIMPL_HAVE_STATUS_SET_INFO = 1
+
+end
