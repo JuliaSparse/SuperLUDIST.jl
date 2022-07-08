@@ -24,7 +24,8 @@ mpi_includedir = joinpath(MPICH_jll.find_artifact_dir(), "include") |> normpath
 mpi_h = joinpath(mpi_includedir, "mpi.h")
 args = get_default_args()
 push!(args, "-isystem$mpi_includedir")
-header_files = [superlu_ddefs_h]
+
+header_files = [superlu_ddefs_h, mpi_h]
 ctx = create_context(header_files, args, options)
 
 build!(ctx)
