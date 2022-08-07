@@ -3,7 +3,7 @@ module SuperLU_DIST
 using SparseArrays
 using SparseArrays: SparseMatrixCSC
 import SparseArrays: nnz
-
+#using SuperLU_DIST_jll
 #TODO export 
 
 include("../lib/libsuperlu_dist.jl")
@@ -25,7 +25,7 @@ function increment!(A::AbstractArray{T}) where T<:Integer
     A
 end
 increment(A::AbstractArray{<:Integer}) = increment!(copy(A))
-
+#=
 using .Libsuperlu_dist:
     #Struct
     SuperMatrix,
@@ -78,7 +78,13 @@ using .Libsuperlu_dist:
     factNodelists_t,
     msgs_t,
     xtrsTimer_t
-    #
+    =#
+
+export gridinfo_t, superlu_gridinit, superlu_dist_options_t, SuperLUStat_t, SuperMatrix, dScalePermstruct_t, dLUstruct_t, superlu_gridinit, superlu_scope_t
+
+using .Libsuperlu_dist: gridinfo_t, superlu_gridinit, superlu_dist_options_t, SuperLUStat_t, SuperMatrix, dScalePermstruct_t, dLUstruct_t, superlu_gridinit, superlu_scope_t
+
+
 
 end
 
