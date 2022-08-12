@@ -1,12 +1,9 @@
 module Libsuperlu_dist
-#using SuperLU_DIST_jll
+using SuperLU_DIST_jll
 
-shared_lib_path = "/global/homes/a/aa25desh/LBNL/shared/superlu_dist/build/SRC/libsuperlu_dist.so"
-Base.Libc.Libdl.dlopen(shared_lib_path)
+const libsuperlu_dist_Int64 = SuperLU_DIST_jll.get_libsuperlu_dist_Int64_path()
 
-const libsuperlu_dist_Int64 = shared_lib_path
-
-const libsuperlu_ddefs = shared_lib_path
+const libsuperlu_ddefs = SuperLU_DIST_jll.get_libsuperlu_dist_Int64_path()
 
 const MPI_Datatype = Cint
 #using MPI

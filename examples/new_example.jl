@@ -8,7 +8,7 @@ stat = SuperLUStat_t()
 A = SuperMatrix()
 ScalePermstruct = dScalePermstruct_t()
 LUstruct = dLUstruct_t()
-gridref = Ref{gridinfo_t}()
+grid = gridinfo_t()
 #C_NULL or something else?
 m,n,a,nnz,asub,xa = Ref{Int64}(), Ref{Int64}(), Ref{Ptr{Float64}}(), Ref{Int64}(), Ref{Ptr{Int64}}(), Ref{Ptr{Int64}}()
 
@@ -40,76 +40,76 @@ MPI.Init()
 nprow = 1
 npcol = 1
 #Let have fixed file name for now! we will chage it later
-fp = open("g20.rua", "r")
-
-superlu_gridinit(MPI.COMM_WORLD, nprow, npcol, gridref)
-print(gridref[])
-exit()
-
-
-
-iam = grid.iam
-
-if iam == -1 
-    LSLU.superlu_gridexit(Ref(grid))
-    MPI.Finalize()
-end
-
-print("\n")
-print("hi")
-
-fpp = Base.Libc.FILE(fp)
-
-print("\n")
-print("FILE ptr")
+# fp = open("g20.rua", "r")
+println(MPI.COMM_WORLD)
+superlu_gridinit(MPI.COMM_WORLD, nprow, npcol, Ref(grid))
+println(grid.rscp)
+# exit()
 
 
-#LSLU.dreadhb_dist(iam, fpp, m, n, nnz, a, asub, xa)
-#MPI.Finalize()
 
-#grid.comm = MPI.COMM_WORLD
-
-print("\n")
-print("gird.coom")
-
-if iam == 0
-    # dreadhb_dist(int iam, FILE *fp, int_t *nrow, int_t *ncol, int_t *nonz, double **nzval, int_t **rowind, int_t **colptr)
-    # @ccall libsuperlu_ddefs.dreadhb_dist(arg1::Cint, arg2::Ptr{Libc.FILE}, arg3::Ptr{int_t}, 
-    #arg4::Ptr{int_t}, arg5::Ptr{int_t}, arg6::Ptr{Ptr{Cdouble}}, arg7::Ptr{Ptr{int_t}}, arg8::Ptr{Ptr{int_t}})::Cvoid
-    #print("hi")
-    #MPI.Finalize()
-    LSLU.dreadhb_dist(iam, fpp, m, n, nnz, a, asub, xa)
-    print("\n")
-    print("after dreadhb_dist")
-    #print("hi")
-    #MPI.Finalize()
-    #Bcast vs Bcast! c ver MPI_Bcast( &m,   1,   mpi_int_t,  0, grid.comm );
-    # MPI_Bcast(void *buffer, int count, MPI_Datatype datatype, int root, MPI_Comm comm)
-    MPI.Bcast!(m, 0, grid.comm) # Julia Bcast!(buf, root::Integer, comm::Comm)
-    # I am leaving out count and  MPI_datatype hope MPI.jl handels it:)
-    print("\n")
-    print(m[])
-	MPI.Bcast!(n, 0, grid.comm)
-	MPI.Bcast!(Ref(nnz), 0, grid.comm)
-	MPI.Bcast!(Ref(a), 0, grid.comm)
-	MPI.Bcast!(Ref(asub), 0, grid.comm)
-	MPI.Bcast!(Ref(xa), 0, grid.comm)
-else 
-    MPI.Bcast!(m, 0, MPI.COMM_WORLD) 
-    print("\n")
-    print("Bacst")
-	MPI.Bcast!(Ref(n), 0, grid.comm)
-	MPI.Bcast!(Ref(nnz), 0, grid.comm)
-
-    LSLU.dallocateA_dist(n, nnz, Ref(a), Ref(asub), Ref(xa));
-
-	MPI.Bcast!(Ref(a), 0, grid.comm)
-	MPI.Bcast!(Ref(asub), 0, grid.comm)
-	MPI.Bcast!(Ref(xa), 0, grid.comm)
-end
-
-print("#####")
-MPI.Finalize()
+# iam = grid.iam
+# 
+# if iam == -1 
+#     LSLU.superlu_gridexit(Ref(grid))
+#     MPI.Finalize()
+# end
+# 
+# print("\n")
+# print("hi")
+# 
+# fpp = Base.Libc.FILE(fp)
+# 
+# print("\n")
+# print("FILE ptr")
+# 
+# 
+# #LSLU.dreadhb_dist(iam, fpp, m, n, nnz, a, asub, xa)
+# #MPI.Finalize()
+# 
+# #grid.comm = MPI.COMM_WORLD
+# 
+# print("\n")
+# print("gird.coom")
+# 
+# if iam == 0
+#     # dreadhb_dist(int iam, FILE *fp, int_t *nrow, int_t *ncol, int_t *nonz, double **nzval, int_t **rowind, int_t **colptr)
+#     # @ccall libsuperlu_ddefs.dreadhb_dist(arg1::Cint, arg2::Ptr{Libc.FILE}, arg3::Ptr{int_t}, 
+#     #arg4::Ptr{int_t}, arg5::Ptr{int_t}, arg6::Ptr{Ptr{Cdouble}}, arg7::Ptr{Ptr{int_t}}, arg8::Ptr{Ptr{int_t}})::Cvoid
+#     #print("hi")
+#     #MPI.Finalize()
+#     LSLU.dreadhb_dist(iam, fpp, m, n, nnz, a, asub, xa)
+#     print("\n")
+#     print("after dreadhb_dist")
+#     #print("hi")
+#     #MPI.Finalize()
+#     #Bcast vs Bcast! c ver MPI_Bcast( &m,   1,   mpi_int_t,  0, grid.comm );
+#     # MPI_Bcast(void *buffer, int count, MPI_Datatype datatype, int root, MPI_Comm comm)
+#     MPI.Bcast!(m, 0, grid.comm) # Julia Bcast!(buf, root::Integer, comm::Comm)
+#     # I am leaving out count and  MPI_datatype hope MPI.jl handels it:)
+#     print("\n")
+#     print(m[])
+# 	MPI.Bcast!(n, 0, grid.comm)
+# 	MPI.Bcast!(Ref(nnz), 0, grid.comm)
+# 	MPI.Bcast!(Ref(a), 0, grid.comm)
+# 	MPI.Bcast!(Ref(asub), 0, grid.comm)
+# 	MPI.Bcast!(Ref(xa), 0, grid.comm)
+# else 
+#     MPI.Bcast!(m, 0, MPI.COMM_WORLD) 
+#     print("\n")
+#     print("Bacst")
+# 	MPI.Bcast!(Ref(n), 0, grid.comm)
+# 	MPI.Bcast!(Ref(nnz), 0, grid.comm)
+# 
+#     LSLU.dallocateA_dist(n, nnz, Ref(a), Ref(asub), Ref(xa));
+# 
+# 	MPI.Bcast!(Ref(a), 0, grid.comm)
+# 	MPI.Bcast!(Ref(asub), 0, grid.comm)
+# 	MPI.Bcast!(Ref(xa), 0, grid.comm)
+# end
+# 
+# print("#####")
+# MPI.Finalize()
 #=
 """
 @enum Dtype_t::UInt32 begin
