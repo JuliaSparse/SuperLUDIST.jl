@@ -1,10 +1,12 @@
 [general]
 library_name = "libsuperlu_dist_Int64"
 library_names = {"superlu_ddefs.h" = "libsuperlu_ddefs"}
+module_name = "Libsuperlu_dist"
 
 use_julia_native_enum_type = true
 use_deterministic_symbol = true
 auto_mutability = true
+auto_mutability_ignorelist = ["gridinfo_t", "superlu_scope_t"]
 
 output_ignorelist = [
     # Clang.jl cannot handle these macro correctly, skip for now.
@@ -17,7 +19,7 @@ output_ignorelist = [
 use_ccall_macro = true
 
 [codegen.macro]
-macro_mode = "basic"
+macro_mode = "disable"
 
 functionlike_macro_includelist = [
 
