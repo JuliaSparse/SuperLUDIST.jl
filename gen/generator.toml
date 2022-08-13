@@ -6,7 +6,16 @@ module_name = "Libsuperlu_dist"
 use_julia_native_enum_type = true
 use_deterministic_symbol = true
 auto_mutability = true
-auto_mutability_ignorelist = ["gridinfo_t", "superlu_scope_t"]
+auto_mutability_ignorelist = [
+    "gridinfo_t", 
+    "superlu_scope_t",
+    "dScalePermstruct_t",
+    "SuperMatrix",
+    "Llu_symbfact_t",
+    "gridinfo3d_t",
+    "Glu_freeable_t",
+    "superlu_dist_options_t",
+]
 
 output_ignorelist = [
     # Clang.jl cannot handle these macro correctly, skip for now.
