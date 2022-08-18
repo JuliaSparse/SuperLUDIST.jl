@@ -101,7 +101,7 @@ if iam == 0
     MPI.bcast(m, 0, MPI.Comm(grid.comm)) # Julia Bcast!(buf, root::Integer, comm::Comm)
     # I am leaving out count and  MPI_datatype hope MPI.jl handels it:)
     print("\n")
-    print(m[])
+    print(m)
 	MPI.bcast(n, 0, MPI.Comm(grid.comm))
 	MPI.bcast(nnz, 0, MPI.Comm(grid.comm))
 	MPI.Bcast!(a, 0, MPI.Comm(grid.comm))
@@ -120,6 +120,12 @@ else
 	MPI.Bcast!(asub, 0, grid.comm)
 	MPI.Bcast!(xa, 0, grid.comm)
 end
+A = LSLU.SuperMatrix()
+res = LSLU.dCreate_CompCol_Matrix_dist(
+    Ref(A), m, n, nnz, a, asub, xa, LSLU.SLU_NC, LSLU.SLU_D, LSLU.SLU_GE
+)
+
+println("After dcreate")
 
 print("#####")
 MPI.Finalize()
@@ -137,8 +143,6 @@ https://github.com/xiaoyeli/superlu_dist/blob/ac353e46cdf817b9738f679d4551efd879
 dCreate_CompCol_Matrix_dist(arg1::Ptr{SuperMatrix}, arg2::int_t,
 arg3::int_t, arg4::int_t, arg5::Ptr{Cdouble}, arg6::Ptr{int_t}, arg7::Ptr{int_t}, arg8::Stype_t, arg9::Dtype_t, arg10::Mtype_t)::Cvoid
 """
-LSLU.dCreate_CompCol_Matrix_dist(Ref(A), m, n, nnz, Ref(a), Ref(asub), Ref(xa), SLU_NC, SLU_D, SLU_GE);
-
 #if (!(b=doubleMalloc_dist(m*nrhs))) ABORT("Malloc fails for b[]")
 #if (!(xtrue=doubleMalloc_dist(n*nrhs))) ABORT("Malloc fails for xtrue[]")
 #libsuperlu_ddefs.doubleMalloc_dist(arg1::int_t)::Ptr{Cdouble}
