@@ -15,6 +15,7 @@ auto_mutability_ignorelist = [
     "gridinfo3d_t",
     "Glu_freeable_t",
     "superlu_dist_options_t",
+    "dLocalLU_t"
 ]
 
 output_ignorelist = [
