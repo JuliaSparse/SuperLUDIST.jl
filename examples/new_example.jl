@@ -3,11 +3,7 @@ using SuperLU_DIST
 #main(int argc, char *argv[]) llel for julia
 const LSLU = SuperLU_DIST.Libsuperlu_dist
 
-options = superlu_dist_options_t()
 stat = SuperLUStat_t()
-A = SuperMatrix()
-ScalePermstruct = dScalePermstruct_t()
-LUstruct = dLUstruct_t()
 gridref = Ref{gridinfo_t}()
 #C_NULL or something else?
 m,n,a,nnz,asub,xa = 
@@ -146,6 +142,9 @@ LSLU.set_default_options_dist(options)
 if iam == 0
     LSLU.print_options_dist(options)
 end
+ScalePermstruct = Ref(LSLU.dScalePermstruct_t())
+dLUstructInit = Ref(dLUstruct_t())
+
 
 MPI.Finalize()
 #=

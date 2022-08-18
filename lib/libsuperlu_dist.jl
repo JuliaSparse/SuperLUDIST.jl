@@ -739,14 +739,13 @@ end
     SLU_HEU = 8
 end
 
-mutable struct SuperMatrix
+struct SuperMatrix
     Stype::Stype_t
     Dtype::Dtype_t
     Mtype::Mtype_t
     nrow::int_t
     ncol::int_t
     Store::Ptr{Cvoid}
-    SuperMatrix() = new()
 end
 
 mutable struct NCformat
@@ -959,7 +958,7 @@ mutable struct Pslu_freeable_t
     Pslu_freeable_t() = new()
 end
 
-mutable struct Llu_symbfact_t
+struct Llu_symbfact_t
     xlsubPr::Ptr{int_t}
     lsubPr::Ptr{int_t}
     szLsubPr::int_t
@@ -984,7 +983,6 @@ mutable struct Llu_symbfact_t
     no_expand::int_t
     no_expand_pr::int_t
     no_expcp::int_t
-    Llu_symbfact_t() = new()
 end
 
 mutable struct vtcsInfo_symbfact_t
@@ -1078,7 +1076,7 @@ struct gridinfo_t
     npcol::int_t
 end
 
-mutable struct gridinfo3d_t
+struct gridinfo3d_t
     comm::MPI_Comm
     rscp::superlu_scope_t
     cscp::superlu_scope_t
@@ -1089,7 +1087,6 @@ mutable struct gridinfo3d_t
     npcol::int_t
     npdep::int_t
     rankorder::Cint
-    gridinfo3d_t() = new()
 end
 
 mutable struct Glu_persist_t
@@ -1098,7 +1095,7 @@ mutable struct Glu_persist_t
     Glu_persist_t() = new()
 end
 
-mutable struct Glu_freeable_t
+struct Glu_freeable_t
     lsub::Ptr{int_t}
     xlsub::Ptr{int_t}
     usub::Ptr{int_t}
@@ -1107,7 +1104,6 @@ mutable struct Glu_freeable_t
     nzumax::int_t
     MemModel::LU_space_t
     nnzLU::Int64
-    Glu_freeable_t() = new()
 end
 
 mutable struct pxgstrs_comm_t
@@ -1129,7 +1125,7 @@ mutable struct pxgstrs_comm_t
     pxgstrs_comm_t() = new()
 end
 
-mutable struct superlu_dist_options_t
+struct superlu_dist_options_t
     Fact::fact_t
     Equil::yes_no_t
     DiagInv::yes_no_t
@@ -1166,7 +1162,6 @@ mutable struct superlu_dist_options_t
     SymPattern::yes_no_t
     Use_TensorCore::yes_no_t
     Algo3d::yes_no_t
-    superlu_dist_options_t() = new()
 end
 
 mutable struct superlu_dist_mem_usage_t
@@ -2168,16 +2163,15 @@ function LDiagBlockRecvWait(k, factored_U, arg3, arg4)
     @ccall libsuperlu_dist_Int64.LDiagBlockRecvWait(k::int_t, factored_U::Ptr{int_t}, arg3::Ptr{MPI_Request}, arg4::Ptr{gridinfo_t})::int_t
 end
 
-mutable struct dScalePermstruct_t
+struct dScalePermstruct_t
     DiagScale::DiagScale_t
     R::Ptr{Cdouble}
     C::Ptr{Cdouble}
     perm_r::Ptr{int_t}
     perm_c::Ptr{int_t}
-    dScalePermstruct_t() = new()
 end
 
-mutable struct dLocalLU_t
+struct dLocalLU_t
     Lrowind_bc_ptr::Ptr{Ptr{int_t}}
     Lrowind_bc_dat::Ptr{int_t}
     Lrowind_bc_offset::Ptr{Clong}
@@ -2262,7 +2256,6 @@ mutable struct dLocalLU_t
     nleaf::int_t
     nfrecvmod::int_t
     inv::int_t
-    dLocalLU_t() = new()
 end
 
 mutable struct dLUstruct_t
