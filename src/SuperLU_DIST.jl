@@ -3,6 +3,7 @@ module SuperLU_DIST
 using SparseArrays
 using SparseArrays: SparseMatrixCSC
 import SparseArrays: nnz
+using MPI
 #using SuperLU_DIST_jll
 #TODO export 
 
@@ -25,6 +26,14 @@ function increment!(A::AbstractArray{T}) where T<:Integer
     A
 end
 increment(A::AbstractArray{<:Integer}) = increment!(copy(A))
+
+function bitsbcast(x, root, comm::MPI.Comm)
+    isbitstype(x) || throw(ArgumentError("x must be isbitstype"))
+    xref = Ref(x)
+    MPI.Bcast!(xref, root, comm)
+    return xref[]
+end
+
 #=
 using .Libsuperlu_dist:
     #Struct

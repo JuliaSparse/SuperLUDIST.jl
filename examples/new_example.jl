@@ -42,8 +42,9 @@ nrhs = 1;
 MPI.Init()
 #MPI_Init( &argc, &argv );
 # How to pass the nprow and npcol? lets have them fixed value now
-nprow = 1
+nprow = 2
 npcol = 1
+nrhs = 1
 #Let have fixed file name for now! we will chage it later
 fp = open("examples/g20.rua", "r")
 println(MPI.COMM_WORLD)
@@ -74,11 +75,6 @@ print("FILE ptr")
 # LSLU.dreadhb_dist(iam, fpp, m, n, nnz, a, asub, xa)
 #MPI.Finalize()
 
-#grid.comm = MPI.COMM_WORLD
-
-print("\n")
-print("gird.coom")
-
 if iam == 0
     # dreadhb_dist(int iam, FILE *fp, int_t *nrow, int_t *ncol, int_t *nonz, double **nzval, int_t **rowind, int_t **colptr)
     # @ccall libsuperlu_ddefs.dreadhb_dist(arg1::Cint, arg2::Ptr{Libc.FILE}, arg3::Ptr{int_t}, 
@@ -86,48 +82,71 @@ if iam == 0
     #print("hi")
     #MPI.Finalize()
     LSLU.dreadhb_dist(iam, fpp, m, n, nnz, a, asub, xa)
-    m = m[]
-    n = n[]
-    nnz = nnz[]
-    a = a[]
-    asub = asub[]
-    xa = xa[]
     print("\n")
     print("after dreadhb_dist")
     #print("hi")
     #MPI.Finalize()
     #Bcast vs Bcast! c ver MPI_Bcast( &m,   1,   mpi_int_t,  0, grid.comm );
     # MPI_Bcast(void *buffer, int count, MPI_Datatype datatype, int root, MPI_Comm comm)
-    MPI.bcast(m, 0, MPI.Comm(grid.comm)) # Julia Bcast!(buf, root::Integer, comm::Comm)
     # I am leaving out count and  MPI_datatype hope MPI.jl handels it:)
     print("\n")
-    print(m)
-	MPI.bcast(n, 0, MPI.Comm(grid.comm))
-	MPI.bcast(nnz, 0, MPI.Comm(grid.comm))
+    print(m[])
+    a = unsafe_wrap(Array, a[], nnz[])
+    asub = unsafe_wrap(Array, asub[], nnz[])
+    xa = unsafe_wrap(Array, xa[], n[] + 1)
+    MPI.Bcast!(m, 0, MPI.Comm(grid.comm))
+    print(m[])
+	MPI.Bcast!(n, 0, MPI.Comm(grid.comm))
+	MPI.Bcast!(nnz, 0, MPI.Comm(grid.comm))
 	MPI.Bcast!(a, 0, MPI.Comm(grid.comm))
 	MPI.Bcast!(asub, 0, MPI.Comm(grid.comm))
 	MPI.Bcast!(xa, 0, MPI.Comm(grid.comm))
 else 
-    MPI.bcast(m, 0, MPI.COMM_WORLD) 
-    print("\n")
-    print("Bacst")
-	MPI.bcast(n, 0, grid.comm)
-	MPI.bcast(nnz, 0, grid.comm)
+    MPI.Bcast!(m, 0, MPI.Comm(grid.comm))
+    print(m[]) 
+	MPI.Bcast!(n, 0, MPI.Comm(grid.comm))
+	MPI.Bcast!(nnz, 0, MPI.Comm(grid.comm))
 
-    LSLU.dallocateA_dist(n, nnz, Ref(a), Ref(asub), Ref(xa));
-
-	MPI.Bcast!(a, 0, grid.comm)
-	MPI.Bcast!(asub, 0, grid.comm)
-	MPI.Bcast!(xa, 0, grid.comm)
+    LSLU.dallocateA_dist(n[], nnz[], a, asub, xa);
+    a = unsafe_wrap(Array, a[], nnz[])
+    asub = unsafe_wrap(Array, asub[], nnz[])
+    xa = unsafe_wrap(Array, xa[], n[] + 1)
+	MPI.Bcast!(a, 0, MPI.Comm(grid.comm))
+	MPI.Bcast!(asub, 0, MPI.Comm(grid.comm))
+	MPI.Bcast!(xa, 0, MPI.Comm(grid.comm))
 end
-A = LSLU.SuperMatrix()
-res = LSLU.dCreate_CompCol_Matrix_dist(
-    Ref(A), m, n, nnz, a, asub, xa, LSLU.SLU_NC, LSLU.SLU_D, LSLU.SLU_GE
-)
 
+A = Ref(LSLU.SuperMatrix())
+m = m[]
+n = n[]
+nnz = nnz[]
+LSLU.dCreate_CompCol_Matrix_dist(
+    A, m, n, nnz, a, asub, xa, LSLU.SLU_NC, LSLU.SLU_D, LSLU.SLU_GE
+)
+A
+if iam == 0
+    LSLU.dPrint_CompCol_Matrix_dist(A)
+end
 println("After dcreate")
 
-print("#####")
+b = LSLU.doubleMalloc_dist(m * nrhs)
+xtrue = LSLU.doubleMalloc_dist(n * nrhs)
+
+trans = Ref(Cchar('N'))
+ldx = n
+ldb = m
+LSLU.dGenXtrue_dist(n, nrhs, xtrue, ldx)
+println("Finished dGenXtrue")
+LSLU.dFillRHS_dist(trans, nrhs, xtrue, ldx, A, b, ldb)
+
+berr = LSLU.doubleMalloc_dist(nrhs)
+
+options = Ref(LSLU.superlu_dist_options_t())
+LSLU.set_default_options_dist(options)
+if iam == 0
+    LSLU.print_options_dist(options)
+end
+
 MPI.Finalize()
 #=
 """
