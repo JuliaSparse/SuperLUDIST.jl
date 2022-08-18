@@ -141,7 +141,7 @@ if iam == 0
     LSLU.print_options_dist(options)
 end
 ScalePermstruct = Ref{LSLU.dScalePermstruct_t}()
-LUstruct = Ref(dLUstruct_t())
+LUstruct = Ref{dLUstruct_t}()
 
 LSLU.dScalePermstructInit(m, n, ScalePermstruct)
 LSLU.dLUstructInit(n, LUstruct)
@@ -150,7 +150,7 @@ println("Init'd")
 stat = Ref{LSLU.SuperLUStat_t}()
 LSLU.PStatInit(stat)
 
-gridref = Ref(grid)
+gridref
 info = Ref{Cint}()
 println("About to pdg")
 LSLU.pdgssvx_ABglobal(options, A, ScalePermstruct, b, ldb, nrhs,

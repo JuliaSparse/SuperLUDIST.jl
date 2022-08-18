@@ -7,19 +7,19 @@ const libsuperlu_dist_Int64 = SuperLU_DIST_jll.get_libsuperlu_dist_Int64_path()
 const libsuperlu_ddefs = SuperLU_DIST_jll.get_libsuperlu_dist_Int64_path()
 
 
-mutable struct ADIOI_FileD end
+struct ADIOI_FileD end
 
-mutable struct MPIR_T_enum_s end
+struct MPIR_T_enum_s end
 
-mutable struct MPIR_T_cvar_handle_s end
+struct MPIR_T_cvar_handle_s end
 
-mutable struct MPIR_T_pvar_handle_s end
+struct MPIR_T_pvar_handle_s end
 
-mutable struct MPIR_T_pvar_session_s end
+struct MPIR_T_pvar_session_s end
 
-mutable struct MPIR_T_event_registration_s end
+struct MPIR_T_event_registration_s end
 
-mutable struct MPIR_T_event_instance_s end
+struct MPIR_T_event_instance_s end
 
 @enum QMPI_Functions_enum::UInt32 begin
     MPI_ATTR_DELETE_T = 0
@@ -748,23 +748,21 @@ struct SuperMatrix
     Store::Ptr{Cvoid}
 end
 
-mutable struct NCformat
+struct NCformat
     nnz::int_t
     nzval::Ptr{Cvoid}
     rowind::Ptr{int_t}
     colptr::Ptr{int_t}
-    NCformat() = new()
 end
 
-mutable struct NRformat
+struct NRformat
     nnz::int_t
     nzval::Ptr{Cvoid}
     colind::Ptr{int_t}
     rowptr::Ptr{int_t}
-    NRformat() = new()
 end
 
-mutable struct SCformat
+struct SCformat
     nnz::int_t
     nsuper::int_t
     nzval::Ptr{Cvoid}
@@ -773,10 +771,9 @@ mutable struct SCformat
     rowind_colptr::Ptr{int_t}
     col_to_sup::Ptr{int_t}
     sup_to_col::Ptr{int_t}
-    SCformat() = new()
 end
 
-mutable struct SCPformat
+struct SCPformat
     nnz::int_t
     nsuper::int_t
     nzval::Ptr{Cvoid}
@@ -788,32 +785,28 @@ mutable struct SCPformat
     col_to_sup::Ptr{int_t}
     sup_to_colbeg::Ptr{int_t}
     sup_to_colend::Ptr{int_t}
-    SCPformat() = new()
 end
 
-mutable struct NCPformat
+struct NCPformat
     nnz::int_t
     nzval::Ptr{Cvoid}
     rowind::Ptr{int_t}
     colbeg::Ptr{int_t}
     colend::Ptr{int_t}
-    NCPformat() = new()
 end
 
-mutable struct DNformat
+struct DNformat
     lda::int_t
     nzval::Ptr{Cvoid}
-    DNformat() = new()
 end
 
-mutable struct NRformat_loc
+struct NRformat_loc
     nnz_loc::int_t
     m_loc::int_t
     fst_row::int_t
     nzval::Ptr{Cvoid}
     rowptr::Ptr{int_t}
     colind::Ptr{int_t}
-    NRformat_loc() = new()
 end
 
 struct NRformat_loc3d
@@ -855,24 +848,22 @@ struct SuperLUStat_t
     MaxActiveRTrees::int_t
 end
 
-mutable struct e_node
+struct e_node
     size::Cint
     mem::Ptr{Cvoid}
-    e_node() = new()
 end
 
 const SuperLU_ExpHeader = e_node
 
-mutable struct SuperLU_LU_stack_t
+struct SuperLU_LU_stack_t
     size::Cint
     used::Cint
     top1::Cint
     top2::Cint
     array::Ptr{Cvoid}
-    SuperLU_LU_stack_t() = new()
 end
 
-mutable struct SCT_t
+struct SCT_t
     datatransfer_count::int_t
     schurPhiCallCount::int_t
     PhiMemCpyCounter::int_t
@@ -937,10 +928,9 @@ mutable struct SCT_t
     tStartup::Cdouble
     commVolFactor::Cdouble
     commVolRed::Cdouble
-    SCT_t() = new()
 end
 
-mutable struct Pslu_freeable_t
+struct Pslu_freeable_t
     xlsub::Ptr{int_t}
     lsub::Ptr{int_t}
     szLsub::int_t
@@ -954,7 +944,6 @@ mutable struct Pslu_freeable_t
     globToLoc::Ptr{int_t}
     maxNvtcsPProc::int_t
     nnzLU::Int64
-    Pslu_freeable_t() = new()
 end
 
 struct Llu_symbfact_t
@@ -984,7 +973,7 @@ struct Llu_symbfact_t
     no_expcp::int_t
 end
 
-mutable struct vtcsInfo_symbfact_t
+struct vtcsInfo_symbfact_t
     maxSzBlk::int_t
     maxNvtcsNds_loc::int_t
     maxNeltsVtx::int_t
@@ -999,18 +988,16 @@ mutable struct vtcsInfo_symbfact_t
     xusub_nextLvl::int_t
     xlsub_nextLvl::int_t
     fstVtx_nextLvl::int_t
-    vtcsInfo_symbfact_t() = new()
 end
 
-mutable struct matrix_symbfact_t
+struct matrix_symbfact_t
     x_ainf::Ptr{int_t}
     ind_ainf::Ptr{int_t}
     x_asup::Ptr{int_t}
     ind_asup::Ptr{int_t}
-    matrix_symbfact_t() = new()
 end
 
-mutable struct comm_symbfact_t
+struct comm_symbfact_t
     rcv_interLvl::Ptr{int_t}
     snd_interLvl::Ptr{int_t}
     snd_interSz::Ptr{int_t}
@@ -1025,10 +1012,9 @@ mutable struct comm_symbfact_t
     snd_buf::Ptr{int_t}
     snd_bufSz::int_t
     ptr_rcvBuf::Ptr{int_t}
-    comm_symbfact_t() = new()
 end
 
-mutable struct psymbfact_stat_t
+struct psymbfact_stat_t
     fill_par::int_t
     relax_seps::Cfloat
     relax_curSep::Cfloat
@@ -1055,7 +1041,6 @@ mutable struct psymbfact_stat_t
     maxSzBuf::int_t
     szDnsSep::int_t
     allocMem::Cfloat
-    psymbfact_stat_t() = new()
 end
 
 const MPI_Comm = Cint
@@ -1088,10 +1073,9 @@ struct gridinfo3d_t
     rankorder::Cint
 end
 
-mutable struct Glu_persist_t
+struct Glu_persist_t
     xsup::Ptr{int_t}
     supno::Ptr{int_t}
-    Glu_persist_t() = new()
 end
 
 struct Glu_freeable_t
@@ -1105,7 +1089,7 @@ struct Glu_freeable_t
     nnzLU::Int64
 end
 
-mutable struct pxgstrs_comm_t
+struct pxgstrs_comm_t
     B_to_X_SendCnt::Ptr{Cint}
     X_to_B_SendCnt::Ptr{Cint}
     ptr_to_ibuf::Ptr{Cint}
@@ -1121,7 +1105,6 @@ mutable struct pxgstrs_comm_t
     recv_ibuf2::Ptr{int_t}
     send_dbuf2::Ptr{Cvoid}
     recv_dbuf2::Ptr{Cvoid}
-    pxgstrs_comm_t() = new()
 end
 
 struct superlu_dist_options_t
@@ -1163,22 +1146,20 @@ struct superlu_dist_options_t
     Algo3d::yes_no_t
 end
 
-mutable struct superlu_dist_mem_usage_t
+struct superlu_dist_mem_usage_t
     for_lu::Cfloat
     total::Cfloat
     expansions::Cint
     nnzL::Int64
     nnzU::Int64
-    superlu_dist_mem_usage_t() = new()
 end
 
-mutable struct Ucb_indptr_t
+struct Ucb_indptr_t
     lbnum::int_t
     indpos::int_t
-    Ucb_indptr_t() = new()
 end
 
-mutable struct Ublock_info_t
+struct Ublock_info_t
     rukp::int_t
     iukp::int_t
     jb::int_t
@@ -1186,24 +1167,21 @@ mutable struct Ublock_info_t
     eo::int_t
     ncols::int_t
     StCol::int_t
-    Ublock_info_t() = new()
 end
 
-mutable struct Remain_info_t
+struct Remain_info_t
     lptr::int_t
     ib::int_t
     eo::int_t
     nrows::int_t
     FullRow::int_t
     StRow::int_t
-    Remain_info_t() = new()
 end
 
-mutable struct etree_node
+struct etree_node
     id::Cint
     key::Cint
     next::Ptr{Cvoid}
-    etree_node() = new()
 end
 
 struct superlu_pair
@@ -1211,32 +1189,29 @@ struct superlu_pair
     val::Cint
 end
 
-mutable struct uPanelInfo_t
+struct uPanelInfo_t
     nub::int_t
     klst::int_t
     ldu::int_t
     usub::Ptr{int_t}
-    uPanelInfo_t() = new()
 end
 
-mutable struct lPanelInfo_t
+struct lPanelInfo_t
     lsub::Ptr{int_t}
     lusup::Ptr{Cvoid}
     luptr0::int_t
     nlb::int_t
     nsupr::int_t
-    lPanelInfo_t() = new()
 end
 
-mutable struct packLUInfo_t
+struct packLUInfo_t
     Ublock_info::Ptr{Ublock_info_t}
     Remain_info::Ptr{Remain_info_t}
     uPanelInfo::Ptr{uPanelInfo_t}
     lPanelInfo::Ptr{lPanelInfo_t}
-    packLUInfo_t() = new()
 end
 
-mutable struct HyP_t
+struct HyP_t
     lookAhead_info::Ptr{Remain_info_t}
     Remain_info::Ptr{Remain_info_t}
     Ublock_info::Ptr{Ublock_info_t}
@@ -1266,30 +1241,26 @@ mutable struct HyP_t
     offloadCondition::Cint
     superlu_acc_offload::Cint
     nGPUStreams::Cint
-    HyP_t() = new()
 end
 
-mutable struct local_l_blk_info_t
+struct local_l_blk_info_t
     luptrj::int_t
     lptrj::int_t
     lib::int_t
-    local_l_blk_info_t() = new()
 end
 
-mutable struct local_u_blk_info_t
+struct local_u_blk_info_t
     iuip::int_t
     ruip::int_t
     ljb::int_t
-    local_u_blk_info_t() = new()
 end
 
-mutable struct perm_array_t
+struct perm_array_t
     perm_c_supno::Ptr{int_t}
     iperm_c_supno::Ptr{int_t}
-    perm_array_t() = new()
 end
 
-mutable struct factStat_t
+struct factStat_t
     factored::Ptr{int_t}
     factored_D::Ptr{int_t}
     factored_L::Ptr{int_t}
@@ -1299,10 +1270,9 @@ mutable struct factStat_t
     IbcastPanel_U::Ptr{int_t}
     numChildLeft::Ptr{int_t}
     gpuLUreduced::Ptr{int_t}
-    factStat_t() = new()
 end
 
-mutable struct d2Hreduce_t
+struct d2Hreduce_t
     next_col::int_t
     next_k::int_t
     kljb::int_t
@@ -1316,10 +1286,9 @@ mutable struct d2Hreduce_t
     mkrow::int_t
     mkcol::int_t
     ksup_size::int_t
-    d2Hreduce_t() = new()
 end
 
-mutable struct treeList_t
+struct treeList_t
     numChild::int_t
     numDescendents::int_t
     left::int_t
@@ -1330,20 +1299,17 @@ mutable struct treeList_t
     weight::Cdouble
     iWeight::Cdouble
     scuWeight::Cdouble
-    treeList_t() = new()
 end
 
-mutable struct treeTopoInfo_t
+struct treeTopoInfo_t
     numLvl::int_t
     eTreeTopLims::Ptr{int_t}
     myIperm::Ptr{int_t}
-    treeTopoInfo_t() = new()
 end
 
-mutable struct gEtreeInfo_t
+struct gEtreeInfo_t
     setree::Ptr{int_t}
     numChildLeft::Ptr{int_t}
-    gEtreeInfo_t() = new()
 end
 
 @enum treePartStrat::UInt32 begin
@@ -1351,7 +1317,7 @@ end
     GD = 1
 end
 
-mutable struct sForest_t
+struct sForest_t
     nNodes::int_t
     nodeList::Ptr{int_t}
     numLvl::int_t
@@ -1359,10 +1325,9 @@ mutable struct sForest_t
     topoInfo::treeTopoInfo_t
     weight::Cdouble
     cost::Cdouble
-    sForest_t() = new()
 end
 
-mutable struct commRequests_t
+struct commRequests_t
     L_diag_blk_recv_req::Ptr{MPI_Request}
     L_diag_blk_send_req::Ptr{MPI_Request}
     U_diag_blk_recv_req::Ptr{MPI_Request}
@@ -1371,25 +1336,22 @@ mutable struct commRequests_t
     recv_requ::Ptr{MPI_Request}
     send_req::Ptr{MPI_Request}
     send_requ::Ptr{MPI_Request}
-    commRequests_t() = new()
 end
 
-mutable struct factNodelists_t
+struct factNodelists_t
     iperm_c_supno::Ptr{int_t}
     iperm_u::Ptr{int_t}
     perm_u::Ptr{int_t}
     indirect::Ptr{Cint}
     indirect2::Ptr{Cint}
-    factNodelists_t() = new()
 end
 
-mutable struct msgs_t
+struct msgs_t
     msgcnt::Ptr{Cint}
     msgcntU::Ptr{Cint}
-    msgs_t() = new()
 end
 
-mutable struct xtrsTimer_t
+struct xtrsTimer_t
     trsDataSendXY::Cdouble
     trsDataSendZ::Cdouble
     trsDataRecvXY::Cdouble
@@ -1409,7 +1371,6 @@ mutable struct xtrsTimer_t
     trsMsgRecvXY::int_t
     trsMsgRecvZ::int_t
     ppXmem::Cdouble
-    xtrsTimer_t() = new()
 end
 
 function superlu_gridinit(arg1, arg2, arg3, arg4)
@@ -1731,7 +1692,7 @@ function file_PrintLong10(arg1, arg2, arg3, arg4)
     @ccall libsuperlu_dist_Int64.file_PrintLong10(arg1::Ptr{Libc.FILE}, arg2::Ptr{Cchar}, arg3::int_t, arg4::Ptr{int_t})::Cint
 end
 
-mutable struct C_Tree
+struct C_Tree
     sendRequests_::NTuple{2, MPI_Request}
     comm_::MPI_Comm
     myRoot_::Cint
@@ -1742,7 +1703,6 @@ mutable struct C_Tree
     tag_::Cint
     empty_::yes_no_t
     type_::MPI_Datatype
-    C_Tree() = new()
 end
 
 function C_RdTree_Create(tree, comm, ranks, rank_cnt, msgSize, precision)
@@ -2257,15 +2217,14 @@ struct dLocalLU_t
     inv::int_t
 end
 
-mutable struct dLUstruct_t
+struct dLUstruct_t
     etree::Ptr{int_t}
     Glu_persist::Ptr{Glu_persist_t}
     Llu::Ptr{dLocalLU_t}
     dt::Cchar
-    dLUstruct_t() = new()
 end
 
-mutable struct pdgsmv_comm_t
+struct pdgsmv_comm_t
     extern_start::Ptr{int_t}
     ind_tosend::Ptr{int_t}
     ind_torecv::Ptr{int_t}
@@ -2277,10 +2236,9 @@ mutable struct pdgsmv_comm_t
     val_torecv::Ptr{Cdouble}
     TotalIndSend::int_t
     TotalValSend::int_t
-    pdgsmv_comm_t() = new()
 end
 
-mutable struct dSOLVEstruct_t
+struct dSOLVEstruct_t
     row_to_proc::Ptr{int_t}
     inv_perm_c::Ptr{int_t}
     num_diag_procs::int_t
@@ -2291,22 +2249,20 @@ mutable struct dSOLVEstruct_t
     A_colind_gsmv::Ptr{int_t}
     xrow_to_proc::Ptr{int_t}
     A3d::Ptr{NRformat_loc3d}
-    dSOLVEstruct_t() = new()
 end
 
-mutable struct dLUValSubBuf_t
+struct dLUValSubBuf_t
     Lsub_buf::Ptr{int_t}
     Lval_buf::Ptr{Cdouble}
     Usub_buf::Ptr{int_t}
     Uval_buf::Ptr{Cdouble}
-    dLUValSubBuf_t() = new()
 end
 
 function scuStatUpdate(knsupc, HyP, SCT, stat)
     @ccall libsuperlu_ddefs.scuStatUpdate(knsupc::int_t, HyP::Ptr{HyP_t}, SCT::Ptr{SCT_t}, stat::Ptr{SuperLUStat_t})::int_t
 end
 
-mutable struct dtrf3Dpartition_t
+struct dtrf3Dpartition_t
     gEtreeInfo::gEtreeInfo_t
     iperm_c_supno::Ptr{int_t}
     myNodeCount::Ptr{int_t}
@@ -2316,19 +2272,16 @@ mutable struct dtrf3Dpartition_t
     sForests::Ptr{Ptr{sForest_t}}
     supernode2treeMap::Ptr{int_t}
     LUvsb::Ptr{dLUValSubBuf_t}
-    dtrf3Dpartition_t() = new()
 end
 
-mutable struct dscuBufs_t
+struct dscuBufs_t
     bigU::Ptr{Cdouble}
     bigV::Ptr{Cdouble}
-    dscuBufs_t() = new()
 end
 
-mutable struct ddiagFactBufs_t
+struct ddiagFactBufs_t
     BlockLFactor::Ptr{Cdouble}
     BlockUFactor::Ptr{Cdouble}
-    ddiagFactBufs_t() = new()
 end
 
 function dCreate_CompCol_Matrix_dist(arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8, arg9, arg10)
@@ -3193,13 +3146,12 @@ const MPI_T_pvar_session = Ptr{MPIR_T_pvar_session_s}
 
 const MPI_Fint = Cint
 
-mutable struct MPI_Status
+struct MPI_Status
     count_lo::Cint
     count_hi_and_cancelled::Cint
     MPI_SOURCE::Cint
     MPI_TAG::Cint
     MPI_ERROR::Cint
-    MPI_Status() = new()
 end
 
 # typedef int ( MPI_Datarep_conversion_function ) ( void * , MPI_Datatype , int , void * , MPI_Offset , void * )
@@ -3374,13 +3326,12 @@ const MPI_T_event_free_cb_function = Cvoid
 # typedef void ( MPI_T_event_dropped_cb_function ) ( MPI_Count count , MPI_T_event_registration event_registration , int source_index , MPI_T_cb_safety cb_safety , void * user_data )
 const MPI_T_event_dropped_cb_function = Cvoid
 
-mutable struct MPI_F08_status
+struct MPI_F08_status
     count_lo::MPI_Fint
     count_hi_and_cancelled::MPI_Fint
     MPI_SOURCE::MPI_Fint
     MPI_TAG::MPI_Fint
     MPI_ERROR::MPI_Fint
-    MPI_F08_status() = new()
 end
 
 # typedef int ( MPI_Grequest_cancel_function ) ( void * , int )
@@ -3401,9 +3352,8 @@ const MPIX_Grequest_wait_function = Cvoid
 # typedef int ( MPI_Datarep_extent_function ) ( MPI_Datatype datatype , MPI_Aint * , void * )
 const MPI_Datarep_extent_function = Cvoid
 
-mutable struct QMPI_Context
+struct QMPI_Context
     storage_stack::Ptr{Ptr{Cvoid}}
-    QMPI_Context() = new()
 end
 
 function QMPI_Register_tool_name(tool_name, init_function_ptr)
