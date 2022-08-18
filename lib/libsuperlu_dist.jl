@@ -841,7 +841,7 @@ const flops_t = Cfloat
 
 const Logical = Cuchar
 
-mutable struct SuperLUStat_t
+struct SuperLUStat_t
     panel_histo::Ptr{Cint}
     utime::Ptr{Cdouble}
     ops::Ptr{flops_t}
@@ -853,7 +853,6 @@ mutable struct SuperLUStat_t
     gpu_buffer::Cfloat
     MaxActiveBTrees::int_t
     MaxActiveRTrees::int_t
-    SuperLUStat_t() = new()
 end
 
 mutable struct e_node

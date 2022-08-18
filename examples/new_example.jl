@@ -2,8 +2,6 @@ using MPI
 using SuperLU_DIST
 #main(int argc, char *argv[]) llel for julia
 const LSLU = SuperLU_DIST.Libsuperlu_dist
-
-stat = SuperLUStat_t()
 gridref = Ref{gridinfo_t}()
 #C_NULL or something else?
 m,n,a,nnz,asub,xa = 
@@ -38,7 +36,7 @@ nrhs = 1;
 MPI.Init()
 #MPI_Init( &argc, &argv );
 # How to pass the nprow and npcol? lets have them fixed value now
-nprow = 2
+nprow = 1
 npcol = 1
 nrhs = 1
 #Let have fixed file name for now! we will chage it later
@@ -112,14 +110,14 @@ else
 	MPI.Bcast!(xa, 0, MPI.Comm(grid.comm))
 end
 
-A = Ref(LSLU.SuperMatrix())
+A = Ref{LSLU.SuperMatrix}()
 m = m[]
 n = n[]
 nnz = nnz[]
 LSLU.dCreate_CompCol_Matrix_dist(
     A, m, n, nnz, a, asub, xa, LSLU.SLU_NC, LSLU.SLU_D, LSLU.SLU_GE
 )
-A
+
 if iam == 0
     LSLU.dPrint_CompCol_Matrix_dist(A)
 end
@@ -137,14 +135,33 @@ LSLU.dFillRHS_dist(trans, nrhs, xtrue, ldx, A, b, ldb)
 
 berr = LSLU.doubleMalloc_dist(nrhs)
 
-options = Ref(LSLU.superlu_dist_options_t())
+options = Ref{LSLU.superlu_dist_options_t}()
 LSLU.set_default_options_dist(options)
 if iam == 0
     LSLU.print_options_dist(options)
 end
-ScalePermstruct = Ref(LSLU.dScalePermstruct_t())
-dLUstructInit = Ref(dLUstruct_t())
+ScalePermstruct = Ref{LSLU.dScalePermstruct_t}()
+LUstruct = Ref(dLUstruct_t())
 
+LSLU.dScalePermstructInit(m, n, ScalePermstruct)
+LSLU.dLUstructInit(n, LUstruct)
+println("Init'd")
+
+stat = Ref{LSLU.SuperLUStat_t}()
+LSLU.PStatInit(stat)
+
+gridref = Ref(grid)
+info = Ref{Cint}()
+println("About to pdg")
+LSLU.pdgssvx_ABglobal(options, A, ScalePermstruct, b, ldb, nrhs,
+gridref, LUstruct, berr, stat, info)
+
+println("PDG'd")
+if iam == 0
+    dinf_norm_error_dist(n, nrhs, b, ldb, xtrue, ldx, gridref)
+end
+println("about to print")
+PStatPrint(options, stat, gridref)
 
 MPI.Finalize()
 #=
