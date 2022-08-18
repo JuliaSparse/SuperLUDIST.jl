@@ -49,7 +49,7 @@ fp = open("examples/g20.rua", "r")
 println(MPI.COMM_WORLD)
 superlu_gridinit(MPI.COMM_WORLD, nprow, npcol, gridref)
 grid = gridref[]
-println(grid)
+println(grid.comm)
 # exit()
 
 
