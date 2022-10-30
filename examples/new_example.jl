@@ -1,13 +1,6 @@
 using MPI
 using SuperLU_DIST
 #main(int argc, char *argv[]) llel for julia
-const LSLU = SuperLU_DIST.Libsuperlu_dist
-
-options = superlu_dist_options_t()
-stat = SuperLUStat_t()
-A = SuperMatrix()
-ScalePermstruct = dScalePermstruct_t()
-LUstruct = dLUstruct_t()
 gridref = Ref{gridinfo_t}()
 #C_NULL or something else?
 m,n,a,nnz,asub,xa = Ref{Int64}(), Ref{Int64}(), Ref{Ptr{Float64}}(), Ref{Int64}(), Ref{Ptr{Int64}}(), Ref{Ptr{Int64}}()
@@ -40,21 +33,22 @@ MPI.Init()
 nprow = 1
 npcol = 1
 #Let have fixed file name for now! we will chage it later
-fp = open("g20.rua", "r")
+fp = open("examples/g20.rua", "r")
 
 superlu_gridinit(MPI.COMM_WORLD, nprow, npcol, gridref)
 print(gridref[])
-exit()
+grid = gridref[]
 
 
 
 iam = grid.iam
 
 if iam == -1 
+    println("Not in the grid :(")
     LSLU.superlu_gridexit(Ref(grid))
     MPI.Finalize()
 end
-
+exit()
 print("\n")
 print("hi")
 

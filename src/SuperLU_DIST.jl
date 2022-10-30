@@ -3,12 +3,14 @@ module SuperLU_DIST
 using SparseArrays
 using SparseArrays: SparseMatrixCSC
 import SparseArrays: nnz
-#using SuperLU_DIST_jll
+using MPI
+# using SuperLU_DIST_jll
 #TODO export 
-
+libsuperlu_dist_Int64 = "/home/wimmerer/spack/opt/spack/linux-ubuntu18.04-skylake_avx512/gcc-7.5.0/superlu-dist-7.2.0-vmqreciesrsyalwhob2wv62nrgjrbei3/lib/libsuperlu_dist.so"
+libsuperlu_ddefs = libsuperlu_dist_Int64
 include("../lib/libsuperlu_dist.jl")
-using .Libsuperlu_dist
-
+using Libdl
+Libdl.dlopen(libsuperlu_dist_Int64)
 
 import Base: (\), size, getproperty, setproperty!, propertynames, show
 
@@ -79,12 +81,6 @@ using .Libsuperlu_dist:
     msgs_t,
     xtrsTimer_t
     =#
-
-export gridinfo_t, superlu_gridinit, superlu_dist_options_t, SuperLUStat_t, SuperMatrix, dScalePermstruct_t, dLUstruct_t, superlu_gridinit, superlu_scope_t
-
-using .Libsuperlu_dist: gridinfo_t, superlu_gridinit, superlu_dist_options_t, SuperLUStat_t, SuperMatrix, dScalePermstruct_t, dLUstruct_t, superlu_gridinit, superlu_scope_t
-
-
 
 end
 
