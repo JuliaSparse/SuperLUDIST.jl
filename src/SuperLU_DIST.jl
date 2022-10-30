@@ -6,7 +6,7 @@ import SparseArrays: nnz
 using MPI
 # using SuperLU_DIST_jll
 #TODO export 
-libsuperlu_dist_Int64 = "/home/wimmerer/spack/opt/spack/linux-ubuntu18.04-skylake_avx512/gcc-7.5.0/superlu-dist-7.2.0-vmqreciesrsyalwhob2wv62nrgjrbei3/lib/libsuperlu_dist.so"
+libsuperlu_dist_Int64 = "/home/wimmerer/spack/var/spack/environments/superlu_dist/.spack-env/view/lib/libsuperlu_dist.so"
 libsuperlu_ddefs = libsuperlu_dist_Int64
 include("../lib/libsuperlu_dist.jl")
 using Libdl

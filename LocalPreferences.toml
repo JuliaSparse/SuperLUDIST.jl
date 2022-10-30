@@ -2,5 +2,5 @@
 _format = "1.0"
 abi = "MPICH"
 binary = "system"
-libmpi = "libmpi"
+libmpi = "/home/wimmerer/spack/var/spack/environments/superlu_dist/.spack-env/view/lib/libmpich.so"
 mpiexec = "mpiexec"
