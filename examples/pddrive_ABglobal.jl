@@ -2,7 +2,7 @@ using MPI
 using SuperLU_DIST
 MPI.Init()
 gridref = Ref{SuperLU_DIST.gridinfo_t}()
-nprow, npcol, nrhs = 2, 1, 1
+nprow, npcol, nrhs = 1, 1, 1
 root = 0
 comm = MPI.COMM_WORLD
 SuperLU_DIST.superlu_gridinit(comm, nprow, npcol, gridref)
@@ -19,8 +19,8 @@ fp = open("examples/g20.rua", "r")
 fpp = Base.Libc.FILE(fp)
 
 
-m, n, nnz = Ref{Int64}(), Ref{Int64}(), Ref{Int64}()
-aref, asubref, xaref = Ref{Ptr{Float64}}(), Ref{Ptr{Int64}}(), Ref{Ptr{Int64}}()
+m, n, nnz = Ref{Int32}(), Ref{Int32}(), Ref{Int32}()
+aref, asubref, xaref = Ref{Ptr{Float64}}(), Ref{Ptr{Int32}}(), Ref{Ptr{Int32}}()
 
 if iam == root
     SuperLU_DIST.dreadhb_dist(iam, fpp, m, n, nnz, aref, asubref, xaref)
@@ -82,13 +82,17 @@ stat = Ref{SuperLU_DIST.SuperLUStat_t}()
 SuperLU_DIST.PStatInit(stat)
 
 
+# NOTES: ONly A and L * U and RHS are distributed, everything else is replicated
 info = Ref{Int32}()
 
 # SuperLU_DIST.dPrint_CompCol_Matrix_dist(A)
+# NOTE: PDDrive is the distributed driver.
+# Can turn LU into CSC from SuperLU.
 GC.@preserve a asub xa SuperLU_DIST.pdgssvx_ABglobal(
     options, A, ScalePermstruct, b, ldb, nrhs, 
     gridref, LUstruct, berr, stat, info)
 
+SuperLU_DIST.dinf_norm_error_dist(n, nrhs, b, ldb, xtrue, ldx, gridref)
 SuperLU_DIST.PStatPrint(options, stat, gridref)
 SuperLU_DIST.PStatFree(stat)
 SuperLU_DIST.Destroy_CompCol_Matrix_dist(A)

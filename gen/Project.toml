@@ -1,4 +1,6 @@
 [deps]
 Clang = "40e3b903-d033-50b4-a0cc-940c62c95e31"
 MPICH_jll = "7cb0a576-ebde-5e09-9194-50597f1243b4"
+MPItrampoline_jll = "f1f71cc9-e9ae-5b93-9b94-4fe0e1ad3748"
+OpenMPI_jll = "fe0851c0-eecd-5654-98d4-656369965a5c"
 SuperLU_DIST_jll = "9a1356b0-3c82-5da3-b77c-7c198e8bd7ab"

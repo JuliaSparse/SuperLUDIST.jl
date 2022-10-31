@@ -1,16 +1,13 @@
 [general]
-library_name = "libsuperlu_dist_Int64"
-library_names = {"superlu_ddefs.h" = "libsuperlu_ddefs"}
+library_name = "libsuperlu_dist_Int32"
+library_names = {"superlu_defs.h" = "libsuperlu_defs"}
+prologue_file_path = "./prologue.jl"
 
 use_julia_native_enum_type = true
 use_deterministic_symbol = true
 auto_mutability = false
 
 output_ignorelist = [
-    # Clang.jl cannot handle these macro correctly, skip for now.
-
-    # useless macros
-
 ]
 
 [codegen]
