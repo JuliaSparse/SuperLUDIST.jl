@@ -4,13 +4,15 @@ using SparseArrays
 using SparseArrays: SparseMatrixCSC
 import SparseArrays: nnz
 using MPI
-# using SuperLU_DIST_jll
-#TODO export 
-libsuperlu_dist_Int64 = "/home/wimmerer/spack/var/spack/environments/superlu_dist/.spack-env/view/lib/libsuperlu_dist.so"
-libsuperlu_ddefs = libsuperlu_dist_Int64
+using SuperLU_DIST_jll
+
+const libsuperlu_ddefs = libsuperlu_dist_Int64
 include("../lib/libsuperlu_dist.jl")
+
 using Libdl
-Libdl.dlopen(libsuperlu_dist_Int64)
+function __init__()
+    Libdl.dlopen(libsuperlu_dist_Int64)
+end
 
 import Base: (\), size, getproperty, setproperty!, propertynames, show
 

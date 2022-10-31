@@ -1,3 +1,5 @@
+import MPI.API: MPI_Comm
+
 mutable struct ADIOI_FileD end
 
 mutable struct MPIR_T_enum_s end
@@ -1033,8 +1035,6 @@ struct psymbfact_stat_t
     szDnsSep::int_t
     allocMem::Cfloat
 end
-
-const MPI_Comm = Cint
 
 struct superlu_scope_t
     comm::MPI_Comm
