@@ -2,7 +2,7 @@ using MPI
 using SuperLU_DIST
 MPI.Init()
 gridref = Ref{SuperLU_DIST.gridinfo_t}()
-nprow, npcol, nrhs = 1, 1, 1
+nprow, npcol, nrhs = 2, 2, 1
 root = 0
 comm = MPI.COMM_WORLD
 SuperLU_DIST.superlu_gridinit(comm, nprow, npcol, gridref)
@@ -15,7 +15,7 @@ if iam == -1
     MPI.Finalize()
 end
 
-fp = open("examples/g20.rua", "r")
+fp = open("examples/big.rua", "r")
 fpp = Base.Libc.FILE(fp)
 
 
@@ -57,11 +57,15 @@ SuperLU_DIST.dCreate_CompCol_Matrix_dist(
 )
 b = SuperLU_DIST.doubleMalloc_dist(m * nrhs)
 xtrue = SuperLU_DIST.doubleMalloc_dist(n * nrhs)
-
+xjl = unsafe_wrap(Array, xtrue, n * nrhs)
 trans = Ref{Cchar}('N')
 ldx = n
 ldb = m
-SuperLU_DIST.dGenXtrue_dist(n, nrhs, xtrue, ldx)
+if iam == root
+    SuperLU_DIST.dGenXtrue_dist(n, nrhs, xtrue, ldx)
+end
+MPI.Bcast!(xjl, root, comm)
+
 SuperLU_DIST.dFillRHS_dist(trans, nrhs, xtrue, ldx, A, b, ldb)
 
 berr = SuperLU_DIST.doubleMalloc_dist(nrhs)
