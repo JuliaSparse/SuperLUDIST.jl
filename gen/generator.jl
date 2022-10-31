@@ -26,6 +26,8 @@ args = get_default_args()
 push!(args, "-isystem$mpi_includedir")
 
 header_files = [superlu_ddefs_h, mpi_h]
+
+@add_def MPI_Comm
 ctx = create_context(header_files, args, options)
 
 build!(ctx)
