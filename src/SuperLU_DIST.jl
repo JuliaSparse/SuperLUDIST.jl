@@ -1,29 +1,35 @@
 module SuperLU_DIST
-
+using SparseBase
 using SparseArrays
-using SparseArrays: SparseMatrixCSC
-import SparseArrays: nnz
 using MPI
 using SuperLU_DIST_jll
-const libsuperlu_defs = SuperLU_DIST_jll.libsuperlu_dist_Int32
-const libsuperlu_ddefs = SuperLU_DIST_jll.libsuperlu_dist_Int32
-const libsuperlu_sdefs = SuperLU_DIST_jll.libsuperlu_dist_Int32
-include("../lib/libsuperlu_dist32.jl")
+using CIndices: CIndex
 
+include("../lib/common.jl")
+include("../lib/libsuperlu_dist32.jl")
+include("../lib/libsuperlu_dist64.jl")
+using .Common
+using .SuperLU_Int32
+using .SuperLU_Int64
 import Base: (\), size, getproperty, setproperty!, propertynames, show
 
-# Convert from 1-based to 0-based indices
-function decrement!(A::AbstractArray{T}) where T<:Integer
-    for i in eachindex(A); A[i] -= oneunit(T) end
-    A
-end
-decrement(A::AbstractArray{<:Integer}) = decrement!(copy(A))
 
-# Convert from 0-based to 1-based indices
-function increment!(A::AbstractArray{T}) where T<:Integer
-    for i in eachindex(A); A[i] += oneunit(T) end
-    A
+function prefixname(::Type{T}, name::Symbol) where T
+    T === Float32 && (return Symbol(:s, name))
+    T === Float64 && (return Symbol(:d, name))
+    T === ComplexF32 && (return Symbol(:c, name))
+    T === ComplexF64 && (return Symbol(:z, name))
 end
-increment(A::AbstractArray{<:Integer}) = increment!(copy(A))
+
+function toslutype(::Type{T}) where T
+    T === Float32 && (return Common.SLU_S)
+    T === Float64 && (return Common.SLU_D)
+    T === ComplexF32 && (return Common.SLU_C)
+    T === ComplexF64 && (return Common.SLU_Z)
+end
+
+include("lowlevel.jl")
+include("structs.jl")
+include("communication.jl")
 end
 

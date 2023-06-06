@@ -1,23 +1,19 @@
 using MPI
 using SuperLU_DIST
-MPI.Init()
-gridref = Ref{SuperLU_DIST.gridinfo_t}()
-nprow, npcol, nrhs = 2, 2, 1
+using SuperLU_DIST: Grid
+nprow, npcol, nrhs = 1, 2, 1
 root = 0
 comm = MPI.COMM_WORLD
-SuperLU_DIST.superlu_gridinit(comm, nprow, npcol, gridref)
-grid = gridref[]
+grid = Grid{Int32}(nprow, npcol)
 
 iam = grid.iam
 if iam == -1
     @info "I was not in the grid :("
-    SuperLU_DIST.superlu_gridexit(gridref)
     MPI.Finalize()
 end
 
 fp = open("examples/big.rua", "r")
 fpp = Base.Libc.FILE(fp)
-
 
 m, n, nnz = Ref{Int32}(), Ref{Int32}(), Ref{Int32}()
 aref, asubref, xaref = Ref{Ptr{Float64}}(), Ref{Ptr{Int32}}(), Ref{Ptr{Int32}}()
@@ -91,22 +87,22 @@ info = Ref{Int32}()
 
 # SuperLU_DIST.dPrint_CompCol_Matrix_dist(A)
 # NOTE: PDDrive is the distributed driver.
-# Can turn LU into CSC from SuperLU.
+# Can turn LU into CSC from SuperLU, not from others
 GC.@preserve a asub xa SuperLU_DIST.pdgssvx_ABglobal(
     options, A, ScalePermstruct, b, ldb, nrhs, 
-    gridref, LUstruct, berr, stat, info)
+    grid, LUstruct, berr, stat, info)
 
-SuperLU_DIST.dinf_norm_error_dist(n, nrhs, b, ldb, xtrue, ldx, gridref)
-SuperLU_DIST.PStatPrint(options, stat, gridref)
+SuperLU_DIST.dinf_norm_error_dist(n, nrhs, b, ldb, xtrue, ldx, grid)
+SuperLU_DIST.PStatPrint(options, stat, grid)
 SuperLU_DIST.PStatFree(stat)
 SuperLU_DIST.Destroy_CompCol_Matrix_dist(A)
-SuperLU_DIST.dDestroy_LU(n, gridref, LUstruct)
+SuperLU_DIST.dDestroy_LU(n, grid, LUstruct)
 SuperLU_DIST.dScalePermstructFree(ScalePermstruct)
 SuperLU_DIST.dLUstructFree(LUstruct)
 SuperLU_DIST.superlu_free_dist.((b, xtrue, berr))
 close(fp)
 
-SuperLU_DIST.superlu_gridexit(gridref)
+SuperLU_DIST.superlu_gridexit(grid)
 
 MPI.Finalize()
 

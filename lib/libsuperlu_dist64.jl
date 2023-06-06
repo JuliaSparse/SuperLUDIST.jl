@@ -1,5 +1,8 @@
+module SuperLU_Int64
 import MPI: MPI_Comm, MPI_Request, MPI_Datatype, MPI_Errhandler
-
+using SuperLU_DIST_jll
+using ..Common
+const libsuperlu_dist_Int64 = SuperLU_DIST_jll.libsuperlu_dist_Int64
 
 function superlu_abort_and_exit_dist(arg1)
     @ccall libsuperlu_dist_Int64.superlu_abort_and_exit_dist(arg1::Ptr{Cchar})::Cvoid
@@ -14,156 +17,6 @@ function superlu_free_dist(arg1)
 end
 
 const int_t = Int64
-
-@enum yes_no_t::UInt32 begin
-    NO = 0
-    YES = 1
-end
-
-@enum fact_t::UInt32 begin
-    DOFACT = 0
-    SamePattern = 1
-    SamePattern_SameRowPerm = 2
-    FACTORED = 3
-end
-
-@enum rowperm_t::UInt32 begin
-    NOROWPERM = 0
-    LargeDiag_MC64 = 1
-    LargeDiag_HWPM = 2
-    MY_PERMR = 3
-end
-
-@enum colperm_t::UInt32 begin
-    NATURAL = 0
-    MMD_ATA = 1
-    MMD_AT_PLUS_A = 2
-    COLAMD = 3
-    METIS_AT_PLUS_A = 4
-    PARMETIS = 5
-    ZOLTAN = 6
-    MY_PERMC = 7
-end
-
-@enum trans_t::UInt32 begin
-    NOTRANS = 0
-    TRANS = 1
-    CONJ = 2
-end
-
-@enum DiagScale_t::UInt32 begin
-    NOEQUIL = 0
-    ROW = 1
-    COL = 2
-    BOTH = 3
-end
-
-@enum IterRefine_t::UInt32 begin
-    NOREFINE = 0
-    SLU_SINGLE = 1
-    SLU_DOUBLE = 2
-    SLU_EXTRA = 3
-end
-
-@enum MemType::UInt32 begin
-    USUB = 0
-    LSUB = 1
-    UCOL = 2
-    LUSUP = 3
-    LLVL = 4
-    ULVL = 5
-    NO_MEMTYPE = 6
-end
-
-@enum stack_end_t::UInt32 begin
-    HEAD = 0
-    TAIL = 1
-end
-
-@enum LU_space_t::UInt32 begin
-    SYSTEM = 0
-    USER = 1
-end
-
-@enum norm_t::UInt32 begin
-    ONE_NORM = 0
-    TWO_NORM = 1
-    INF_NORM = 2
-end
-
-@enum milu_t::UInt32 begin
-    SILU = 0
-    SMILU_1 = 1
-    SMILU_2 = 2
-    SMILU_3 = 3
-end
-
-@enum rule_t::UInt32 begin
-    NODROP = 0
-    DROP_BASIC = 1
-    DROP_PROWS = 2
-    DROP_COLUMN = 4
-    DROP_AREA = 8
-    DROP_SECONDARY = 14
-    DROP_DYNAMIC = 16
-    DROP_INTERP = 256
-end
-
-@enum PhaseType::UInt32 begin
-    COLPERM = 0
-    ROWPERM = 1
-    RELAX = 2
-    ETREE = 3
-    EQUIL = 4
-    SYMBFAC = 5
-    DIST = 6
-    FACT = 7
-    COMM = 8
-    COMM_DIAG = 9
-    COMM_RIGHT = 10
-    COMM_DOWN = 11
-    SOL_COMM = 12
-    SOL_GEMM = 13
-    SOL_TRSM = 14
-    SOL_TOT = 15
-    RCOND = 16
-    SOLVE = 17
-    REFINE = 18
-    TRSV = 19
-    GEMV = 20
-    FERR = 21
-    NPHASES = 22
-end
-
-@enum Stype_t::UInt32 begin
-    SLU_NC = 0
-    SLU_NCP = 1
-    SLU_NR = 2
-    SLU_SC = 3
-    SLU_SCP = 4
-    SLU_SR = 5
-    SLU_DN = 6
-    SLU_NR_loc = 7
-end
-
-@enum Dtype_t::UInt32 begin
-    SLU_S = 0
-    SLU_D = 1
-    SLU_C = 2
-    SLU_Z = 3
-end
-
-@enum Mtype_t::UInt32 begin
-    SLU_GE = 0
-    SLU_TRLU = 1
-    SLU_TRUU = 2
-    SLU_TRL = 3
-    SLU_TRU = 4
-    SLU_SYL = 5
-    SLU_SYU = 6
-    SLU_HEL = 7
-    SLU_HEU = 8
-end
 
 struct SuperMatrix
     Stype::Stype_t
@@ -512,6 +365,18 @@ struct dLocalLU_t
     Lindval_loc_bc_dat::Ptr{int_t}
     Lindval_loc_bc_offset::Ptr{Clong}
     Lindval_loc_bc_cnt::Clong
+    Ucolind_bc_ptr::Ptr{Ptr{int_t}}
+    Ucolind_bc_dat::Ptr{int_t}
+    Ucolind_bc_offset::Ptr{Int64}
+    Ucolind_bc_cnt::Int64
+    Unzval_bc_ptr::Ptr{Ptr{Cdouble}}
+    Unzval_bc_dat::Ptr{Cdouble}
+    Unzval_bc_offset::Ptr{Int64}
+    Unzval_bc_cnt::Int64
+    Uindval_loc_bc_ptr::Ptr{Ptr{int_t}}
+    Uindval_loc_bc_dat::Ptr{int_t}
+    Uindval_loc_bc_offset::Ptr{Int64}
+    Uindval_loc_bc_cnt::Int64
     Unnz::Ptr{int_t}
     Lrowind_bc_2_lsum::Ptr{Ptr{int_t}}
     Uinv_bc_ptr::Ptr{Ptr{Cdouble}}
@@ -698,7 +563,7 @@ struct HyP_t
 end
 
 function scuStatUpdate(knsupc, HyP, SCT, stat)
-    @ccall libsuperlu_ddefs.scuStatUpdate(knsupc::int_t, HyP::Ptr{HyP_t}, SCT::Ptr{SCT_t}, stat::Ptr{SuperLUStat_t})::int_t
+    @ccall libsuperlu_dist_Int64.scuStatUpdate(knsupc::int_t, HyP::Ptr{HyP_t}, SCT::Ptr{SCT_t}, stat::Ptr{SuperLUStat_t})::int_t
 end
 
 struct gEtreeInfo_t
@@ -745,15 +610,15 @@ struct ddiagFactBufs_t
 end
 
 function dCreate_CompCol_Matrix_dist(arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8, arg9, arg10)
-    @ccall libsuperlu_ddefs.dCreate_CompCol_Matrix_dist(arg1::Ptr{SuperMatrix}, arg2::int_t, arg3::int_t, arg4::int_t, arg5::Ptr{Cdouble}, arg6::Ptr{int_t}, arg7::Ptr{int_t}, arg8::Stype_t, arg9::Dtype_t, arg10::Mtype_t)::Cvoid
+    @ccall libsuperlu_dist_Int64.dCreate_CompCol_Matrix_dist(arg1::Ptr{SuperMatrix}, arg2::int_t, arg3::int_t, arg4::int_t, arg5::Ptr{Cdouble}, arg6::Ptr{int_t}, arg7::Ptr{int_t}, arg8::Stype_t, arg9::Dtype_t, arg10::Mtype_t)::Cvoid
 end
 
 function dCreate_CompRowLoc_Matrix_dist(arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8, arg9, arg10, arg11, arg12)
-    @ccall libsuperlu_ddefs.dCreate_CompRowLoc_Matrix_dist(arg1::Ptr{SuperMatrix}, arg2::int_t, arg3::int_t, arg4::int_t, arg5::int_t, arg6::int_t, arg7::Ptr{Cdouble}, arg8::Ptr{int_t}, arg9::Ptr{int_t}, arg10::Stype_t, arg11::Dtype_t, arg12::Mtype_t)::Cvoid
+    @ccall libsuperlu_dist_Int64.dCreate_CompRowLoc_Matrix_dist(arg1::Ptr{SuperMatrix}, arg2::int_t, arg3::int_t, arg4::int_t, arg5::int_t, arg6::int_t, arg7::Ptr{Cdouble}, arg8::Ptr{int_t}, arg9::Ptr{int_t}, arg10::Stype_t, arg11::Dtype_t, arg12::Mtype_t)::Cvoid
 end
 
 function dCompRow_to_CompCol_dist(arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8, arg9)
-    @ccall libsuperlu_ddefs.dCompRow_to_CompCol_dist(arg1::int_t, arg2::int_t, arg3::int_t, arg4::Ptr{Cdouble}, arg5::Ptr{int_t}, arg6::Ptr{int_t}, arg7::Ptr{Ptr{Cdouble}}, arg8::Ptr{Ptr{int_t}}, arg9::Ptr{Ptr{int_t}})::Cvoid
+    @ccall libsuperlu_dist_Int64.dCompRow_to_CompCol_dist(arg1::int_t, arg2::int_t, arg3::int_t, arg4::Ptr{Cdouble}, arg5::Ptr{int_t}, arg6::Ptr{int_t}, arg7::Ptr{Ptr{Cdouble}}, arg8::Ptr{Ptr{int_t}}, arg9::Ptr{Ptr{int_t}})::Cvoid
 end
 
 struct superlu_scope_t
@@ -772,138 +637,138 @@ struct gridinfo_t
 end
 
 function pdCompRow_loc_to_CompCol_global(arg1, arg2, arg3, arg4)
-    @ccall libsuperlu_ddefs.pdCompRow_loc_to_CompCol_global(arg1::int_t, arg2::Ptr{SuperMatrix}, arg3::Ptr{gridinfo_t}, arg4::Ptr{SuperMatrix})::Cint
+    @ccall libsuperlu_dist_Int64.pdCompRow_loc_to_CompCol_global(arg1::int_t, arg2::Ptr{SuperMatrix}, arg3::Ptr{gridinfo_t}, arg4::Ptr{SuperMatrix})::Cint
 end
 
 function dCopy_CompCol_Matrix_dist(arg1, arg2)
-    @ccall libsuperlu_ddefs.dCopy_CompCol_Matrix_dist(arg1::Ptr{SuperMatrix}, arg2::Ptr{SuperMatrix})::Cvoid
+    @ccall libsuperlu_dist_Int64.dCopy_CompCol_Matrix_dist(arg1::Ptr{SuperMatrix}, arg2::Ptr{SuperMatrix})::Cvoid
 end
 
 function dCreate_Dense_Matrix_dist(arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8)
-    @ccall libsuperlu_ddefs.dCreate_Dense_Matrix_dist(arg1::Ptr{SuperMatrix}, arg2::int_t, arg3::int_t, arg4::Ptr{Cdouble}, arg5::int_t, arg6::Stype_t, arg7::Dtype_t, arg8::Mtype_t)::Cvoid
+    @ccall libsuperlu_dist_Int64.dCreate_Dense_Matrix_dist(arg1::Ptr{SuperMatrix}, arg2::int_t, arg3::int_t, arg4::Ptr{Cdouble}, arg5::int_t, arg6::Stype_t, arg7::Dtype_t, arg8::Mtype_t)::Cvoid
 end
 
 function dCreate_SuperNode_Matrix_dist(arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8, arg9, arg10, arg11, arg12, arg13)
-    @ccall libsuperlu_ddefs.dCreate_SuperNode_Matrix_dist(arg1::Ptr{SuperMatrix}, arg2::int_t, arg3::int_t, arg4::int_t, arg5::Ptr{Cdouble}, arg6::Ptr{int_t}, arg7::Ptr{int_t}, arg8::Ptr{int_t}, arg9::Ptr{int_t}, arg10::Ptr{int_t}, arg11::Stype_t, arg12::Dtype_t, arg13::Mtype_t)::Cvoid
+    @ccall libsuperlu_dist_Int64.dCreate_SuperNode_Matrix_dist(arg1::Ptr{SuperMatrix}, arg2::int_t, arg3::int_t, arg4::int_t, arg5::Ptr{Cdouble}, arg6::Ptr{int_t}, arg7::Ptr{int_t}, arg8::Ptr{int_t}, arg9::Ptr{int_t}, arg10::Ptr{int_t}, arg11::Stype_t, arg12::Dtype_t, arg13::Mtype_t)::Cvoid
 end
 
 function dCopy_Dense_Matrix_dist(arg1, arg2, arg3, arg4, arg5, arg6)
-    @ccall libsuperlu_ddefs.dCopy_Dense_Matrix_dist(arg1::int_t, arg2::int_t, arg3::Ptr{Cdouble}, arg4::int_t, arg5::Ptr{Cdouble}, arg6::int_t)::Cvoid
+    @ccall libsuperlu_dist_Int64.dCopy_Dense_Matrix_dist(arg1::int_t, arg2::int_t, arg3::Ptr{Cdouble}, arg4::int_t, arg5::Ptr{Cdouble}, arg6::int_t)::Cvoid
 end
 
 function dallocateA_dist(arg1, arg2, arg3, arg4, arg5)
-    @ccall libsuperlu_ddefs.dallocateA_dist(arg1::int_t, arg2::int_t, arg3::Ptr{Ptr{Cdouble}}, arg4::Ptr{Ptr{int_t}}, arg5::Ptr{Ptr{int_t}})::Cvoid
+    @ccall libsuperlu_dist_Int64.dallocateA_dist(arg1::int_t, arg2::int_t, arg3::Ptr{Ptr{Cdouble}}, arg4::Ptr{Ptr{int_t}}, arg5::Ptr{Ptr{int_t}})::Cvoid
 end
 
 function dGenXtrue_dist(arg1, arg2, arg3, arg4)
-    @ccall libsuperlu_ddefs.dGenXtrue_dist(arg1::int_t, arg2::int_t, arg3::Ptr{Cdouble}, arg4::int_t)::Cvoid
+    @ccall libsuperlu_dist_Int64.dGenXtrue_dist(arg1::int_t, arg2::int_t, arg3::Ptr{Cdouble}, arg4::int_t)::Cvoid
 end
 
 function dFillRHS_dist(arg1, arg2, arg3, arg4, arg5, arg6, arg7)
-    @ccall libsuperlu_ddefs.dFillRHS_dist(arg1::Ptr{Cchar}, arg2::int_t, arg3::Ptr{Cdouble}, arg4::int_t, arg5::Ptr{SuperMatrix}, arg6::Ptr{Cdouble}, arg7::int_t)::Cvoid
+    @ccall libsuperlu_dist_Int64.dFillRHS_dist(arg1::Ptr{Cchar}, arg2::int_t, arg3::Ptr{Cdouble}, arg4::int_t, arg5::Ptr{SuperMatrix}, arg6::Ptr{Cdouble}, arg7::int_t)::Cvoid
 end
 
 function dcreate_matrix(arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8)
-    @ccall libsuperlu_ddefs.dcreate_matrix(arg1::Ptr{SuperMatrix}, arg2::Cint, arg3::Ptr{Ptr{Cdouble}}, arg4::Ptr{Cint}, arg5::Ptr{Ptr{Cdouble}}, arg6::Ptr{Cint}, arg7::Ptr{Libc.FILE}, arg8::Ptr{gridinfo_t})::Cint
+    @ccall libsuperlu_dist_Int64.dcreate_matrix(arg1::Ptr{SuperMatrix}, arg2::Cint, arg3::Ptr{Ptr{Cdouble}}, arg4::Ptr{Cint}, arg5::Ptr{Ptr{Cdouble}}, arg6::Ptr{Cint}, arg7::Ptr{Libc.FILE}, arg8::Ptr{gridinfo_t})::Cint
 end
 
 function dcreate_matrix_rb(arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8)
-    @ccall libsuperlu_ddefs.dcreate_matrix_rb(arg1::Ptr{SuperMatrix}, arg2::Cint, arg3::Ptr{Ptr{Cdouble}}, arg4::Ptr{Cint}, arg5::Ptr{Ptr{Cdouble}}, arg6::Ptr{Cint}, arg7::Ptr{Libc.FILE}, arg8::Ptr{gridinfo_t})::Cint
+    @ccall libsuperlu_dist_Int64.dcreate_matrix_rb(arg1::Ptr{SuperMatrix}, arg2::Cint, arg3::Ptr{Ptr{Cdouble}}, arg4::Ptr{Cint}, arg5::Ptr{Ptr{Cdouble}}, arg6::Ptr{Cint}, arg7::Ptr{Libc.FILE}, arg8::Ptr{gridinfo_t})::Cint
 end
 
 function dcreate_matrix_dat(arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8)
-    @ccall libsuperlu_ddefs.dcreate_matrix_dat(arg1::Ptr{SuperMatrix}, arg2::Cint, arg3::Ptr{Ptr{Cdouble}}, arg4::Ptr{Cint}, arg5::Ptr{Ptr{Cdouble}}, arg6::Ptr{Cint}, arg7::Ptr{Libc.FILE}, arg8::Ptr{gridinfo_t})::Cint
+    @ccall libsuperlu_dist_Int64.dcreate_matrix_dat(arg1::Ptr{SuperMatrix}, arg2::Cint, arg3::Ptr{Ptr{Cdouble}}, arg4::Ptr{Cint}, arg5::Ptr{Ptr{Cdouble}}, arg6::Ptr{Cint}, arg7::Ptr{Libc.FILE}, arg8::Ptr{gridinfo_t})::Cint
 end
 
 function dcreate_matrix_postfix(arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8, arg9)
-    @ccall libsuperlu_ddefs.dcreate_matrix_postfix(arg1::Ptr{SuperMatrix}, arg2::Cint, arg3::Ptr{Ptr{Cdouble}}, arg4::Ptr{Cint}, arg5::Ptr{Ptr{Cdouble}}, arg6::Ptr{Cint}, arg7::Ptr{Libc.FILE}, arg8::Ptr{Cchar}, arg9::Ptr{gridinfo_t})::Cint
+    @ccall libsuperlu_dist_Int64.dcreate_matrix_postfix(arg1::Ptr{SuperMatrix}, arg2::Cint, arg3::Ptr{Ptr{Cdouble}}, arg4::Ptr{Cint}, arg5::Ptr{Ptr{Cdouble}}, arg6::Ptr{Cint}, arg7::Ptr{Libc.FILE}, arg8::Ptr{Cchar}, arg9::Ptr{gridinfo_t})::Cint
 end
 
 function dScalePermstructInit(arg1, arg2, arg3)
-    @ccall libsuperlu_ddefs.dScalePermstructInit(arg1::int_t, arg2::int_t, arg3::Ptr{dScalePermstruct_t})::Cvoid
+    @ccall libsuperlu_dist_Int64.dScalePermstructInit(arg1::int_t, arg2::int_t, arg3::Ptr{dScalePermstruct_t})::Cvoid
 end
 
 function dScalePermstructFree(arg1)
-    @ccall libsuperlu_ddefs.dScalePermstructFree(arg1::Ptr{dScalePermstruct_t})::Cvoid
+    @ccall libsuperlu_dist_Int64.dScalePermstructFree(arg1::Ptr{dScalePermstruct_t})::Cvoid
 end
 
 function dgsequ_dist(arg1, arg2, arg3, arg4, arg5, arg6, arg7)
-    @ccall libsuperlu_ddefs.dgsequ_dist(arg1::Ptr{SuperMatrix}, arg2::Ptr{Cdouble}, arg3::Ptr{Cdouble}, arg4::Ptr{Cdouble}, arg5::Ptr{Cdouble}, arg6::Ptr{Cdouble}, arg7::Ptr{int_t})::Cvoid
+    @ccall libsuperlu_dist_Int64.dgsequ_dist(arg1::Ptr{SuperMatrix}, arg2::Ptr{Cdouble}, arg3::Ptr{Cdouble}, arg4::Ptr{Cdouble}, arg5::Ptr{Cdouble}, arg6::Ptr{Cdouble}, arg7::Ptr{int_t})::Cvoid
 end
 
 function dlangs_dist(arg1, arg2)
-    @ccall libsuperlu_ddefs.dlangs_dist(arg1::Ptr{Cchar}, arg2::Ptr{SuperMatrix})::Cdouble
+    @ccall libsuperlu_dist_Int64.dlangs_dist(arg1::Ptr{Cchar}, arg2::Ptr{SuperMatrix})::Cdouble
 end
 
 function dlaqgs_dist(arg1, arg2, arg3, arg4, arg5, arg6, arg7)
-    @ccall libsuperlu_ddefs.dlaqgs_dist(arg1::Ptr{SuperMatrix}, arg2::Ptr{Cdouble}, arg3::Ptr{Cdouble}, arg4::Cdouble, arg5::Cdouble, arg6::Cdouble, arg7::Ptr{Cchar})::Cvoid
+    @ccall libsuperlu_dist_Int64.dlaqgs_dist(arg1::Ptr{SuperMatrix}, arg2::Ptr{Cdouble}, arg3::Ptr{Cdouble}, arg4::Cdouble, arg5::Cdouble, arg6::Cdouble, arg7::Ptr{Cchar})::Cvoid
 end
 
 function pdgsequ(arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8)
-    @ccall libsuperlu_ddefs.pdgsequ(arg1::Ptr{SuperMatrix}, arg2::Ptr{Cdouble}, arg3::Ptr{Cdouble}, arg4::Ptr{Cdouble}, arg5::Ptr{Cdouble}, arg6::Ptr{Cdouble}, arg7::Ptr{int_t}, arg8::Ptr{gridinfo_t})::Cvoid
+    @ccall libsuperlu_dist_Int64.pdgsequ(arg1::Ptr{SuperMatrix}, arg2::Ptr{Cdouble}, arg3::Ptr{Cdouble}, arg4::Ptr{Cdouble}, arg5::Ptr{Cdouble}, arg6::Ptr{Cdouble}, arg7::Ptr{int_t}, arg8::Ptr{gridinfo_t})::Cvoid
 end
 
 function pdlangs(arg1, arg2, arg3)
-    @ccall libsuperlu_ddefs.pdlangs(arg1::Ptr{Cchar}, arg2::Ptr{SuperMatrix}, arg3::Ptr{gridinfo_t})::Cdouble
+    @ccall libsuperlu_dist_Int64.pdlangs(arg1::Ptr{Cchar}, arg2::Ptr{SuperMatrix}, arg3::Ptr{gridinfo_t})::Cdouble
 end
 
 function pdlaqgs(arg1, arg2, arg3, arg4, arg5, arg6, arg7)
-    @ccall libsuperlu_ddefs.pdlaqgs(arg1::Ptr{SuperMatrix}, arg2::Ptr{Cdouble}, arg3::Ptr{Cdouble}, arg4::Cdouble, arg5::Cdouble, arg6::Cdouble, arg7::Ptr{Cchar})::Cvoid
+    @ccall libsuperlu_dist_Int64.pdlaqgs(arg1::Ptr{SuperMatrix}, arg2::Ptr{Cdouble}, arg3::Ptr{Cdouble}, arg4::Cdouble, arg5::Cdouble, arg6::Cdouble, arg7::Ptr{Cchar})::Cvoid
 end
 
 function pdPermute_Dense_Matrix(arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8, arg9, arg10)
-    @ccall libsuperlu_ddefs.pdPermute_Dense_Matrix(arg1::int_t, arg2::int_t, arg3::Ptr{int_t}, arg4::Ptr{int_t}, arg5::Ptr{Cdouble}, arg6::Cint, arg7::Ptr{Cdouble}, arg8::Cint, arg9::Cint, arg10::Ptr{gridinfo_t})::Cint
+    @ccall libsuperlu_dist_Int64.pdPermute_Dense_Matrix(arg1::int_t, arg2::int_t, arg3::Ptr{int_t}, arg4::Ptr{int_t}, arg5::Ptr{Cdouble}, arg6::Cint, arg7::Ptr{Cdouble}, arg8::Cint, arg9::Cint, arg10::Ptr{gridinfo_t})::Cint
 end
 
 function sp_dtrsv_dist(arg1, arg2, arg3, arg4, arg5, arg6, arg7)
-    @ccall libsuperlu_ddefs.sp_dtrsv_dist(arg1::Ptr{Cchar}, arg2::Ptr{Cchar}, arg3::Ptr{Cchar}, arg4::Ptr{SuperMatrix}, arg5::Ptr{SuperMatrix}, arg6::Ptr{Cdouble}, arg7::Ptr{Cint})::Cint
+    @ccall libsuperlu_dist_Int64.sp_dtrsv_dist(arg1::Ptr{Cchar}, arg2::Ptr{Cchar}, arg3::Ptr{Cchar}, arg4::Ptr{SuperMatrix}, arg5::Ptr{SuperMatrix}, arg6::Ptr{Cdouble}, arg7::Ptr{Cint})::Cint
 end
 
 function sp_dgemv_dist(arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8)
-    @ccall libsuperlu_ddefs.sp_dgemv_dist(arg1::Ptr{Cchar}, arg2::Cdouble, arg3::Ptr{SuperMatrix}, arg4::Ptr{Cdouble}, arg5::Cint, arg6::Cdouble, arg7::Ptr{Cdouble}, arg8::Cint)::Cint
+    @ccall libsuperlu_dist_Int64.sp_dgemv_dist(arg1::Ptr{Cchar}, arg2::Cdouble, arg3::Ptr{SuperMatrix}, arg4::Ptr{Cdouble}, arg5::Cint, arg6::Cdouble, arg7::Ptr{Cdouble}, arg8::Cint)::Cint
 end
 
 function sp_dgemm_dist(arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8, arg9)
-    @ccall libsuperlu_ddefs.sp_dgemm_dist(arg1::Ptr{Cchar}, arg2::Cint, arg3::Cdouble, arg4::Ptr{SuperMatrix}, arg5::Ptr{Cdouble}, arg6::Cint, arg7::Cdouble, arg8::Ptr{Cdouble}, arg9::Cint)::Cint
+    @ccall libsuperlu_dist_Int64.sp_dgemm_dist(arg1::Ptr{Cchar}, arg2::Cint, arg3::Cdouble, arg4::Ptr{SuperMatrix}, arg5::Ptr{Cdouble}, arg6::Cint, arg7::Cdouble, arg8::Ptr{Cdouble}, arg9::Cint)::Cint
 end
 
-struct superlu_dist_options_t
-    Fact::fact_t
-    Equil::yes_no_t
-    DiagInv::yes_no_t
-    ColPerm::colperm_t
-    Trans::trans_t
-    IterRefine::IterRefine_t
-    DiagPivotThresh::Cdouble
-    SymmetricMode::yes_no_t
-    PivotGrowth::yes_no_t
-    ConditionNumber::yes_no_t
-    RowPerm::rowperm_t
-    ILU_DropRule::Cint
-    ILU_DropTol::Cdouble
-    ILU_FillFactor::Cdouble
-    ILU_Norm::norm_t
-    ILU_FillTol::Cdouble
-    ILU_MILU::milu_t
-    ILU_MILU_Dim::Cdouble
-    ParSymbFact::yes_no_t
-    ReplaceTinyPivot::yes_no_t
-    SolveInitialized::yes_no_t
-    RefineInitialized::yes_no_t
-    PrintStat::yes_no_t
-    lookahead_etree::yes_no_t
-    num_lookaheads::Cint
-    superlu_relax::Cint
-    superlu_maxsup::Cint
-    superlu_rankorder::NTuple{4, Cchar}
-    superlu_lbs::NTuple{4, Cchar}
-    superlu_n_gemm::Cint
-    superlu_max_buffer_size::Cint
-    superlu_num_gpu_streams::Cint
-    superlu_acc_offload::Cint
-    SymPattern::yes_no_t
-    Use_TensorCore::yes_no_t
-    Algo3d::yes_no_t
+Base.@kwdef mutable struct superlu_dist_options_t
+    Fact::fact_t  = DOFACT
+    Equil::yes_no_t  = YES
+    DiagInv::yes_no_t  = NO
+    ColPerm::colperm_t  = Sys.iswindows() ? METIS_AT_PLUS_A : MMD_AT_PLUS_A
+    Trans::trans_t  = NOTRANS
+    IterRefine::IterRefine_t  = SLU_DOUBLE
+    DiagPivotThresh::Cdouble  = 0
+    SymmetricMode::yes_no_t  = NO
+    PivotGrowth::yes_no_t  = NO
+    ConditionNumber::yes_no_t  = NO
+    RowPerm::rowperm_t  = LargeDiag_MC64
+    ILU_DropRule::Cint  = 1
+    ILU_DropTol::Cdouble  = 0
+    ILU_FillFactor::Cdouble  = 0
+    ILU_Norm::norm_t  = ONE_NORM
+    ILU_FillTol::Cdouble  = 0
+    ILU_MILU::milu_t  = SILU
+    ILU_MILU_Dim::Cdouble  = 0
+    ParSymbFact::yes_no_t  = NO
+    ReplaceTinyPivot::yes_no_t  = NO
+    SolveInitialized::yes_no_t  = NO
+    RefineInitialized::yes_no_t  = NO
+    PrintStat::yes_no_t  = YES
+    lookahead_etree::yes_no_t  = NO
+    num_lookaheads::Cint  = 10
+    superlu_relax::Cint  = 60
+    superlu_maxsup::Cint  = 256
+    superlu_rankorder::NTuple{4, Cchar} = ('Z', '\0', '\0', '\0') #???
+    superlu_lbs::NTuple{4, Cchar} = ('G', 'D', '\0', '\0') #???
+    superlu_n_gemm::Cint  = 5000
+    superlu_max_buffer_size::Cint  = 256000000
+    superlu_num_gpu_streams::Cint  = 8
+    superlu_acc_offload::Cint  = 1
+    SymPattern::yes_no_t  = NO
+    Use_TensorCore::yes_no_t  = NO
+    Algo3d::yes_no_t   = NO
 end
 
 struct Glu_freeable_t
@@ -918,31 +783,31 @@ struct Glu_freeable_t
 end
 
 function ddistribute(arg1, arg2, arg3, arg4, arg5, arg6)
-    @ccall libsuperlu_ddefs.ddistribute(arg1::Ptr{superlu_dist_options_t}, arg2::int_t, arg3::Ptr{SuperMatrix}, arg4::Ptr{Glu_freeable_t}, arg5::Ptr{dLUstruct_t}, arg6::Ptr{gridinfo_t})::Cfloat
+    @ccall libsuperlu_dist_Int64.ddistribute(arg1::Ptr{superlu_dist_options_t}, arg2::int_t, arg3::Ptr{SuperMatrix}, arg4::Ptr{Glu_freeable_t}, arg5::Ptr{dLUstruct_t}, arg6::Ptr{gridinfo_t})::Cfloat
 end
 
 function pdgssvx_ABglobal(arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8, arg9, arg10, arg11)
-    @ccall libsuperlu_ddefs.pdgssvx_ABglobal(arg1::Ptr{superlu_dist_options_t}, arg2::Ptr{SuperMatrix}, arg3::Ptr{dScalePermstruct_t}, arg4::Ptr{Cdouble}, arg5::Cint, arg6::Cint, arg7::Ptr{gridinfo_t}, arg8::Ptr{dLUstruct_t}, arg9::Ptr{Cdouble}, arg10::Ptr{SuperLUStat_t}, arg11::Ptr{Cint})::Cvoid
+    @ccall libsuperlu_dist_Int64.pdgssvx_ABglobal(arg1::Ptr{superlu_dist_options_t}, arg2::Ptr{SuperMatrix}, arg3::Ptr{dScalePermstruct_t}, arg4::Ptr{Cdouble}, arg5::Cint, arg6::Cint, arg7::Ptr{gridinfo_t}, arg8::Ptr{dLUstruct_t}, arg9::Ptr{Cdouble}, arg10::Ptr{SuperLUStat_t}, arg11::Ptr{Cint})::Cvoid
 end
 
 function pddistribute(arg1, arg2, arg3, arg4, arg5, arg6, arg7)
-    @ccall libsuperlu_ddefs.pddistribute(arg1::Ptr{superlu_dist_options_t}, arg2::int_t, arg3::Ptr{SuperMatrix}, arg4::Ptr{dScalePermstruct_t}, arg5::Ptr{Glu_freeable_t}, arg6::Ptr{dLUstruct_t}, arg7::Ptr{gridinfo_t})::Cfloat
+    @ccall libsuperlu_dist_Int64.pddistribute(arg1::Ptr{superlu_dist_options_t}, arg2::int_t, arg3::Ptr{SuperMatrix}, arg4::Ptr{dScalePermstruct_t}, arg5::Ptr{Glu_freeable_t}, arg6::Ptr{dLUstruct_t}, arg7::Ptr{gridinfo_t})::Cfloat
 end
 
 function pdgssvx(arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8, arg9, arg10, arg11, arg12)
-    @ccall libsuperlu_ddefs.pdgssvx(arg1::Ptr{superlu_dist_options_t}, arg2::Ptr{SuperMatrix}, arg3::Ptr{dScalePermstruct_t}, arg4::Ptr{Cdouble}, arg5::Cint, arg6::Cint, arg7::Ptr{gridinfo_t}, arg8::Ptr{dLUstruct_t}, arg9::Ptr{dSOLVEstruct_t}, arg10::Ptr{Cdouble}, arg11::Ptr{SuperLUStat_t}, arg12::Ptr{Cint})::Cvoid
+    @ccall libsuperlu_dist_Int64.pdgssvx(arg1::Ptr{superlu_dist_options_t}, arg2::Ptr{SuperMatrix}, arg3::Ptr{dScalePermstruct_t}, arg4::Ptr{Cdouble}, arg5::Cint, arg6::Cint, arg7::Ptr{gridinfo_t}, arg8::Ptr{dLUstruct_t}, arg9::Ptr{dSOLVEstruct_t}, arg10::Ptr{Cdouble}, arg11::Ptr{SuperLUStat_t}, arg12::Ptr{Cint})::Cvoid
 end
 
 function pdCompute_Diag_Inv(arg1, arg2, arg3, arg4, arg5)
-    @ccall libsuperlu_ddefs.pdCompute_Diag_Inv(arg1::int_t, arg2::Ptr{dLUstruct_t}, arg3::Ptr{gridinfo_t}, arg4::Ptr{SuperLUStat_t}, arg5::Ptr{Cint})::Cvoid
+    @ccall libsuperlu_dist_Int64.pdCompute_Diag_Inv(arg1::int_t, arg2::Ptr{dLUstruct_t}, arg3::Ptr{gridinfo_t}, arg4::Ptr{SuperLUStat_t}, arg5::Ptr{Cint})::Cvoid
 end
 
 function dSolveInit(arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8)
-    @ccall libsuperlu_ddefs.dSolveInit(arg1::Ptr{superlu_dist_options_t}, arg2::Ptr{SuperMatrix}, arg3::Ptr{int_t}, arg4::Ptr{int_t}, arg5::int_t, arg6::Ptr{dLUstruct_t}, arg7::Ptr{gridinfo_t}, arg8::Ptr{dSOLVEstruct_t})::Cint
+    @ccall libsuperlu_dist_Int64.dSolveInit(arg1::Ptr{superlu_dist_options_t}, arg2::Ptr{SuperMatrix}, arg3::Ptr{int_t}, arg4::Ptr{int_t}, arg5::int_t, arg6::Ptr{dLUstruct_t}, arg7::Ptr{gridinfo_t}, arg8::Ptr{dSOLVEstruct_t})::Cint
 end
 
 function dSolveFinalize(arg1, arg2)
-    @ccall libsuperlu_ddefs.dSolveFinalize(arg1::Ptr{superlu_dist_options_t}, arg2::Ptr{dSOLVEstruct_t})::Cvoid
+    @ccall libsuperlu_dist_Int64.dSolveFinalize(arg1::Ptr{superlu_dist_options_t}, arg2::Ptr{dSOLVEstruct_t})::Cvoid
 end
 
 struct gridinfo3d_t
@@ -959,147 +824,147 @@ struct gridinfo3d_t
 end
 
 function dDestroy_A3d_gathered_on_2d(arg1, arg2)
-    @ccall libsuperlu_ddefs.dDestroy_A3d_gathered_on_2d(arg1::Ptr{dSOLVEstruct_t}, arg2::Ptr{gridinfo3d_t})::Cvoid
+    @ccall libsuperlu_dist_Int64.dDestroy_A3d_gathered_on_2d(arg1::Ptr{dSOLVEstruct_t}, arg2::Ptr{gridinfo3d_t})::Cvoid
 end
 
 function pdgstrs_init(arg1, arg2, arg3, arg4, arg5, arg6, grid, arg8, arg9)
-    @ccall libsuperlu_ddefs.pdgstrs_init(arg1::int_t, arg2::int_t, arg3::int_t, arg4::int_t, arg5::Ptr{int_t}, arg6::Ptr{int_t}, grid::Ptr{gridinfo_t}, arg8::Ptr{Glu_persist_t}, arg9::Ptr{dSOLVEstruct_t})::int_t
+    @ccall libsuperlu_dist_Int64.pdgstrs_init(arg1::int_t, arg2::int_t, arg3::int_t, arg4::int_t, arg5::Ptr{int_t}, arg6::Ptr{int_t}, grid::Ptr{gridinfo_t}, arg8::Ptr{Glu_persist_t}, arg9::Ptr{dSOLVEstruct_t})::int_t
 end
 
 function pxgstrs_finalize(arg1)
-    @ccall libsuperlu_ddefs.pxgstrs_finalize(arg1::Ptr{pxgstrs_comm_t})::Cvoid
+    @ccall libsuperlu_dist_Int64.pxgstrs_finalize(arg1::Ptr{pxgstrs_comm_t})::Cvoid
 end
 
 function dldperm_dist(arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8, arg9)
-    @ccall libsuperlu_ddefs.dldperm_dist(arg1::Cint, arg2::Cint, arg3::int_t, arg4::Ptr{int_t}, arg5::Ptr{int_t}, arg6::Ptr{Cdouble}, arg7::Ptr{int_t}, arg8::Ptr{Cdouble}, arg9::Ptr{Cdouble})::Cint
+    @ccall libsuperlu_dist_Int64.dldperm_dist(arg1::Cint, arg2::Cint, arg3::int_t, arg4::Ptr{int_t}, arg5::Ptr{int_t}, arg6::Ptr{Cdouble}, arg7::Ptr{int_t}, arg8::Ptr{Cdouble}, arg9::Ptr{Cdouble})::Cint
 end
 
 function dstatic_schedule(arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8, arg9)
-    @ccall libsuperlu_ddefs.dstatic_schedule(arg1::Ptr{superlu_dist_options_t}, arg2::Cint, arg3::Cint, arg4::Ptr{dLUstruct_t}, arg5::Ptr{gridinfo_t}, arg6::Ptr{SuperLUStat_t}, arg7::Ptr{int_t}, arg8::Ptr{int_t}, arg9::Ptr{Cint})::Cint
+    @ccall libsuperlu_dist_Int64.dstatic_schedule(arg1::Ptr{superlu_dist_options_t}, arg2::Cint, arg3::Cint, arg4::Ptr{dLUstruct_t}, arg5::Ptr{gridinfo_t}, arg6::Ptr{SuperLUStat_t}, arg7::Ptr{int_t}, arg8::Ptr{int_t}, arg9::Ptr{Cint})::Cint
 end
 
 function dLUstructInit(arg1, arg2)
-    @ccall libsuperlu_ddefs.dLUstructInit(arg1::int_t, arg2::Ptr{dLUstruct_t})::Cvoid
+    @ccall libsuperlu_dist_Int64.dLUstructInit(arg1::int_t, arg2::Ptr{dLUstruct_t})::Cvoid
 end
 
 function dLUstructFree(arg1)
-    @ccall libsuperlu_ddefs.dLUstructFree(arg1::Ptr{dLUstruct_t})::Cvoid
+    @ccall libsuperlu_dist_Int64.dLUstructFree(arg1::Ptr{dLUstruct_t})::Cvoid
 end
 
 function dDestroy_LU(arg1, arg2, arg3)
-    @ccall libsuperlu_ddefs.dDestroy_LU(arg1::int_t, arg2::Ptr{gridinfo_t}, arg3::Ptr{dLUstruct_t})::Cvoid
+    @ccall libsuperlu_dist_Int64.dDestroy_LU(arg1::int_t, arg2::Ptr{gridinfo_t}, arg3::Ptr{dLUstruct_t})::Cvoid
 end
 
 function dDestroy_Tree(arg1, arg2, arg3)
-    @ccall libsuperlu_ddefs.dDestroy_Tree(arg1::int_t, arg2::Ptr{gridinfo_t}, arg3::Ptr{dLUstruct_t})::Cvoid
+    @ccall libsuperlu_dist_Int64.dDestroy_Tree(arg1::int_t, arg2::Ptr{gridinfo_t}, arg3::Ptr{dLUstruct_t})::Cvoid
 end
 
 function dscatter_l(ib, ljb, nsupc, iukp, xsup, klst, nbrow, lptr, temp_nbrow, usub, lsub, tempv, indirect_thread, indirect2, Lrowind_bc_ptr, Lnzval_bc_ptr, grid)
-    @ccall libsuperlu_ddefs.dscatter_l(ib::Cint, ljb::Cint, nsupc::Cint, iukp::int_t, xsup::Ptr{int_t}, klst::Cint, nbrow::Cint, lptr::int_t, temp_nbrow::Cint, usub::Ptr{int_t}, lsub::Ptr{int_t}, tempv::Ptr{Cdouble}, indirect_thread::Ptr{Cint}, indirect2::Ptr{Cint}, Lrowind_bc_ptr::Ptr{Ptr{int_t}}, Lnzval_bc_ptr::Ptr{Ptr{Cdouble}}, grid::Ptr{gridinfo_t})::Cvoid
+    @ccall libsuperlu_dist_Int64.dscatter_l(ib::Cint, ljb::Cint, nsupc::Cint, iukp::int_t, xsup::Ptr{int_t}, klst::Cint, nbrow::Cint, lptr::int_t, temp_nbrow::Cint, usub::Ptr{int_t}, lsub::Ptr{int_t}, tempv::Ptr{Cdouble}, indirect_thread::Ptr{Cint}, indirect2::Ptr{Cint}, Lrowind_bc_ptr::Ptr{Ptr{int_t}}, Lnzval_bc_ptr::Ptr{Ptr{Cdouble}}, grid::Ptr{gridinfo_t})::Cvoid
 end
 
 function dscatter_u(ib, jb, nsupc, iukp, xsup, klst, nbrow, lptr, temp_nbrow, lsub, usub, tempv, Ufstnz_br_ptr, Unzval_br_ptr, grid)
-    @ccall libsuperlu_ddefs.dscatter_u(ib::Cint, jb::Cint, nsupc::Cint, iukp::int_t, xsup::Ptr{int_t}, klst::Cint, nbrow::Cint, lptr::int_t, temp_nbrow::Cint, lsub::Ptr{int_t}, usub::Ptr{int_t}, tempv::Ptr{Cdouble}, Ufstnz_br_ptr::Ptr{Ptr{int_t}}, Unzval_br_ptr::Ptr{Ptr{Cdouble}}, grid::Ptr{gridinfo_t})::Cvoid
+    @ccall libsuperlu_dist_Int64.dscatter_u(ib::Cint, jb::Cint, nsupc::Cint, iukp::int_t, xsup::Ptr{int_t}, klst::Cint, nbrow::Cint, lptr::int_t, temp_nbrow::Cint, lsub::Ptr{int_t}, usub::Ptr{int_t}, tempv::Ptr{Cdouble}, Ufstnz_br_ptr::Ptr{Ptr{int_t}}, Unzval_br_ptr::Ptr{Ptr{Cdouble}}, grid::Ptr{gridinfo_t})::Cvoid
 end
 
 function pdgstrf(arg1, arg2, arg3, anorm, arg5, arg6, arg7, arg8)
-    @ccall libsuperlu_ddefs.pdgstrf(arg1::Ptr{superlu_dist_options_t}, arg2::Cint, arg3::Cint, anorm::Cdouble, arg5::Ptr{dLUstruct_t}, arg6::Ptr{gridinfo_t}, arg7::Ptr{SuperLUStat_t}, arg8::Ptr{Cint})::int_t
+    @ccall libsuperlu_dist_Int64.pdgstrf(arg1::Ptr{superlu_dist_options_t}, arg2::Cint, arg3::Cint, anorm::Cdouble, arg5::Ptr{dLUstruct_t}, arg6::Ptr{gridinfo_t}, arg7::Ptr{SuperLUStat_t}, arg8::Ptr{Cint})::int_t
 end
 
 function pdgstrs_Bglobal(arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8, arg9)
-    @ccall libsuperlu_ddefs.pdgstrs_Bglobal(arg1::Ptr{superlu_dist_options_t}, arg2::int_t, arg3::Ptr{dLUstruct_t}, arg4::Ptr{gridinfo_t}, arg5::Ptr{Cdouble}, arg6::int_t, arg7::Cint, arg8::Ptr{SuperLUStat_t}, arg9::Ptr{Cint})::Cvoid
+    @ccall libsuperlu_dist_Int64.pdgstrs_Bglobal(arg1::Ptr{superlu_dist_options_t}, arg2::int_t, arg3::Ptr{dLUstruct_t}, arg4::Ptr{gridinfo_t}, arg5::Ptr{Cdouble}, arg6::int_t, arg7::Cint, arg8::Ptr{SuperLUStat_t}, arg9::Ptr{Cint})::Cvoid
 end
 
 function pdgstrs(arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8, arg9, arg10, arg11, arg12, arg13)
-    @ccall libsuperlu_ddefs.pdgstrs(arg1::Ptr{superlu_dist_options_t}, arg2::int_t, arg3::Ptr{dLUstruct_t}, arg4::Ptr{dScalePermstruct_t}, arg5::Ptr{gridinfo_t}, arg6::Ptr{Cdouble}, arg7::int_t, arg8::int_t, arg9::int_t, arg10::Cint, arg11::Ptr{dSOLVEstruct_t}, arg12::Ptr{SuperLUStat_t}, arg13::Ptr{Cint})::Cvoid
+    @ccall libsuperlu_dist_Int64.pdgstrs(arg1::Ptr{superlu_dist_options_t}, arg2::int_t, arg3::Ptr{dLUstruct_t}, arg4::Ptr{dScalePermstruct_t}, arg5::Ptr{gridinfo_t}, arg6::Ptr{Cdouble}, arg7::int_t, arg8::int_t, arg9::int_t, arg10::Cint, arg11::Ptr{dSOLVEstruct_t}, arg12::Ptr{SuperLUStat_t}, arg13::Ptr{Cint})::Cvoid
 end
 
 function pdgstrf2_trsm(options, k0, k, thresh, arg5, arg6, arg7, arg8, tag_ub, arg10, info)
-    @ccall libsuperlu_ddefs.pdgstrf2_trsm(options::Ptr{superlu_dist_options_t}, k0::int_t, k::int_t, thresh::Cdouble, arg5::Ptr{Glu_persist_t}, arg6::Ptr{gridinfo_t}, arg7::Ptr{dLocalLU_t}, arg8::Ptr{MPI_Request}, tag_ub::Cint, arg10::Ptr{SuperLUStat_t}, info::Ptr{Cint})::Cvoid
+    @ccall libsuperlu_dist_Int64.pdgstrf2_trsm(options::Ptr{superlu_dist_options_t}, k0::int_t, k::int_t, thresh::Cdouble, arg5::Ptr{Glu_persist_t}, arg6::Ptr{gridinfo_t}, arg7::Ptr{dLocalLU_t}, arg8::Ptr{MPI_Request}, tag_ub::Cint, arg10::Ptr{SuperLUStat_t}, info::Ptr{Cint})::Cvoid
 end
 
 function pdgstrs2_omp(k0, k, arg3, arg4, arg5, arg6, arg7)
-    @ccall libsuperlu_ddefs.pdgstrs2_omp(k0::int_t, k::int_t, arg3::Ptr{Glu_persist_t}, arg4::Ptr{gridinfo_t}, arg5::Ptr{dLocalLU_t}, arg6::Ptr{Ublock_info_t}, arg7::Ptr{SuperLUStat_t})::Cvoid
+    @ccall libsuperlu_dist_Int64.pdgstrs2_omp(k0::int_t, k::int_t, arg3::Ptr{Glu_persist_t}, arg4::Ptr{gridinfo_t}, arg5::Ptr{dLocalLU_t}, arg6::Ptr{Ublock_info_t}, arg7::Ptr{SuperLUStat_t})::Cvoid
 end
 
 function pdReDistribute_B_to_X(B, m_loc, nrhs, ldb, fst_row, ilsum, x, arg8, arg9, arg10, arg11)
-    @ccall libsuperlu_ddefs.pdReDistribute_B_to_X(B::Ptr{Cdouble}, m_loc::int_t, nrhs::Cint, ldb::int_t, fst_row::int_t, ilsum::Ptr{int_t}, x::Ptr{Cdouble}, arg8::Ptr{dScalePermstruct_t}, arg9::Ptr{Glu_persist_t}, arg10::Ptr{gridinfo_t}, arg11::Ptr{dSOLVEstruct_t})::int_t
+    @ccall libsuperlu_dist_Int64.pdReDistribute_B_to_X(B::Ptr{Cdouble}, m_loc::int_t, nrhs::Cint, ldb::int_t, fst_row::int_t, ilsum::Ptr{int_t}, x::Ptr{Cdouble}, arg8::Ptr{dScalePermstruct_t}, arg9::Ptr{Glu_persist_t}, arg10::Ptr{gridinfo_t}, arg11::Ptr{dSOLVEstruct_t})::int_t
 end
 
 function dlsum_fmod(arg1, arg2, arg3, arg4, arg5, arg6, arg7, fmod, arg9, arg10, arg11, arg12, arg13, arg14, arg15, arg16)
-    @ccall libsuperlu_ddefs.dlsum_fmod(arg1::Ptr{Cdouble}, arg2::Ptr{Cdouble}, arg3::Ptr{Cdouble}, arg4::Ptr{Cdouble}, arg5::Cint, arg6::Cint, arg7::int_t, fmod::Ptr{Cint}, arg9::int_t, arg10::int_t, arg11::int_t, arg12::Ptr{int_t}, arg13::Ptr{gridinfo_t}, arg14::Ptr{dLocalLU_t}, arg15::Ptr{MPI_Request}, arg16::Ptr{SuperLUStat_t})::Cvoid
+    @ccall libsuperlu_dist_Int64.dlsum_fmod(arg1::Ptr{Cdouble}, arg2::Ptr{Cdouble}, arg3::Ptr{Cdouble}, arg4::Ptr{Cdouble}, arg5::Cint, arg6::Cint, arg7::int_t, fmod::Ptr{Cint}, arg9::int_t, arg10::int_t, arg11::int_t, arg12::Ptr{int_t}, arg13::Ptr{gridinfo_t}, arg14::Ptr{dLocalLU_t}, arg15::Ptr{MPI_Request}, arg16::Ptr{SuperLUStat_t})::Cvoid
 end
 
 function dlsum_bmod(arg1, arg2, arg3, arg4, arg5, bmod, arg7, arg8, arg9, arg10, arg11, arg12, arg13, arg14)
-    @ccall libsuperlu_ddefs.dlsum_bmod(arg1::Ptr{Cdouble}, arg2::Ptr{Cdouble}, arg3::Ptr{Cdouble}, arg4::Cint, arg5::int_t, bmod::Ptr{Cint}, arg7::Ptr{int_t}, arg8::Ptr{Ptr{Ucb_indptr_t}}, arg9::Ptr{Ptr{int_t}}, arg10::Ptr{int_t}, arg11::Ptr{gridinfo_t}, arg12::Ptr{dLocalLU_t}, arg13::Ptr{MPI_Request}, arg14::Ptr{SuperLUStat_t})::Cvoid
+    @ccall libsuperlu_dist_Int64.dlsum_bmod(arg1::Ptr{Cdouble}, arg2::Ptr{Cdouble}, arg3::Ptr{Cdouble}, arg4::Cint, arg5::int_t, bmod::Ptr{Cint}, arg7::Ptr{int_t}, arg8::Ptr{Ptr{Ucb_indptr_t}}, arg9::Ptr{Ptr{int_t}}, arg10::Ptr{int_t}, arg11::Ptr{gridinfo_t}, arg12::Ptr{dLocalLU_t}, arg13::Ptr{MPI_Request}, arg14::Ptr{SuperLUStat_t})::Cvoid
 end
 
 function dlsum_fmod_inv(arg1, arg2, arg3, arg4, arg5, arg6, fmod, arg8, arg9, arg10, arg11, arg12, arg13, arg14, arg15, arg16, arg17, arg18, arg19)
-    @ccall libsuperlu_ddefs.dlsum_fmod_inv(arg1::Ptr{Cdouble}, arg2::Ptr{Cdouble}, arg3::Ptr{Cdouble}, arg4::Ptr{Cdouble}, arg5::Cint, arg6::int_t, fmod::Ptr{Cint}, arg8::Ptr{int_t}, arg9::Ptr{gridinfo_t}, arg10::Ptr{dLocalLU_t}, arg11::Ptr{Ptr{SuperLUStat_t}}, arg12::Ptr{int_t}, arg13::Ptr{int_t}, arg14::int_t, arg15::int_t, arg16::int_t, arg17::int_t, arg18::Cint, arg19::Cint)::Cvoid
+    @ccall libsuperlu_dist_Int64.dlsum_fmod_inv(arg1::Ptr{Cdouble}, arg2::Ptr{Cdouble}, arg3::Ptr{Cdouble}, arg4::Ptr{Cdouble}, arg5::Cint, arg6::int_t, fmod::Ptr{Cint}, arg8::Ptr{int_t}, arg9::Ptr{gridinfo_t}, arg10::Ptr{dLocalLU_t}, arg11::Ptr{Ptr{SuperLUStat_t}}, arg12::Ptr{int_t}, arg13::Ptr{int_t}, arg14::int_t, arg15::int_t, arg16::int_t, arg17::int_t, arg18::Cint, arg19::Cint)::Cvoid
 end
 
 function dlsum_fmod_inv_master(arg1, arg2, arg3, arg4, arg5, arg6, arg7, fmod, arg9, arg10, arg11, arg12, arg13, arg14, arg15, arg16, arg17, arg18, arg19)
-    @ccall libsuperlu_ddefs.dlsum_fmod_inv_master(arg1::Ptr{Cdouble}, arg2::Ptr{Cdouble}, arg3::Ptr{Cdouble}, arg4::Ptr{Cdouble}, arg5::Cint, arg6::Cint, arg7::int_t, fmod::Ptr{Cint}, arg9::int_t, arg10::Ptr{int_t}, arg11::Ptr{gridinfo_t}, arg12::Ptr{dLocalLU_t}, arg13::Ptr{Ptr{SuperLUStat_t}}, arg14::int_t, arg15::int_t, arg16::int_t, arg17::int_t, arg18::Cint, arg19::Cint)::Cvoid
+    @ccall libsuperlu_dist_Int64.dlsum_fmod_inv_master(arg1::Ptr{Cdouble}, arg2::Ptr{Cdouble}, arg3::Ptr{Cdouble}, arg4::Ptr{Cdouble}, arg5::Cint, arg6::Cint, arg7::int_t, fmod::Ptr{Cint}, arg9::int_t, arg10::Ptr{int_t}, arg11::Ptr{gridinfo_t}, arg12::Ptr{dLocalLU_t}, arg13::Ptr{Ptr{SuperLUStat_t}}, arg14::int_t, arg15::int_t, arg16::int_t, arg17::int_t, arg18::Cint, arg19::Cint)::Cvoid
 end
 
 function dlsum_bmod_inv(arg1, arg2, arg3, arg4, arg5, arg6, bmod, arg8, arg9, arg10, arg11, arg12, arg13, arg14, arg15, arg16, arg17, arg18, arg19, arg20)
-    @ccall libsuperlu_ddefs.dlsum_bmod_inv(arg1::Ptr{Cdouble}, arg2::Ptr{Cdouble}, arg3::Ptr{Cdouble}, arg4::Ptr{Cdouble}, arg5::Cint, arg6::int_t, bmod::Ptr{Cint}, arg8::Ptr{int_t}, arg9::Ptr{Ptr{Ucb_indptr_t}}, arg10::Ptr{Ptr{int_t}}, arg11::Ptr{int_t}, arg12::Ptr{gridinfo_t}, arg13::Ptr{dLocalLU_t}, arg14::Ptr{Ptr{SuperLUStat_t}}, arg15::Ptr{int_t}, arg16::Ptr{int_t}, arg17::int_t, arg18::int_t, arg19::Cint, arg20::Cint)::Cvoid
+    @ccall libsuperlu_dist_Int64.dlsum_bmod_inv(arg1::Ptr{Cdouble}, arg2::Ptr{Cdouble}, arg3::Ptr{Cdouble}, arg4::Ptr{Cdouble}, arg5::Cint, arg6::int_t, bmod::Ptr{Cint}, arg8::Ptr{int_t}, arg9::Ptr{Ptr{Ucb_indptr_t}}, arg10::Ptr{Ptr{int_t}}, arg11::Ptr{int_t}, arg12::Ptr{gridinfo_t}, arg13::Ptr{dLocalLU_t}, arg14::Ptr{Ptr{SuperLUStat_t}}, arg15::Ptr{int_t}, arg16::Ptr{int_t}, arg17::int_t, arg18::int_t, arg19::Cint, arg20::Cint)::Cvoid
 end
 
 function dlsum_bmod_inv_master(arg1, arg2, arg3, arg4, arg5, arg6, bmod, arg8, arg9, arg10, arg11, arg12, arg13, arg14, arg15, arg16, arg17, arg18)
-    @ccall libsuperlu_ddefs.dlsum_bmod_inv_master(arg1::Ptr{Cdouble}, arg2::Ptr{Cdouble}, arg3::Ptr{Cdouble}, arg4::Ptr{Cdouble}, arg5::Cint, arg6::int_t, bmod::Ptr{Cint}, arg8::Ptr{int_t}, arg9::Ptr{Ptr{Ucb_indptr_t}}, arg10::Ptr{Ptr{int_t}}, arg11::Ptr{int_t}, arg12::Ptr{gridinfo_t}, arg13::Ptr{dLocalLU_t}, arg14::Ptr{Ptr{SuperLUStat_t}}, arg15::int_t, arg16::int_t, arg17::Cint, arg18::Cint)::Cvoid
+    @ccall libsuperlu_dist_Int64.dlsum_bmod_inv_master(arg1::Ptr{Cdouble}, arg2::Ptr{Cdouble}, arg3::Ptr{Cdouble}, arg4::Ptr{Cdouble}, arg5::Cint, arg6::int_t, bmod::Ptr{Cint}, arg8::Ptr{int_t}, arg9::Ptr{Ptr{Ucb_indptr_t}}, arg10::Ptr{Ptr{int_t}}, arg11::Ptr{int_t}, arg12::Ptr{gridinfo_t}, arg13::Ptr{dLocalLU_t}, arg14::Ptr{Ptr{SuperLUStat_t}}, arg15::int_t, arg16::int_t, arg17::Cint, arg18::Cint)::Cvoid
 end
 
 function dComputeLevelsets(arg1, arg2, arg3, arg4, arg5, arg6)
-    @ccall libsuperlu_ddefs.dComputeLevelsets(arg1::Cint, arg2::int_t, arg3::Ptr{gridinfo_t}, arg4::Ptr{Glu_persist_t}, arg5::Ptr{dLocalLU_t}, arg6::Ptr{int_t})::Cvoid
+    @ccall libsuperlu_dist_Int64.dComputeLevelsets(arg1::Cint, arg2::int_t, arg3::Ptr{gridinfo_t}, arg4::Ptr{Glu_persist_t}, arg5::Ptr{dLocalLU_t}, arg6::Ptr{int_t})::Cvoid
 end
 
 function pdgsrfs(arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8, arg9, arg10, arg11, arg12, arg13, arg14, arg15, arg16)
-    @ccall libsuperlu_ddefs.pdgsrfs(arg1::Ptr{superlu_dist_options_t}, arg2::int_t, arg3::Ptr{SuperMatrix}, arg4::Cdouble, arg5::Ptr{dLUstruct_t}, arg6::Ptr{dScalePermstruct_t}, arg7::Ptr{gridinfo_t}, arg8::Ptr{Cdouble}, arg9::int_t, arg10::Ptr{Cdouble}, arg11::int_t, arg12::Cint, arg13::Ptr{dSOLVEstruct_t}, arg14::Ptr{Cdouble}, arg15::Ptr{SuperLUStat_t}, arg16::Ptr{Cint})::Cvoid
+    @ccall libsuperlu_dist_Int64.pdgsrfs(arg1::Ptr{superlu_dist_options_t}, arg2::int_t, arg3::Ptr{SuperMatrix}, arg4::Cdouble, arg5::Ptr{dLUstruct_t}, arg6::Ptr{dScalePermstruct_t}, arg7::Ptr{gridinfo_t}, arg8::Ptr{Cdouble}, arg9::int_t, arg10::Ptr{Cdouble}, arg11::int_t, arg12::Cint, arg13::Ptr{dSOLVEstruct_t}, arg14::Ptr{Cdouble}, arg15::Ptr{SuperLUStat_t}, arg16::Ptr{Cint})::Cvoid
 end
 
 function pdgsrfs_ABXglobal(arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8, arg9, arg10, arg11, arg12, arg13, arg14)
-    @ccall libsuperlu_ddefs.pdgsrfs_ABXglobal(arg1::Ptr{superlu_dist_options_t}, arg2::int_t, arg3::Ptr{SuperMatrix}, arg4::Cdouble, arg5::Ptr{dLUstruct_t}, arg6::Ptr{gridinfo_t}, arg7::Ptr{Cdouble}, arg8::int_t, arg9::Ptr{Cdouble}, arg10::int_t, arg11::Cint, arg12::Ptr{Cdouble}, arg13::Ptr{SuperLUStat_t}, arg14::Ptr{Cint})::Cvoid
+    @ccall libsuperlu_dist_Int64.pdgsrfs_ABXglobal(arg1::Ptr{superlu_dist_options_t}, arg2::int_t, arg3::Ptr{SuperMatrix}, arg4::Cdouble, arg5::Ptr{dLUstruct_t}, arg6::Ptr{gridinfo_t}, arg7::Ptr{Cdouble}, arg8::int_t, arg9::Ptr{Cdouble}, arg10::int_t, arg11::Cint, arg12::Ptr{Cdouble}, arg13::Ptr{SuperLUStat_t}, arg14::Ptr{Cint})::Cvoid
 end
 
 function pdgsmv_AXglobal_setup(arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8)
-    @ccall libsuperlu_ddefs.pdgsmv_AXglobal_setup(arg1::Ptr{SuperMatrix}, arg2::Ptr{Glu_persist_t}, arg3::Ptr{gridinfo_t}, arg4::Ptr{int_t}, arg5::Ptr{Ptr{int_t}}, arg6::Ptr{Ptr{Cdouble}}, arg7::Ptr{Ptr{int_t}}, arg8::Ptr{int_t})::Cint
+    @ccall libsuperlu_dist_Int64.pdgsmv_AXglobal_setup(arg1::Ptr{SuperMatrix}, arg2::Ptr{Glu_persist_t}, arg3::Ptr{gridinfo_t}, arg4::Ptr{int_t}, arg5::Ptr{Ptr{int_t}}, arg6::Ptr{Ptr{Cdouble}}, arg7::Ptr{Ptr{int_t}}, arg8::Ptr{int_t})::Cint
 end
 
 function pdgsmv_AXglobal(arg1, arg2, arg3, arg4, arg5, arg6)
-    @ccall libsuperlu_ddefs.pdgsmv_AXglobal(arg1::int_t, arg2::Ptr{int_t}, arg3::Ptr{Cdouble}, arg4::Ptr{int_t}, arg5::Ptr{Cdouble}, arg6::Ptr{Cdouble})::Cint
+    @ccall libsuperlu_dist_Int64.pdgsmv_AXglobal(arg1::int_t, arg2::Ptr{int_t}, arg3::Ptr{Cdouble}, arg4::Ptr{int_t}, arg5::Ptr{Cdouble}, arg6::Ptr{Cdouble})::Cint
 end
 
 function pdgsmv_AXglobal_abs(arg1, arg2, arg3, arg4, arg5, arg6)
-    @ccall libsuperlu_ddefs.pdgsmv_AXglobal_abs(arg1::int_t, arg2::Ptr{int_t}, arg3::Ptr{Cdouble}, arg4::Ptr{int_t}, arg5::Ptr{Cdouble}, arg6::Ptr{Cdouble})::Cint
+    @ccall libsuperlu_dist_Int64.pdgsmv_AXglobal_abs(arg1::int_t, arg2::Ptr{int_t}, arg3::Ptr{Cdouble}, arg4::Ptr{int_t}, arg5::Ptr{Cdouble}, arg6::Ptr{Cdouble})::Cint
 end
 
 function pdgsmv_init(arg1, arg2, arg3, arg4)
-    @ccall libsuperlu_ddefs.pdgsmv_init(arg1::Ptr{SuperMatrix}, arg2::Ptr{int_t}, arg3::Ptr{gridinfo_t}, arg4::Ptr{pdgsmv_comm_t})::Cvoid
+    @ccall libsuperlu_dist_Int64.pdgsmv_init(arg1::Ptr{SuperMatrix}, arg2::Ptr{int_t}, arg3::Ptr{gridinfo_t}, arg4::Ptr{pdgsmv_comm_t})::Cvoid
 end
 
 function pdgsmv(arg1, arg2, arg3, arg4, x, ax)
-    @ccall libsuperlu_ddefs.pdgsmv(arg1::int_t, arg2::Ptr{SuperMatrix}, arg3::Ptr{gridinfo_t}, arg4::Ptr{pdgsmv_comm_t}, x::Ptr{Cdouble}, ax::Ptr{Cdouble})::Cvoid
+    @ccall libsuperlu_dist_Int64.pdgsmv(arg1::int_t, arg2::Ptr{SuperMatrix}, arg3::Ptr{gridinfo_t}, arg4::Ptr{pdgsmv_comm_t}, x::Ptr{Cdouble}, ax::Ptr{Cdouble})::Cvoid
 end
 
 function pdgsmv_finalize(arg1)
-    @ccall libsuperlu_ddefs.pdgsmv_finalize(arg1::Ptr{pdgsmv_comm_t})::Cvoid
+    @ccall libsuperlu_dist_Int64.pdgsmv_finalize(arg1::Ptr{pdgsmv_comm_t})::Cvoid
 end
 
 function doubleMalloc_dist(arg1)
-    @ccall libsuperlu_ddefs.doubleMalloc_dist(arg1::int_t)::Ptr{Cdouble}
+    @ccall libsuperlu_dist_Int64.doubleMalloc_dist(arg1::int_t)::Ptr{Cdouble}
 end
 
 function doubleCalloc_dist(arg1)
-    @ccall libsuperlu_ddefs.doubleCalloc_dist(arg1::int_t)::Ptr{Cdouble}
+    @ccall libsuperlu_dist_Int64.doubleCalloc_dist(arg1::int_t)::Ptr{Cdouble}
 end
 
 function duser_malloc_dist(arg1, arg2)
-    @ccall libsuperlu_ddefs.duser_malloc_dist(arg1::int_t, arg2::int_t)::Ptr{Cvoid}
+    @ccall libsuperlu_dist_Int64.duser_malloc_dist(arg1::int_t, arg2::int_t)::Ptr{Cvoid}
 end
 
 function duser_free_dist(arg1, arg2)
-    @ccall libsuperlu_ddefs.duser_free_dist(arg1::int_t, arg2::int_t)::Cvoid
+    @ccall libsuperlu_dist_Int64.duser_free_dist(arg1::int_t, arg2::int_t)::Cvoid
 end
 
 struct superlu_dist_mem_usage_t
@@ -1111,467 +976,467 @@ struct superlu_dist_mem_usage_t
 end
 
 function dQuerySpace_dist(arg1, arg2, arg3, arg4, arg5)
-    @ccall libsuperlu_ddefs.dQuerySpace_dist(arg1::int_t, arg2::Ptr{dLUstruct_t}, arg3::Ptr{gridinfo_t}, arg4::Ptr{SuperLUStat_t}, arg5::Ptr{superlu_dist_mem_usage_t})::int_t
+    @ccall libsuperlu_dist_Int64.dQuerySpace_dist(arg1::int_t, arg2::Ptr{dLUstruct_t}, arg3::Ptr{gridinfo_t}, arg4::Ptr{SuperLUStat_t}, arg5::Ptr{superlu_dist_mem_usage_t})::int_t
 end
 
 function dClone_CompRowLoc_Matrix_dist(arg1, arg2)
-    @ccall libsuperlu_ddefs.dClone_CompRowLoc_Matrix_dist(arg1::Ptr{SuperMatrix}, arg2::Ptr{SuperMatrix})::Cvoid
+    @ccall libsuperlu_dist_Int64.dClone_CompRowLoc_Matrix_dist(arg1::Ptr{SuperMatrix}, arg2::Ptr{SuperMatrix})::Cvoid
 end
 
 function dCopy_CompRowLoc_Matrix_dist(arg1, arg2)
-    @ccall libsuperlu_ddefs.dCopy_CompRowLoc_Matrix_dist(arg1::Ptr{SuperMatrix}, arg2::Ptr{SuperMatrix})::Cvoid
+    @ccall libsuperlu_dist_Int64.dCopy_CompRowLoc_Matrix_dist(arg1::Ptr{SuperMatrix}, arg2::Ptr{SuperMatrix})::Cvoid
 end
 
 function dZero_CompRowLoc_Matrix_dist(arg1)
-    @ccall libsuperlu_ddefs.dZero_CompRowLoc_Matrix_dist(arg1::Ptr{SuperMatrix})::Cvoid
+    @ccall libsuperlu_dist_Int64.dZero_CompRowLoc_Matrix_dist(arg1::Ptr{SuperMatrix})::Cvoid
 end
 
 function dScaleAddId_CompRowLoc_Matrix_dist(arg1, arg2)
-    @ccall libsuperlu_ddefs.dScaleAddId_CompRowLoc_Matrix_dist(arg1::Ptr{SuperMatrix}, arg2::Cdouble)::Cvoid
+    @ccall libsuperlu_dist_Int64.dScaleAddId_CompRowLoc_Matrix_dist(arg1::Ptr{SuperMatrix}, arg2::Cdouble)::Cvoid
 end
 
 function dScaleAdd_CompRowLoc_Matrix_dist(arg1, arg2, arg3)
-    @ccall libsuperlu_ddefs.dScaleAdd_CompRowLoc_Matrix_dist(arg1::Ptr{SuperMatrix}, arg2::Ptr{SuperMatrix}, arg3::Cdouble)::Cvoid
+    @ccall libsuperlu_dist_Int64.dScaleAdd_CompRowLoc_Matrix_dist(arg1::Ptr{SuperMatrix}, arg2::Ptr{SuperMatrix}, arg3::Cdouble)::Cvoid
 end
 
 function dZeroLblocks(arg1, arg2, arg3, arg4)
-    @ccall libsuperlu_ddefs.dZeroLblocks(arg1::Cint, arg2::Cint, arg3::Ptr{gridinfo_t}, arg4::Ptr{dLUstruct_t})::Cvoid
+    @ccall libsuperlu_dist_Int64.dZeroLblocks(arg1::Cint, arg2::Cint, arg3::Ptr{gridinfo_t}, arg4::Ptr{dLUstruct_t})::Cvoid
 end
 
 function dZeroUblocks(iam, n, arg3, arg4)
-    @ccall libsuperlu_ddefs.dZeroUblocks(iam::Cint, n::Cint, arg3::Ptr{gridinfo_t}, arg4::Ptr{dLUstruct_t})::Cvoid
+    @ccall libsuperlu_dist_Int64.dZeroUblocks(iam::Cint, n::Cint, arg3::Ptr{gridinfo_t}, arg4::Ptr{dLUstruct_t})::Cvoid
 end
 
 function dfill_dist(arg1, arg2, arg3)
-    @ccall libsuperlu_ddefs.dfill_dist(arg1::Ptr{Cdouble}, arg2::int_t, arg3::Cdouble)::Cvoid
+    @ccall libsuperlu_dist_Int64.dfill_dist(arg1::Ptr{Cdouble}, arg2::int_t, arg3::Cdouble)::Cvoid
 end
 
 function dinf_norm_error_dist(arg1, arg2, arg3, arg4, arg5, arg6, arg7)
-    @ccall libsuperlu_ddefs.dinf_norm_error_dist(arg1::int_t, arg2::int_t, arg3::Ptr{Cdouble}, arg4::int_t, arg5::Ptr{Cdouble}, arg6::int_t, arg7::Ptr{gridinfo_t})::Cvoid
+    @ccall libsuperlu_dist_Int64.dinf_norm_error_dist(arg1::int_t, arg2::int_t, arg3::Ptr{Cdouble}, arg4::int_t, arg5::Ptr{Cdouble}, arg6::int_t, arg7::Ptr{gridinfo_t})::Cvoid
 end
 
 function pdinf_norm_error(arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8)
-    @ccall libsuperlu_ddefs.pdinf_norm_error(arg1::Cint, arg2::int_t, arg3::int_t, arg4::Ptr{Cdouble}, arg5::int_t, arg6::Ptr{Cdouble}, arg7::int_t, arg8::MPI_Comm)::Cvoid
+    @ccall libsuperlu_dist_Int64.pdinf_norm_error(arg1::Cint, arg2::int_t, arg3::int_t, arg4::Ptr{Cdouble}, arg5::int_t, arg6::Ptr{Cdouble}, arg7::int_t, arg8::MPI_Comm)::Cvoid
 end
 
 function dreadhb_dist(arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8)
-    @ccall libsuperlu_ddefs.dreadhb_dist(arg1::Cint, arg2::Ptr{Libc.FILE}, arg3::Ptr{int_t}, arg4::Ptr{int_t}, arg5::Ptr{int_t}, arg6::Ptr{Ptr{Cdouble}}, arg7::Ptr{Ptr{int_t}}, arg8::Ptr{Ptr{int_t}})::Cvoid
+    @ccall libsuperlu_dist_Int64.dreadhb_dist(arg1::Cint, arg2::Ptr{Libc.FILE}, arg3::Ptr{int_t}, arg4::Ptr{int_t}, arg5::Ptr{int_t}, arg6::Ptr{Ptr{Cdouble}}, arg7::Ptr{Ptr{int_t}}, arg8::Ptr{Ptr{int_t}})::Cvoid
 end
 
 function dreadtriple_dist(arg1, arg2, arg3, arg4, arg5, arg6, arg7)
-    @ccall libsuperlu_ddefs.dreadtriple_dist(arg1::Ptr{Libc.FILE}, arg2::Ptr{int_t}, arg3::Ptr{int_t}, arg4::Ptr{int_t}, arg5::Ptr{Ptr{Cdouble}}, arg6::Ptr{Ptr{int_t}}, arg7::Ptr{Ptr{int_t}})::Cvoid
+    @ccall libsuperlu_dist_Int64.dreadtriple_dist(arg1::Ptr{Libc.FILE}, arg2::Ptr{int_t}, arg3::Ptr{int_t}, arg4::Ptr{int_t}, arg5::Ptr{Ptr{Cdouble}}, arg6::Ptr{Ptr{int_t}}, arg7::Ptr{Ptr{int_t}})::Cvoid
 end
 
 function dreadtriple_noheader(arg1, arg2, arg3, arg4, arg5, arg6, arg7)
-    @ccall libsuperlu_ddefs.dreadtriple_noheader(arg1::Ptr{Libc.FILE}, arg2::Ptr{int_t}, arg3::Ptr{int_t}, arg4::Ptr{int_t}, arg5::Ptr{Ptr{Cdouble}}, arg6::Ptr{Ptr{int_t}}, arg7::Ptr{Ptr{int_t}})::Cvoid
+    @ccall libsuperlu_dist_Int64.dreadtriple_noheader(arg1::Ptr{Libc.FILE}, arg2::Ptr{int_t}, arg3::Ptr{int_t}, arg4::Ptr{int_t}, arg5::Ptr{Ptr{Cdouble}}, arg6::Ptr{Ptr{int_t}}, arg7::Ptr{Ptr{int_t}})::Cvoid
 end
 
 function dreadrb_dist(arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8)
-    @ccall libsuperlu_ddefs.dreadrb_dist(arg1::Cint, arg2::Ptr{Libc.FILE}, arg3::Ptr{int_t}, arg4::Ptr{int_t}, arg5::Ptr{int_t}, arg6::Ptr{Ptr{Cdouble}}, arg7::Ptr{Ptr{int_t}}, arg8::Ptr{Ptr{int_t}})::Cvoid
+    @ccall libsuperlu_dist_Int64.dreadrb_dist(arg1::Cint, arg2::Ptr{Libc.FILE}, arg3::Ptr{int_t}, arg4::Ptr{int_t}, arg5::Ptr{int_t}, arg6::Ptr{Ptr{Cdouble}}, arg7::Ptr{Ptr{int_t}}, arg8::Ptr{Ptr{int_t}})::Cvoid
 end
 
 function dreadMM_dist(arg1, arg2, arg3, arg4, arg5, arg6, arg7)
-    @ccall libsuperlu_ddefs.dreadMM_dist(arg1::Ptr{Libc.FILE}, arg2::Ptr{int_t}, arg3::Ptr{int_t}, arg4::Ptr{int_t}, arg5::Ptr{Ptr{Cdouble}}, arg6::Ptr{Ptr{int_t}}, arg7::Ptr{Ptr{int_t}})::Cvoid
+    @ccall libsuperlu_dist_Int64.dreadMM_dist(arg1::Ptr{Libc.FILE}, arg2::Ptr{int_t}, arg3::Ptr{int_t}, arg4::Ptr{int_t}, arg5::Ptr{Ptr{Cdouble}}, arg6::Ptr{Ptr{int_t}}, arg7::Ptr{Ptr{int_t}})::Cvoid
 end
 
 function dread_binary(arg1, arg2, arg3, arg4, arg5, arg6, arg7)
-    @ccall libsuperlu_ddefs.dread_binary(arg1::Ptr{Libc.FILE}, arg2::Ptr{int_t}, arg3::Ptr{int_t}, arg4::Ptr{int_t}, arg5::Ptr{Ptr{Cdouble}}, arg6::Ptr{Ptr{int_t}}, arg7::Ptr{Ptr{int_t}})::Cint
+    @ccall libsuperlu_dist_Int64.dread_binary(arg1::Ptr{Libc.FILE}, arg2::Ptr{int_t}, arg3::Ptr{int_t}, arg4::Ptr{int_t}, arg5::Ptr{Ptr{Cdouble}}, arg6::Ptr{Ptr{int_t}}, arg7::Ptr{Ptr{int_t}})::Cint
 end
 
 function ddist_psymbtonum(arg1, arg2, arg3, arg4, arg5, arg6, arg7)
-    @ccall libsuperlu_ddefs.ddist_psymbtonum(arg1::Ptr{superlu_dist_options_t}, arg2::int_t, arg3::Ptr{SuperMatrix}, arg4::Ptr{dScalePermstruct_t}, arg5::Ptr{Pslu_freeable_t}, arg6::Ptr{dLUstruct_t}, arg7::Ptr{gridinfo_t})::Cfloat
+    @ccall libsuperlu_dist_Int64.ddist_psymbtonum(arg1::Ptr{superlu_dist_options_t}, arg2::int_t, arg3::Ptr{SuperMatrix}, arg4::Ptr{dScalePermstruct_t}, arg5::Ptr{Pslu_freeable_t}, arg6::Ptr{dLUstruct_t}, arg7::Ptr{gridinfo_t})::Cfloat
 end
 
 function pdGetDiagU(arg1, arg2, arg3, arg4)
-    @ccall libsuperlu_ddefs.pdGetDiagU(arg1::int_t, arg2::Ptr{dLUstruct_t}, arg3::Ptr{gridinfo_t}, arg4::Ptr{Cdouble})::Cvoid
+    @ccall libsuperlu_dist_Int64.pdGetDiagU(arg1::int_t, arg2::Ptr{dLUstruct_t}, arg3::Ptr{gridinfo_t}, arg4::Ptr{Cdouble})::Cvoid
 end
 
 function d_c2cpp_GetHWPM(arg1, arg2, arg3)
-    @ccall libsuperlu_ddefs.d_c2cpp_GetHWPM(arg1::Ptr{SuperMatrix}, arg2::Ptr{gridinfo_t}, arg3::Ptr{dScalePermstruct_t})::Cint
+    @ccall libsuperlu_dist_Int64.d_c2cpp_GetHWPM(arg1::Ptr{SuperMatrix}, arg2::Ptr{gridinfo_t}, arg3::Ptr{dScalePermstruct_t})::Cint
 end
 
 function dPrintLblocks(arg1, arg2, arg3, arg4, arg5)
-    @ccall libsuperlu_ddefs.dPrintLblocks(arg1::Cint, arg2::int_t, arg3::Ptr{gridinfo_t}, arg4::Ptr{Glu_persist_t}, arg5::Ptr{dLocalLU_t})::Cvoid
+    @ccall libsuperlu_dist_Int64.dPrintLblocks(arg1::Cint, arg2::int_t, arg3::Ptr{gridinfo_t}, arg4::Ptr{Glu_persist_t}, arg5::Ptr{dLocalLU_t})::Cvoid
 end
 
 function dPrintUblocks(arg1, arg2, arg3, arg4, arg5)
-    @ccall libsuperlu_ddefs.dPrintUblocks(arg1::Cint, arg2::int_t, arg3::Ptr{gridinfo_t}, arg4::Ptr{Glu_persist_t}, arg5::Ptr{dLocalLU_t})::Cvoid
+    @ccall libsuperlu_dist_Int64.dPrintUblocks(arg1::Cint, arg2::int_t, arg3::Ptr{gridinfo_t}, arg4::Ptr{Glu_persist_t}, arg5::Ptr{dLocalLU_t})::Cvoid
 end
 
 function dPrint_CompCol_Matrix_dist(arg1)
-    @ccall libsuperlu_ddefs.dPrint_CompCol_Matrix_dist(arg1::Ptr{SuperMatrix})::Cvoid
+    @ccall libsuperlu_dist_Int64.dPrint_CompCol_Matrix_dist(arg1::Ptr{SuperMatrix})::Cvoid
 end
 
 function dPrint_Dense_Matrix_dist(arg1)
-    @ccall libsuperlu_ddefs.dPrint_Dense_Matrix_dist(arg1::Ptr{SuperMatrix})::Cvoid
+    @ccall libsuperlu_dist_Int64.dPrint_Dense_Matrix_dist(arg1::Ptr{SuperMatrix})::Cvoid
 end
 
 function dPrint_CompRowLoc_Matrix_dist(arg1)
-    @ccall libsuperlu_ddefs.dPrint_CompRowLoc_Matrix_dist(arg1::Ptr{SuperMatrix})::Cint
+    @ccall libsuperlu_dist_Int64.dPrint_CompRowLoc_Matrix_dist(arg1::Ptr{SuperMatrix})::Cint
 end
 
 function file_dPrint_CompRowLoc_Matrix_dist(fp, A)
-    @ccall libsuperlu_ddefs.file_dPrint_CompRowLoc_Matrix_dist(fp::Ptr{Libc.FILE}, A::Ptr{SuperMatrix})::Cint
+    @ccall libsuperlu_dist_Int64.file_dPrint_CompRowLoc_Matrix_dist(fp::Ptr{Libc.FILE}, A::Ptr{SuperMatrix})::Cint
 end
 
 function Printdouble5(arg1, arg2, arg3)
-    @ccall libsuperlu_ddefs.Printdouble5(arg1::Ptr{Cchar}, arg2::int_t, arg3::Ptr{Cdouble})::Cvoid
+    @ccall libsuperlu_dist_Int64.Printdouble5(arg1::Ptr{Cchar}, arg2::int_t, arg3::Ptr{Cdouble})::Cvoid
 end
 
 function file_Printdouble5(arg1, arg2, arg3, arg4)
-    @ccall libsuperlu_ddefs.file_Printdouble5(arg1::Ptr{Libc.FILE}, arg2::Ptr{Cchar}, arg3::int_t, arg4::Ptr{Cdouble})::Cint
+    @ccall libsuperlu_dist_Int64.file_Printdouble5(arg1::Ptr{Libc.FILE}, arg2::Ptr{Cchar}, arg3::int_t, arg4::Ptr{Cdouble})::Cint
 end
 
 function dGenCOOLblocks(arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8, arg9, arg10)
-    @ccall libsuperlu_ddefs.dGenCOOLblocks(arg1::Cint, arg2::int_t, arg3::Ptr{gridinfo_t}, arg4::Ptr{Glu_persist_t}, arg5::Ptr{dLocalLU_t}, arg6::Ptr{Ptr{int_t}}, arg7::Ptr{Ptr{int_t}}, arg8::Ptr{Ptr{Cdouble}}, arg9::Ptr{int_t}, arg10::Ptr{int_t})::Cvoid
+    @ccall libsuperlu_dist_Int64.dGenCOOLblocks(arg1::Cint, arg2::int_t, arg3::Ptr{gridinfo_t}, arg4::Ptr{Glu_persist_t}, arg5::Ptr{dLocalLU_t}, arg6::Ptr{Ptr{int_t}}, arg7::Ptr{Ptr{int_t}}, arg8::Ptr{Ptr{Cdouble}}, arg9::Ptr{int_t}, arg10::Ptr{int_t})::Cvoid
 end
 
 function dGenCSCLblocks(arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8, arg9, arg10)
-    @ccall libsuperlu_ddefs.dGenCSCLblocks(arg1::Cint, arg2::int_t, arg3::Ptr{gridinfo_t}, arg4::Ptr{Glu_persist_t}, arg5::Ptr{dLocalLU_t}, arg6::Ptr{Ptr{Cdouble}}, arg7::Ptr{Ptr{int_t}}, arg8::Ptr{Ptr{int_t}}, arg9::Ptr{int_t}, arg10::Ptr{int_t})::Cvoid
+    @ccall libsuperlu_dist_Int64.dGenCSCLblocks(arg1::Cint, arg2::int_t, arg3::Ptr{gridinfo_t}, arg4::Ptr{Glu_persist_t}, arg5::Ptr{dLocalLU_t}, arg6::Ptr{Ptr{Cdouble}}, arg7::Ptr{Ptr{int_t}}, arg8::Ptr{Ptr{int_t}}, arg9::Ptr{int_t}, arg10::Ptr{int_t})::Cvoid
 end
 
 function dGenCSRLblocks(arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8, arg9, arg10)
-    @ccall libsuperlu_ddefs.dGenCSRLblocks(arg1::Cint, arg2::int_t, arg3::Ptr{gridinfo_t}, arg4::Ptr{Glu_persist_t}, arg5::Ptr{dLocalLU_t}, arg6::Ptr{Ptr{Cdouble}}, arg7::Ptr{Ptr{int_t}}, arg8::Ptr{Ptr{int_t}}, arg9::Ptr{int_t}, arg10::Ptr{int_t})::Cvoid
+    @ccall libsuperlu_dist_Int64.dGenCSRLblocks(arg1::Cint, arg2::int_t, arg3::Ptr{gridinfo_t}, arg4::Ptr{Glu_persist_t}, arg5::Ptr{dLocalLU_t}, arg6::Ptr{Ptr{Cdouble}}, arg7::Ptr{Ptr{int_t}}, arg8::Ptr{Ptr{int_t}}, arg9::Ptr{int_t}, arg10::Ptr{int_t})::Cvoid
 end
 
 function superlu_dgemm(transa, transb, m, n, k, alpha, a, lda, b, ldb, beta, c, ldc)
-    @ccall libsuperlu_ddefs.superlu_dgemm(transa::Ptr{Cchar}, transb::Ptr{Cchar}, m::Cint, n::Cint, k::Cint, alpha::Cdouble, a::Ptr{Cdouble}, lda::Cint, b::Ptr{Cdouble}, ldb::Cint, beta::Cdouble, c::Ptr{Cdouble}, ldc::Cint)::Cint
+    @ccall libsuperlu_dist_Int64.superlu_dgemm(transa::Ptr{Cchar}, transb::Ptr{Cchar}, m::Cint, n::Cint, k::Cint, alpha::Cdouble, a::Ptr{Cdouble}, lda::Cint, b::Ptr{Cdouble}, ldb::Cint, beta::Cdouble, c::Ptr{Cdouble}, ldc::Cint)::Cint
 end
 
 function superlu_dtrsm(sideRL, uplo, transa, diag, m, n, alpha, a, lda, b, ldb)
-    @ccall libsuperlu_ddefs.superlu_dtrsm(sideRL::Ptr{Cchar}, uplo::Ptr{Cchar}, transa::Ptr{Cchar}, diag::Ptr{Cchar}, m::Cint, n::Cint, alpha::Cdouble, a::Ptr{Cdouble}, lda::Cint, b::Ptr{Cdouble}, ldb::Cint)::Cint
+    @ccall libsuperlu_dist_Int64.superlu_dtrsm(sideRL::Ptr{Cchar}, uplo::Ptr{Cchar}, transa::Ptr{Cchar}, diag::Ptr{Cchar}, m::Cint, n::Cint, alpha::Cdouble, a::Ptr{Cdouble}, lda::Cint, b::Ptr{Cdouble}, ldb::Cint)::Cint
 end
 
 function superlu_dger(m, n, alpha, x, incx, y, incy, a, lda)
-    @ccall libsuperlu_ddefs.superlu_dger(m::Cint, n::Cint, alpha::Cdouble, x::Ptr{Cdouble}, incx::Cint, y::Ptr{Cdouble}, incy::Cint, a::Ptr{Cdouble}, lda::Cint)::Cint
+    @ccall libsuperlu_dist_Int64.superlu_dger(m::Cint, n::Cint, alpha::Cdouble, x::Ptr{Cdouble}, incx::Cint, y::Ptr{Cdouble}, incy::Cint, a::Ptr{Cdouble}, lda::Cint)::Cint
 end
 
 function superlu_dscal(n, alpha, x, incx)
-    @ccall libsuperlu_ddefs.superlu_dscal(n::Cint, alpha::Cdouble, x::Ptr{Cdouble}, incx::Cint)::Cint
+    @ccall libsuperlu_dist_Int64.superlu_dscal(n::Cint, alpha::Cdouble, x::Ptr{Cdouble}, incx::Cint)::Cint
 end
 
 function superlu_daxpy(n, alpha, x, incx, y, incy)
-    @ccall libsuperlu_ddefs.superlu_daxpy(n::Cint, alpha::Cdouble, x::Ptr{Cdouble}, incx::Cint, y::Ptr{Cdouble}, incy::Cint)::Cint
+    @ccall libsuperlu_dist_Int64.superlu_daxpy(n::Cint, alpha::Cdouble, x::Ptr{Cdouble}, incx::Cint, y::Ptr{Cdouble}, incy::Cint)::Cint
 end
 
 function superlu_dgemv(trans, m, n, alpha, a, lda, x, incx, beta, y, incy)
-    @ccall libsuperlu_ddefs.superlu_dgemv(trans::Ptr{Cchar}, m::Cint, n::Cint, alpha::Cdouble, a::Ptr{Cdouble}, lda::Cint, x::Ptr{Cdouble}, incx::Cint, beta::Cdouble, y::Ptr{Cdouble}, incy::Cint)::Cint
+    @ccall libsuperlu_dist_Int64.superlu_dgemv(trans::Ptr{Cchar}, m::Cint, n::Cint, alpha::Cdouble, a::Ptr{Cdouble}, lda::Cint, x::Ptr{Cdouble}, incx::Cint, beta::Cdouble, y::Ptr{Cdouble}, incy::Cint)::Cint
 end
 
 function superlu_dtrsv(uplo, trans, diag, n, a, lda, x, incx)
-    @ccall libsuperlu_ddefs.superlu_dtrsv(uplo::Ptr{Cchar}, trans::Ptr{Cchar}, diag::Ptr{Cchar}, n::Cint, a::Ptr{Cdouble}, lda::Cint, x::Ptr{Cdouble}, incx::Cint)::Cint
+    @ccall libsuperlu_dist_Int64.superlu_dtrsv(uplo::Ptr{Cchar}, trans::Ptr{Cchar}, diag::Ptr{Cchar}, n::Cint, a::Ptr{Cdouble}, lda::Cint, x::Ptr{Cdouble}, incx::Cint)::Cint
 end
 
 function dcreate_matrix3d(A, nrhs, rhs, ldb, x, ldx, fp, grid3d)
-    @ccall libsuperlu_ddefs.dcreate_matrix3d(A::Ptr{SuperMatrix}, nrhs::Cint, rhs::Ptr{Ptr{Cdouble}}, ldb::Ptr{Cint}, x::Ptr{Ptr{Cdouble}}, ldx::Ptr{Cint}, fp::Ptr{Libc.FILE}, grid3d::Ptr{gridinfo3d_t})::Cint
+    @ccall libsuperlu_dist_Int64.dcreate_matrix3d(A::Ptr{SuperMatrix}, nrhs::Cint, rhs::Ptr{Ptr{Cdouble}}, ldb::Ptr{Cint}, x::Ptr{Ptr{Cdouble}}, ldx::Ptr{Cint}, fp::Ptr{Libc.FILE}, grid3d::Ptr{gridinfo3d_t})::Cint
 end
 
 function dcreate_matrix_postfix3d(A, nrhs, rhs, ldb, x, ldx, fp, postfix, grid3d)
-    @ccall libsuperlu_ddefs.dcreate_matrix_postfix3d(A::Ptr{SuperMatrix}, nrhs::Cint, rhs::Ptr{Ptr{Cdouble}}, ldb::Ptr{Cint}, x::Ptr{Ptr{Cdouble}}, ldx::Ptr{Cint}, fp::Ptr{Libc.FILE}, postfix::Ptr{Cchar}, grid3d::Ptr{gridinfo3d_t})::Cint
+    @ccall libsuperlu_dist_Int64.dcreate_matrix_postfix3d(A::Ptr{SuperMatrix}, nrhs::Cint, rhs::Ptr{Ptr{Cdouble}}, ldb::Ptr{Cint}, x::Ptr{Ptr{Cdouble}}, ldx::Ptr{Cint}, fp::Ptr{Libc.FILE}, postfix::Ptr{Cchar}, grid3d::Ptr{gridinfo3d_t})::Cint
 end
 
 function dGatherNRformat_loc3d(Fact, A, B, ldb, nrhs, grid3d, arg7)
-    @ccall libsuperlu_ddefs.dGatherNRformat_loc3d(Fact::fact_t, A::Ptr{NRformat_loc}, B::Ptr{Cdouble}, ldb::Cint, nrhs::Cint, grid3d::Ptr{gridinfo3d_t}, arg7::Ptr{Ptr{NRformat_loc3d}})::Cvoid
+    @ccall libsuperlu_dist_Int64.dGatherNRformat_loc3d(Fact::fact_t, A::Ptr{NRformat_loc}, B::Ptr{Cdouble}, ldb::Cint, nrhs::Cint, grid3d::Ptr{gridinfo3d_t}, arg7::Ptr{Ptr{NRformat_loc3d}})::Cvoid
 end
 
 function dScatter_B3d(A3d, grid3d)
-    @ccall libsuperlu_ddefs.dScatter_B3d(A3d::Ptr{NRformat_loc3d}, grid3d::Ptr{gridinfo3d_t})::Cint
+    @ccall libsuperlu_dist_Int64.dScatter_B3d(A3d::Ptr{NRformat_loc3d}, grid3d::Ptr{gridinfo3d_t})::Cint
 end
 
 function pdgssvx3d(arg1, arg2, arg3, B, ldb, nrhs, arg7, arg8, arg9, berr, arg11, info)
-    @ccall libsuperlu_ddefs.pdgssvx3d(arg1::Ptr{superlu_dist_options_t}, arg2::Ptr{SuperMatrix}, arg3::Ptr{dScalePermstruct_t}, B::Ptr{Cdouble}, ldb::Cint, nrhs::Cint, arg7::Ptr{gridinfo3d_t}, arg8::Ptr{dLUstruct_t}, arg9::Ptr{dSOLVEstruct_t}, berr::Ptr{Cdouble}, arg11::Ptr{SuperLUStat_t}, info::Ptr{Cint})::Cvoid
+    @ccall libsuperlu_dist_Int64.pdgssvx3d(arg1::Ptr{superlu_dist_options_t}, arg2::Ptr{SuperMatrix}, arg3::Ptr{dScalePermstruct_t}, B::Ptr{Cdouble}, ldb::Cint, nrhs::Cint, arg7::Ptr{gridinfo3d_t}, arg8::Ptr{dLUstruct_t}, arg9::Ptr{dSOLVEstruct_t}, berr::Ptr{Cdouble}, arg11::Ptr{SuperLUStat_t}, info::Ptr{Cint})::Cvoid
 end
 
 function pdgstrf3d(arg1, m, n, anorm, arg5, arg6, arg7, arg8, arg9, arg10)
-    @ccall libsuperlu_ddefs.pdgstrf3d(arg1::Ptr{superlu_dist_options_t}, m::Cint, n::Cint, anorm::Cdouble, arg5::Ptr{dtrf3Dpartition_t}, arg6::Ptr{SCT_t}, arg7::Ptr{dLUstruct_t}, arg8::Ptr{gridinfo3d_t}, arg9::Ptr{SuperLUStat_t}, arg10::Ptr{Cint})::int_t
+    @ccall libsuperlu_dist_Int64.pdgstrf3d(arg1::Ptr{superlu_dist_options_t}, m::Cint, n::Cint, anorm::Cdouble, arg5::Ptr{dtrf3Dpartition_t}, arg6::Ptr{SCT_t}, arg7::Ptr{dLUstruct_t}, arg8::Ptr{gridinfo3d_t}, arg9::Ptr{SuperLUStat_t}, arg10::Ptr{Cint})::int_t
 end
 
 function dInit_HyP(HyP, Llu, mcb, mrb)
-    @ccall libsuperlu_ddefs.dInit_HyP(HyP::Ptr{HyP_t}, Llu::Ptr{dLocalLU_t}, mcb::int_t, mrb::int_t)::Cvoid
+    @ccall libsuperlu_dist_Int64.dInit_HyP(HyP::Ptr{HyP_t}, Llu::Ptr{dLocalLU_t}, mcb::int_t, mrb::int_t)::Cvoid
 end
 
 function Free_HyP(HyP)
-    @ccall libsuperlu_ddefs.Free_HyP(HyP::Ptr{HyP_t})::Cvoid
+    @ccall libsuperlu_dist_Int64.Free_HyP(HyP::Ptr{HyP_t})::Cvoid
 end
 
 function updateDirtyBit(k0, HyP, grid)
-    @ccall libsuperlu_ddefs.updateDirtyBit(k0::int_t, HyP::Ptr{HyP_t}, grid::Ptr{gridinfo_t})::Cint
+    @ccall libsuperlu_dist_Int64.updateDirtyBit(k0::int_t, HyP::Ptr{HyP_t}, grid::Ptr{gridinfo_t})::Cint
 end
 
 function dblock_gemm_scatter(lb, j, Ublock_info, Remain_info, L_mat, ldl, U_mat, ldu, bigV, knsupc, klst, lsub, usub, ldt, thread_id, indirect, indirect2, Lrowind_bc_ptr, Lnzval_bc_ptr, Ufstnz_br_ptr, Unzval_br_ptr, xsup, arg23, arg24)
-    @ccall libsuperlu_ddefs.dblock_gemm_scatter(lb::int_t, j::int_t, Ublock_info::Ptr{Ublock_info_t}, Remain_info::Ptr{Remain_info_t}, L_mat::Ptr{Cdouble}, ldl::Cint, U_mat::Ptr{Cdouble}, ldu::Cint, bigV::Ptr{Cdouble}, knsupc::int_t, klst::int_t, lsub::Ptr{int_t}, usub::Ptr{int_t}, ldt::int_t, thread_id::int_t, indirect::Ptr{Cint}, indirect2::Ptr{Cint}, Lrowind_bc_ptr::Ptr{Ptr{int_t}}, Lnzval_bc_ptr::Ptr{Ptr{Cdouble}}, Ufstnz_br_ptr::Ptr{Ptr{int_t}}, Unzval_br_ptr::Ptr{Ptr{Cdouble}}, xsup::Ptr{int_t}, arg23::Ptr{gridinfo_t}, arg24::Ptr{SuperLUStat_t})::Cvoid
+    @ccall libsuperlu_dist_Int64.dblock_gemm_scatter(lb::int_t, j::int_t, Ublock_info::Ptr{Ublock_info_t}, Remain_info::Ptr{Remain_info_t}, L_mat::Ptr{Cdouble}, ldl::Cint, U_mat::Ptr{Cdouble}, ldu::Cint, bigV::Ptr{Cdouble}, knsupc::int_t, klst::int_t, lsub::Ptr{int_t}, usub::Ptr{int_t}, ldt::int_t, thread_id::int_t, indirect::Ptr{Cint}, indirect2::Ptr{Cint}, Lrowind_bc_ptr::Ptr{Ptr{int_t}}, Lnzval_bc_ptr::Ptr{Ptr{Cdouble}}, Ufstnz_br_ptr::Ptr{Ptr{int_t}}, Unzval_br_ptr::Ptr{Ptr{Cdouble}}, xsup::Ptr{int_t}, arg23::Ptr{gridinfo_t}, arg24::Ptr{SuperLUStat_t})::Cvoid
 end
 
 function dblock_gemm_scatterTopLeft(lb, j, bigV, knsupc, klst, lsub, usub, ldt, indirect, indirect2, HyP, arg12, arg13, SCT, arg15)
-    @ccall libsuperlu_ddefs.dblock_gemm_scatterTopLeft(lb::int_t, j::int_t, bigV::Ptr{Cdouble}, knsupc::int_t, klst::int_t, lsub::Ptr{int_t}, usub::Ptr{int_t}, ldt::int_t, indirect::Ptr{Cint}, indirect2::Ptr{Cint}, HyP::Ptr{HyP_t}, arg12::Ptr{dLUstruct_t}, arg13::Ptr{gridinfo_t}, SCT::Ptr{SCT_t}, arg15::Ptr{SuperLUStat_t})::int_t
+    @ccall libsuperlu_dist_Int64.dblock_gemm_scatterTopLeft(lb::int_t, j::int_t, bigV::Ptr{Cdouble}, knsupc::int_t, klst::int_t, lsub::Ptr{int_t}, usub::Ptr{int_t}, ldt::int_t, indirect::Ptr{Cint}, indirect2::Ptr{Cint}, HyP::Ptr{HyP_t}, arg12::Ptr{dLUstruct_t}, arg13::Ptr{gridinfo_t}, SCT::Ptr{SCT_t}, arg15::Ptr{SuperLUStat_t})::int_t
 end
 
 function dblock_gemm_scatterTopRight(lb, j, bigV, knsupc, klst, lsub, usub, ldt, indirect, indirect2, HyP, arg12, arg13, SCT, arg15)
-    @ccall libsuperlu_ddefs.dblock_gemm_scatterTopRight(lb::int_t, j::int_t, bigV::Ptr{Cdouble}, knsupc::int_t, klst::int_t, lsub::Ptr{int_t}, usub::Ptr{int_t}, ldt::int_t, indirect::Ptr{Cint}, indirect2::Ptr{Cint}, HyP::Ptr{HyP_t}, arg12::Ptr{dLUstruct_t}, arg13::Ptr{gridinfo_t}, SCT::Ptr{SCT_t}, arg15::Ptr{SuperLUStat_t})::int_t
+    @ccall libsuperlu_dist_Int64.dblock_gemm_scatterTopRight(lb::int_t, j::int_t, bigV::Ptr{Cdouble}, knsupc::int_t, klst::int_t, lsub::Ptr{int_t}, usub::Ptr{int_t}, ldt::int_t, indirect::Ptr{Cint}, indirect2::Ptr{Cint}, HyP::Ptr{HyP_t}, arg12::Ptr{dLUstruct_t}, arg13::Ptr{gridinfo_t}, SCT::Ptr{SCT_t}, arg15::Ptr{SuperLUStat_t})::int_t
 end
 
 function dblock_gemm_scatterBottomLeft(lb, j, bigV, knsupc, klst, lsub, usub, ldt, indirect, indirect2, HyP, arg12, arg13, SCT, arg15)
-    @ccall libsuperlu_ddefs.dblock_gemm_scatterBottomLeft(lb::int_t, j::int_t, bigV::Ptr{Cdouble}, knsupc::int_t, klst::int_t, lsub::Ptr{int_t}, usub::Ptr{int_t}, ldt::int_t, indirect::Ptr{Cint}, indirect2::Ptr{Cint}, HyP::Ptr{HyP_t}, arg12::Ptr{dLUstruct_t}, arg13::Ptr{gridinfo_t}, SCT::Ptr{SCT_t}, arg15::Ptr{SuperLUStat_t})::int_t
+    @ccall libsuperlu_dist_Int64.dblock_gemm_scatterBottomLeft(lb::int_t, j::int_t, bigV::Ptr{Cdouble}, knsupc::int_t, klst::int_t, lsub::Ptr{int_t}, usub::Ptr{int_t}, ldt::int_t, indirect::Ptr{Cint}, indirect2::Ptr{Cint}, HyP::Ptr{HyP_t}, arg12::Ptr{dLUstruct_t}, arg13::Ptr{gridinfo_t}, SCT::Ptr{SCT_t}, arg15::Ptr{SuperLUStat_t})::int_t
 end
 
 function dblock_gemm_scatterBottomRight(lb, j, bigV, knsupc, klst, lsub, usub, ldt, indirect, indirect2, HyP, arg12, arg13, SCT, arg15)
-    @ccall libsuperlu_ddefs.dblock_gemm_scatterBottomRight(lb::int_t, j::int_t, bigV::Ptr{Cdouble}, knsupc::int_t, klst::int_t, lsub::Ptr{int_t}, usub::Ptr{int_t}, ldt::int_t, indirect::Ptr{Cint}, indirect2::Ptr{Cint}, HyP::Ptr{HyP_t}, arg12::Ptr{dLUstruct_t}, arg13::Ptr{gridinfo_t}, SCT::Ptr{SCT_t}, arg15::Ptr{SuperLUStat_t})::int_t
+    @ccall libsuperlu_dist_Int64.dblock_gemm_scatterBottomRight(lb::int_t, j::int_t, bigV::Ptr{Cdouble}, knsupc::int_t, klst::int_t, lsub::Ptr{int_t}, usub::Ptr{int_t}, ldt::int_t, indirect::Ptr{Cint}, indirect2::Ptr{Cint}, HyP::Ptr{HyP_t}, arg12::Ptr{dLUstruct_t}, arg13::Ptr{gridinfo_t}, SCT::Ptr{SCT_t}, arg15::Ptr{SuperLUStat_t})::int_t
 end
 
 function dgather_u(num_u_blks, Ublock_info, usub, uval, bigU, ldu, xsup, klst)
-    @ccall libsuperlu_ddefs.dgather_u(num_u_blks::int_t, Ublock_info::Ptr{Ublock_info_t}, usub::Ptr{int_t}, uval::Ptr{Cdouble}, bigU::Ptr{Cdouble}, ldu::int_t, xsup::Ptr{int_t}, klst::int_t)::Cvoid
+    @ccall libsuperlu_dist_Int64.dgather_u(num_u_blks::int_t, Ublock_info::Ptr{Ublock_info_t}, usub::Ptr{int_t}, uval::Ptr{Cdouble}, bigU::Ptr{Cdouble}, ldu::int_t, xsup::Ptr{int_t}, klst::int_t)::Cvoid
 end
 
 function dgather_l(num_LBlk, knsupc, L_info, lval, LD_lval, L_buff)
-    @ccall libsuperlu_ddefs.dgather_l(num_LBlk::int_t, knsupc::int_t, L_info::Ptr{Remain_info_t}, lval::Ptr{Cdouble}, LD_lval::int_t, L_buff::Ptr{Cdouble})::Cvoid
+    @ccall libsuperlu_dist_Int64.dgather_l(num_LBlk::int_t, knsupc::int_t, L_info::Ptr{Remain_info_t}, lval::Ptr{Cdouble}, LD_lval::int_t, L_buff::Ptr{Cdouble})::Cvoid
 end
 
 function dRgather_L(k, lsub, lusup, arg4, arg5, arg6, arg7, myIperm, iperm_c_supno)
-    @ccall libsuperlu_ddefs.dRgather_L(k::int_t, lsub::Ptr{int_t}, lusup::Ptr{Cdouble}, arg4::Ptr{gEtreeInfo_t}, arg5::Ptr{Glu_persist_t}, arg6::Ptr{gridinfo_t}, arg7::Ptr{HyP_t}, myIperm::Ptr{int_t}, iperm_c_supno::Ptr{int_t})::Cvoid
+    @ccall libsuperlu_dist_Int64.dRgather_L(k::int_t, lsub::Ptr{int_t}, lusup::Ptr{Cdouble}, arg4::Ptr{gEtreeInfo_t}, arg5::Ptr{Glu_persist_t}, arg6::Ptr{gridinfo_t}, arg7::Ptr{HyP_t}, myIperm::Ptr{int_t}, iperm_c_supno::Ptr{int_t})::Cvoid
 end
 
 function dRgather_U(k, jj0, usub, uval, bigU, arg6, arg7, arg8, arg9, myIperm, iperm_c_supno, perm_u)
-    @ccall libsuperlu_ddefs.dRgather_U(k::int_t, jj0::int_t, usub::Ptr{int_t}, uval::Ptr{Cdouble}, bigU::Ptr{Cdouble}, arg6::Ptr{gEtreeInfo_t}, arg7::Ptr{Glu_persist_t}, arg8::Ptr{gridinfo_t}, arg9::Ptr{HyP_t}, myIperm::Ptr{int_t}, iperm_c_supno::Ptr{int_t}, perm_u::Ptr{int_t})::Cvoid
+    @ccall libsuperlu_dist_Int64.dRgather_U(k::int_t, jj0::int_t, usub::Ptr{int_t}, uval::Ptr{Cdouble}, bigU::Ptr{Cdouble}, arg6::Ptr{gEtreeInfo_t}, arg7::Ptr{Glu_persist_t}, arg8::Ptr{gridinfo_t}, arg9::Ptr{HyP_t}, myIperm::Ptr{int_t}, iperm_c_supno::Ptr{int_t}, perm_u::Ptr{int_t})::Cvoid
 end
 
 function dinitTrf3Dpartition(nsupers, options, LUstruct, grid3d)
-    @ccall libsuperlu_ddefs.dinitTrf3Dpartition(nsupers::int_t, options::Ptr{superlu_dist_options_t}, LUstruct::Ptr{dLUstruct_t}, grid3d::Ptr{gridinfo3d_t})::Ptr{dtrf3Dpartition_t}
+    @ccall libsuperlu_dist_Int64.dinitTrf3Dpartition(nsupers::int_t, options::Ptr{superlu_dist_options_t}, LUstruct::Ptr{dLUstruct_t}, grid3d::Ptr{gridinfo3d_t})::Ptr{dtrf3Dpartition_t}
 end
 
 function dDestroy_trf3Dpartition(trf3Dpartition, grid3d)
-    @ccall libsuperlu_ddefs.dDestroy_trf3Dpartition(trf3Dpartition::Ptr{dtrf3Dpartition_t}, grid3d::Ptr{gridinfo3d_t})::Cvoid
+    @ccall libsuperlu_dist_Int64.dDestroy_trf3Dpartition(trf3Dpartition::Ptr{dtrf3Dpartition_t}, grid3d::Ptr{gridinfo3d_t})::Cvoid
 end
 
 function d3D_printMemUse(trf3Dpartition, LUstruct, grid3d)
-    @ccall libsuperlu_ddefs.d3D_printMemUse(trf3Dpartition::Ptr{dtrf3Dpartition_t}, LUstruct::Ptr{dLUstruct_t}, grid3d::Ptr{gridinfo3d_t})::Cvoid
+    @ccall libsuperlu_dist_Int64.d3D_printMemUse(trf3Dpartition::Ptr{dtrf3Dpartition_t}, LUstruct::Ptr{dLUstruct_t}, grid3d::Ptr{gridinfo3d_t})::Cvoid
 end
 
 function dinit3DLUstructForest(myTreeIdxs, myZeroTrIdxs, sForests, LUstruct, grid3d)
-    @ccall libsuperlu_ddefs.dinit3DLUstructForest(myTreeIdxs::Ptr{int_t}, myZeroTrIdxs::Ptr{int_t}, sForests::Ptr{Ptr{sForest_t}}, LUstruct::Ptr{dLUstruct_t}, grid3d::Ptr{gridinfo3d_t})::Cvoid
+    @ccall libsuperlu_dist_Int64.dinit3DLUstructForest(myTreeIdxs::Ptr{int_t}, myZeroTrIdxs::Ptr{int_t}, sForests::Ptr{Ptr{sForest_t}}, LUstruct::Ptr{dLUstruct_t}, grid3d::Ptr{gridinfo3d_t})::Cvoid
 end
 
 function dgatherAllFactoredLUFr(myZeroTrIdxs, sForests, LUstruct, grid3d, SCT)
-    @ccall libsuperlu_ddefs.dgatherAllFactoredLUFr(myZeroTrIdxs::Ptr{int_t}, sForests::Ptr{sForest_t}, LUstruct::Ptr{dLUstruct_t}, grid3d::Ptr{gridinfo3d_t}, SCT::Ptr{SCT_t})::int_t
+    @ccall libsuperlu_dist_Int64.dgatherAllFactoredLUFr(myZeroTrIdxs::Ptr{int_t}, sForests::Ptr{sForest_t}, LUstruct::Ptr{dLUstruct_t}, grid3d::Ptr{gridinfo3d_t}, SCT::Ptr{SCT_t})::int_t
 end
 
 function dLpanelUpdate(off0, nsupc, ublk_ptr, ld_ujrow, lusup, nsupr, arg7)
-    @ccall libsuperlu_ddefs.dLpanelUpdate(off0::int_t, nsupc::int_t, ublk_ptr::Ptr{Cdouble}, ld_ujrow::int_t, lusup::Ptr{Cdouble}, nsupr::int_t, arg7::Ptr{SCT_t})::int_t
+    @ccall libsuperlu_dist_Int64.dLpanelUpdate(off0::int_t, nsupc::int_t, ublk_ptr::Ptr{Cdouble}, ld_ujrow::int_t, lusup::Ptr{Cdouble}, nsupr::int_t, arg7::Ptr{SCT_t})::int_t
 end
 
 function Local_Dgstrf2(options, k, thresh, BlockUFactor, arg5, arg6, arg7, arg8, info, arg10)
-    @ccall libsuperlu_ddefs.Local_Dgstrf2(options::Ptr{superlu_dist_options_t}, k::int_t, thresh::Cdouble, BlockUFactor::Ptr{Cdouble}, arg5::Ptr{Glu_persist_t}, arg6::Ptr{gridinfo_t}, arg7::Ptr{dLocalLU_t}, arg8::Ptr{SuperLUStat_t}, info::Ptr{Cint}, arg10::Ptr{SCT_t})::Cvoid
+    @ccall libsuperlu_dist_Int64.Local_Dgstrf2(options::Ptr{superlu_dist_options_t}, k::int_t, thresh::Cdouble, BlockUFactor::Ptr{Cdouble}, arg5::Ptr{Glu_persist_t}, arg6::Ptr{gridinfo_t}, arg7::Ptr{dLocalLU_t}, arg8::Ptr{SuperLUStat_t}, info::Ptr{Cint}, arg10::Ptr{SCT_t})::Cvoid
 end
 
 function dTrs2_GatherU(iukp, rukp, klst, nsupc, ldu, usub, uval, tempv)
-    @ccall libsuperlu_ddefs.dTrs2_GatherU(iukp::int_t, rukp::int_t, klst::int_t, nsupc::int_t, ldu::int_t, usub::Ptr{int_t}, uval::Ptr{Cdouble}, tempv::Ptr{Cdouble})::int_t
+    @ccall libsuperlu_dist_Int64.dTrs2_GatherU(iukp::int_t, rukp::int_t, klst::int_t, nsupc::int_t, ldu::int_t, usub::Ptr{int_t}, uval::Ptr{Cdouble}, tempv::Ptr{Cdouble})::int_t
 end
 
 function dTrs2_ScatterU(iukp, rukp, klst, nsupc, ldu, usub, uval, tempv)
-    @ccall libsuperlu_ddefs.dTrs2_ScatterU(iukp::int_t, rukp::int_t, klst::int_t, nsupc::int_t, ldu::int_t, usub::Ptr{int_t}, uval::Ptr{Cdouble}, tempv::Ptr{Cdouble})::int_t
+    @ccall libsuperlu_dist_Int64.dTrs2_ScatterU(iukp::int_t, rukp::int_t, klst::int_t, nsupc::int_t, ldu::int_t, usub::Ptr{int_t}, uval::Ptr{Cdouble}, tempv::Ptr{Cdouble})::int_t
 end
 
 function dTrs2_GatherTrsmScatter(klst, iukp, rukp, usub, uval, tempv, knsupc, nsupr, lusup, Glu_persist)
-    @ccall libsuperlu_ddefs.dTrs2_GatherTrsmScatter(klst::int_t, iukp::int_t, rukp::int_t, usub::Ptr{int_t}, uval::Ptr{Cdouble}, tempv::Ptr{Cdouble}, knsupc::int_t, nsupr::Cint, lusup::Ptr{Cdouble}, Glu_persist::Ptr{Glu_persist_t})::int_t
+    @ccall libsuperlu_dist_Int64.dTrs2_GatherTrsmScatter(klst::int_t, iukp::int_t, rukp::int_t, usub::Ptr{int_t}, uval::Ptr{Cdouble}, tempv::Ptr{Cdouble}, knsupc::int_t, nsupr::Cint, lusup::Ptr{Cdouble}, Glu_persist::Ptr{Glu_persist_t})::int_t
 end
 
 function pdgstrs2(m, k0, k, Glu_persist, grid, Llu, stat)
-    @ccall libsuperlu_ddefs.pdgstrs2(m::int_t, k0::int_t, k::int_t, Glu_persist::Ptr{Glu_persist_t}, grid::Ptr{gridinfo_t}, Llu::Ptr{dLocalLU_t}, stat::Ptr{SuperLUStat_t})::Cvoid
+    @ccall libsuperlu_dist_Int64.pdgstrs2(m::int_t, k0::int_t, k::int_t, Glu_persist::Ptr{Glu_persist_t}, grid::Ptr{gridinfo_t}, Llu::Ptr{dLocalLU_t}, stat::Ptr{SuperLUStat_t})::Cvoid
 end
 
 function pdgstrf2(arg1, nsupers, k0, k, thresh, arg6, arg7, arg8, arg9, arg10, arg11, arg12)
-    @ccall libsuperlu_ddefs.pdgstrf2(arg1::Ptr{superlu_dist_options_t}, nsupers::int_t, k0::int_t, k::int_t, thresh::Cdouble, arg6::Ptr{Glu_persist_t}, arg7::Ptr{gridinfo_t}, arg8::Ptr{dLocalLU_t}, arg9::Ptr{MPI_Request}, arg10::Cint, arg11::Ptr{SuperLUStat_t}, arg12::Ptr{Cint})::Cvoid
+    @ccall libsuperlu_dist_Int64.pdgstrf2(arg1::Ptr{superlu_dist_options_t}, nsupers::int_t, k0::int_t, k::int_t, thresh::Cdouble, arg6::Ptr{Glu_persist_t}, arg7::Ptr{gridinfo_t}, arg8::Ptr{dLocalLU_t}, arg9::Ptr{MPI_Request}, arg10::Cint, arg11::Ptr{SuperLUStat_t}, arg12::Ptr{Cint})::Cvoid
 end
 
 function dAllocLlu_3d(nsupers, LUstruct, grid3d)
-    @ccall libsuperlu_ddefs.dAllocLlu_3d(nsupers::int_t, LUstruct::Ptr{dLUstruct_t}, grid3d::Ptr{gridinfo3d_t})::int_t
+    @ccall libsuperlu_dist_Int64.dAllocLlu_3d(nsupers::int_t, LUstruct::Ptr{dLUstruct_t}, grid3d::Ptr{gridinfo3d_t})::int_t
 end
 
 function dp3dScatter(n, LUstruct, grid3d)
-    @ccall libsuperlu_ddefs.dp3dScatter(n::int_t, LUstruct::Ptr{dLUstruct_t}, grid3d::Ptr{gridinfo3d_t})::int_t
+    @ccall libsuperlu_dist_Int64.dp3dScatter(n::int_t, LUstruct::Ptr{dLUstruct_t}, grid3d::Ptr{gridinfo3d_t})::int_t
 end
 
 function dscatter3dLPanels(nsupers, LUstruct, grid3d)
-    @ccall libsuperlu_ddefs.dscatter3dLPanels(nsupers::int_t, LUstruct::Ptr{dLUstruct_t}, grid3d::Ptr{gridinfo3d_t})::int_t
+    @ccall libsuperlu_dist_Int64.dscatter3dLPanels(nsupers::int_t, LUstruct::Ptr{dLUstruct_t}, grid3d::Ptr{gridinfo3d_t})::int_t
 end
 
 function dscatter3dUPanels(nsupers, LUstruct, grid3d)
-    @ccall libsuperlu_ddefs.dscatter3dUPanels(nsupers::int_t, LUstruct::Ptr{dLUstruct_t}, grid3d::Ptr{gridinfo3d_t})::int_t
+    @ccall libsuperlu_dist_Int64.dscatter3dUPanels(nsupers::int_t, LUstruct::Ptr{dLUstruct_t}, grid3d::Ptr{gridinfo3d_t})::int_t
 end
 
 function dcollect3dLpanels(layer, nsupers, LUstruct, grid3d)
-    @ccall libsuperlu_ddefs.dcollect3dLpanels(layer::int_t, nsupers::int_t, LUstruct::Ptr{dLUstruct_t}, grid3d::Ptr{gridinfo3d_t})::int_t
+    @ccall libsuperlu_dist_Int64.dcollect3dLpanels(layer::int_t, nsupers::int_t, LUstruct::Ptr{dLUstruct_t}, grid3d::Ptr{gridinfo3d_t})::int_t
 end
 
 function dcollect3dUpanels(layer, nsupers, LUstruct, grid3d)
-    @ccall libsuperlu_ddefs.dcollect3dUpanels(layer::int_t, nsupers::int_t, LUstruct::Ptr{dLUstruct_t}, grid3d::Ptr{gridinfo3d_t})::int_t
+    @ccall libsuperlu_dist_Int64.dcollect3dUpanels(layer::int_t, nsupers::int_t, LUstruct::Ptr{dLUstruct_t}, grid3d::Ptr{gridinfo3d_t})::int_t
 end
 
 function dp3dCollect(layer, n, LUstruct, grid3d)
-    @ccall libsuperlu_ddefs.dp3dCollect(layer::int_t, n::int_t, LUstruct::Ptr{dLUstruct_t}, grid3d::Ptr{gridinfo3d_t})::int_t
+    @ccall libsuperlu_dist_Int64.dp3dCollect(layer::int_t, n::int_t, LUstruct::Ptr{dLUstruct_t}, grid3d::Ptr{gridinfo3d_t})::int_t
 end
 
 function dzeroSetLU(nnodes, nodeList, arg3, arg4)
-    @ccall libsuperlu_ddefs.dzeroSetLU(nnodes::int_t, nodeList::Ptr{int_t}, arg3::Ptr{dLUstruct_t}, arg4::Ptr{gridinfo3d_t})::int_t
+    @ccall libsuperlu_dist_Int64.dzeroSetLU(nnodes::int_t, nodeList::Ptr{int_t}, arg3::Ptr{dLUstruct_t}, arg4::Ptr{gridinfo3d_t})::int_t
 end
 
 function dAllocGlu_3d(n, nsupers, arg3)
-    @ccall libsuperlu_ddefs.dAllocGlu_3d(n::int_t, nsupers::int_t, arg3::Ptr{dLUstruct_t})::Cint
+    @ccall libsuperlu_dist_Int64.dAllocGlu_3d(n::int_t, nsupers::int_t, arg3::Ptr{dLUstruct_t})::Cint
 end
 
 function dDeAllocLlu_3d(n, arg2, arg3)
-    @ccall libsuperlu_ddefs.dDeAllocLlu_3d(n::int_t, arg2::Ptr{dLUstruct_t}, arg3::Ptr{gridinfo3d_t})::Cint
+    @ccall libsuperlu_dist_Int64.dDeAllocLlu_3d(n::int_t, arg2::Ptr{dLUstruct_t}, arg3::Ptr{gridinfo3d_t})::Cint
 end
 
 function dDeAllocGlu_3d(arg1)
-    @ccall libsuperlu_ddefs.dDeAllocGlu_3d(arg1::Ptr{dLUstruct_t})::Cint
+    @ccall libsuperlu_dist_Int64.dDeAllocGlu_3d(arg1::Ptr{dLUstruct_t})::Cint
 end
 
 function dreduceAncestors3d(sender, receiver, nnodes, nodeList, Lval_buf, Uval_buf, LUstruct, grid3d, SCT)
-    @ccall libsuperlu_ddefs.dreduceAncestors3d(sender::int_t, receiver::int_t, nnodes::int_t, nodeList::Ptr{int_t}, Lval_buf::Ptr{Cdouble}, Uval_buf::Ptr{Cdouble}, LUstruct::Ptr{dLUstruct_t}, grid3d::Ptr{gridinfo3d_t}, SCT::Ptr{SCT_t})::int_t
+    @ccall libsuperlu_dist_Int64.dreduceAncestors3d(sender::int_t, receiver::int_t, nnodes::int_t, nodeList::Ptr{int_t}, Lval_buf::Ptr{Cdouble}, Uval_buf::Ptr{Cdouble}, LUstruct::Ptr{dLUstruct_t}, grid3d::Ptr{gridinfo3d_t}, SCT::Ptr{SCT_t})::int_t
 end
 
 function dreduceAllAncestors3d(ilvl, myNodeCount, treePerm, LUvsb, LUstruct, grid3d, SCT)
-    @ccall libsuperlu_ddefs.dreduceAllAncestors3d(ilvl::int_t, myNodeCount::Ptr{int_t}, treePerm::Ptr{Ptr{int_t}}, LUvsb::Ptr{dLUValSubBuf_t}, LUstruct::Ptr{dLUstruct_t}, grid3d::Ptr{gridinfo3d_t}, SCT::Ptr{SCT_t})::Cint
+    @ccall libsuperlu_dist_Int64.dreduceAllAncestors3d(ilvl::int_t, myNodeCount::Ptr{int_t}, treePerm::Ptr{Ptr{int_t}}, LUvsb::Ptr{dLUValSubBuf_t}, LUstruct::Ptr{dLUstruct_t}, grid3d::Ptr{gridinfo3d_t}, SCT::Ptr{SCT_t})::Cint
 end
 
 function dgatherFactoredLU(sender, receiver, nnodes, nodeList, LUvsb, LUstruct, grid3d, SCT)
-    @ccall libsuperlu_ddefs.dgatherFactoredLU(sender::int_t, receiver::int_t, nnodes::int_t, nodeList::Ptr{int_t}, LUvsb::Ptr{dLUValSubBuf_t}, LUstruct::Ptr{dLUstruct_t}, grid3d::Ptr{gridinfo3d_t}, SCT::Ptr{SCT_t})::int_t
+    @ccall libsuperlu_dist_Int64.dgatherFactoredLU(sender::int_t, receiver::int_t, nnodes::int_t, nodeList::Ptr{int_t}, LUvsb::Ptr{dLUValSubBuf_t}, LUstruct::Ptr{dLUstruct_t}, grid3d::Ptr{gridinfo3d_t}, SCT::Ptr{SCT_t})::int_t
 end
 
 function dgatherAllFactoredLU(trf3Dpartition, LUstruct, grid3d, SCT)
-    @ccall libsuperlu_ddefs.dgatherAllFactoredLU(trf3Dpartition::Ptr{dtrf3Dpartition_t}, LUstruct::Ptr{dLUstruct_t}, grid3d::Ptr{gridinfo3d_t}, SCT::Ptr{SCT_t})::int_t
+    @ccall libsuperlu_dist_Int64.dgatherAllFactoredLU(trf3Dpartition::Ptr{dtrf3Dpartition_t}, LUstruct::Ptr{dLUstruct_t}, grid3d::Ptr{gridinfo3d_t}, SCT::Ptr{SCT_t})::int_t
 end
 
 function dinit3DLUstruct(myTreeIdxs, myZeroTrIdxs, nodeCount, nodeList, LUstruct, grid3d)
-    @ccall libsuperlu_ddefs.dinit3DLUstruct(myTreeIdxs::Ptr{int_t}, myZeroTrIdxs::Ptr{int_t}, nodeCount::Ptr{int_t}, nodeList::Ptr{Ptr{int_t}}, LUstruct::Ptr{dLUstruct_t}, grid3d::Ptr{gridinfo3d_t})::int_t
+    @ccall libsuperlu_dist_Int64.dinit3DLUstruct(myTreeIdxs::Ptr{int_t}, myZeroTrIdxs::Ptr{int_t}, nodeCount::Ptr{int_t}, nodeList::Ptr{Ptr{int_t}}, LUstruct::Ptr{dLUstruct_t}, grid3d::Ptr{gridinfo3d_t})::int_t
 end
 
 function dzSendLPanel(k, receiver, LUstruct, grid3d, SCT)
-    @ccall libsuperlu_ddefs.dzSendLPanel(k::int_t, receiver::int_t, LUstruct::Ptr{dLUstruct_t}, grid3d::Ptr{gridinfo3d_t}, SCT::Ptr{SCT_t})::int_t
+    @ccall libsuperlu_dist_Int64.dzSendLPanel(k::int_t, receiver::int_t, LUstruct::Ptr{dLUstruct_t}, grid3d::Ptr{gridinfo3d_t}, SCT::Ptr{SCT_t})::int_t
 end
 
 function dzRecvLPanel(k, sender, alpha, beta, Lval_buf, LUstruct, grid3d, SCT)
-    @ccall libsuperlu_ddefs.dzRecvLPanel(k::int_t, sender::int_t, alpha::Cdouble, beta::Cdouble, Lval_buf::Ptr{Cdouble}, LUstruct::Ptr{dLUstruct_t}, grid3d::Ptr{gridinfo3d_t}, SCT::Ptr{SCT_t})::int_t
+    @ccall libsuperlu_dist_Int64.dzRecvLPanel(k::int_t, sender::int_t, alpha::Cdouble, beta::Cdouble, Lval_buf::Ptr{Cdouble}, LUstruct::Ptr{dLUstruct_t}, grid3d::Ptr{gridinfo3d_t}, SCT::Ptr{SCT_t})::int_t
 end
 
 function dzSendUPanel(k, receiver, LUstruct, grid3d, SCT)
-    @ccall libsuperlu_ddefs.dzSendUPanel(k::int_t, receiver::int_t, LUstruct::Ptr{dLUstruct_t}, grid3d::Ptr{gridinfo3d_t}, SCT::Ptr{SCT_t})::int_t
+    @ccall libsuperlu_dist_Int64.dzSendUPanel(k::int_t, receiver::int_t, LUstruct::Ptr{dLUstruct_t}, grid3d::Ptr{gridinfo3d_t}, SCT::Ptr{SCT_t})::int_t
 end
 
 function dzRecvUPanel(k, sender, alpha, beta, Uval_buf, LUstruct, grid3d, SCT)
-    @ccall libsuperlu_ddefs.dzRecvUPanel(k::int_t, sender::int_t, alpha::Cdouble, beta::Cdouble, Uval_buf::Ptr{Cdouble}, LUstruct::Ptr{dLUstruct_t}, grid3d::Ptr{gridinfo3d_t}, SCT::Ptr{SCT_t})::int_t
+    @ccall libsuperlu_dist_Int64.dzRecvUPanel(k::int_t, sender::int_t, alpha::Cdouble, beta::Cdouble, Uval_buf::Ptr{Cdouble}, LUstruct::Ptr{dLUstruct_t}, grid3d::Ptr{gridinfo3d_t}, SCT::Ptr{SCT_t})::int_t
 end
 
 function dIBcast_LPanel(k, k0, lsub, lusup, arg5, msgcnt, arg7, ToSendR, xsup, arg10)
-    @ccall libsuperlu_ddefs.dIBcast_LPanel(k::int_t, k0::int_t, lsub::Ptr{int_t}, lusup::Ptr{Cdouble}, arg5::Ptr{gridinfo_t}, msgcnt::Ptr{Cint}, arg7::Ptr{MPI_Request}, ToSendR::Ptr{Ptr{Cint}}, xsup::Ptr{int_t}, arg10::Cint)::int_t
+    @ccall libsuperlu_dist_Int64.dIBcast_LPanel(k::int_t, k0::int_t, lsub::Ptr{int_t}, lusup::Ptr{Cdouble}, arg5::Ptr{gridinfo_t}, msgcnt::Ptr{Cint}, arg7::Ptr{MPI_Request}, ToSendR::Ptr{Ptr{Cint}}, xsup::Ptr{int_t}, arg10::Cint)::int_t
 end
 
 function dBcast_LPanel(k, k0, lsub, lusup, arg5, msgcnt, ToSendR, xsup, arg9, arg10)
-    @ccall libsuperlu_ddefs.dBcast_LPanel(k::int_t, k0::int_t, lsub::Ptr{int_t}, lusup::Ptr{Cdouble}, arg5::Ptr{gridinfo_t}, msgcnt::Ptr{Cint}, ToSendR::Ptr{Ptr{Cint}}, xsup::Ptr{int_t}, arg9::Ptr{SCT_t}, arg10::Cint)::int_t
+    @ccall libsuperlu_dist_Int64.dBcast_LPanel(k::int_t, k0::int_t, lsub::Ptr{int_t}, lusup::Ptr{Cdouble}, arg5::Ptr{gridinfo_t}, msgcnt::Ptr{Cint}, ToSendR::Ptr{Ptr{Cint}}, xsup::Ptr{int_t}, arg9::Ptr{SCT_t}, arg10::Cint)::int_t
 end
 
 function dIBcast_UPanel(k, k0, usub, uval, arg5, msgcnt, arg7, ToSendD, arg9)
-    @ccall libsuperlu_ddefs.dIBcast_UPanel(k::int_t, k0::int_t, usub::Ptr{int_t}, uval::Ptr{Cdouble}, arg5::Ptr{gridinfo_t}, msgcnt::Ptr{Cint}, arg7::Ptr{MPI_Request}, ToSendD::Ptr{Cint}, arg9::Cint)::int_t
+    @ccall libsuperlu_dist_Int64.dIBcast_UPanel(k::int_t, k0::int_t, usub::Ptr{int_t}, uval::Ptr{Cdouble}, arg5::Ptr{gridinfo_t}, msgcnt::Ptr{Cint}, arg7::Ptr{MPI_Request}, ToSendD::Ptr{Cint}, arg9::Cint)::int_t
 end
 
 function dBcast_UPanel(k, k0, usub, uval, arg5, msgcnt, ToSendD, arg8, arg9)
-    @ccall libsuperlu_ddefs.dBcast_UPanel(k::int_t, k0::int_t, usub::Ptr{int_t}, uval::Ptr{Cdouble}, arg5::Ptr{gridinfo_t}, msgcnt::Ptr{Cint}, ToSendD::Ptr{Cint}, arg8::Ptr{SCT_t}, arg9::Cint)::int_t
+    @ccall libsuperlu_dist_Int64.dBcast_UPanel(k::int_t, k0::int_t, usub::Ptr{int_t}, uval::Ptr{Cdouble}, arg5::Ptr{gridinfo_t}, msgcnt::Ptr{Cint}, ToSendD::Ptr{Cint}, arg8::Ptr{SCT_t}, arg9::Cint)::int_t
 end
 
 function dIrecv_LPanel(k, k0, Lsub_buf, Lval_buf, arg5, arg6, arg7, arg8)
-    @ccall libsuperlu_ddefs.dIrecv_LPanel(k::int_t, k0::int_t, Lsub_buf::Ptr{int_t}, Lval_buf::Ptr{Cdouble}, arg5::Ptr{gridinfo_t}, arg6::Ptr{MPI_Request}, arg7::Ptr{dLocalLU_t}, arg8::Cint)::int_t
+    @ccall libsuperlu_dist_Int64.dIrecv_LPanel(k::int_t, k0::int_t, Lsub_buf::Ptr{int_t}, Lval_buf::Ptr{Cdouble}, arg5::Ptr{gridinfo_t}, arg6::Ptr{MPI_Request}, arg7::Ptr{dLocalLU_t}, arg8::Cint)::int_t
 end
 
 function dIrecv_UPanel(k, k0, Usub_buf, arg4, arg5, arg6, arg7, arg8)
-    @ccall libsuperlu_ddefs.dIrecv_UPanel(k::int_t, k0::int_t, Usub_buf::Ptr{int_t}, arg4::Ptr{Cdouble}, arg5::Ptr{dLocalLU_t}, arg6::Ptr{gridinfo_t}, arg7::Ptr{MPI_Request}, arg8::Cint)::int_t
+    @ccall libsuperlu_dist_Int64.dIrecv_UPanel(k::int_t, k0::int_t, Usub_buf::Ptr{int_t}, arg4::Ptr{Cdouble}, arg5::Ptr{dLocalLU_t}, arg6::Ptr{gridinfo_t}, arg7::Ptr{MPI_Request}, arg8::Cint)::int_t
 end
 
 function dWait_URecv(arg1, msgcnt, arg3)
-    @ccall libsuperlu_ddefs.dWait_URecv(arg1::Ptr{MPI_Request}, msgcnt::Ptr{Cint}, arg3::Ptr{SCT_t})::int_t
+    @ccall libsuperlu_dist_Int64.dWait_URecv(arg1::Ptr{MPI_Request}, msgcnt::Ptr{Cint}, arg3::Ptr{SCT_t})::int_t
 end
 
 function dWait_LRecv(arg1, msgcnt, msgcntsU, arg4, arg5)
-    @ccall libsuperlu_ddefs.dWait_LRecv(arg1::Ptr{MPI_Request}, msgcnt::Ptr{Cint}, msgcntsU::Ptr{Cint}, arg4::Ptr{gridinfo_t}, arg5::Ptr{SCT_t})::int_t
+    @ccall libsuperlu_dist_Int64.dWait_LRecv(arg1::Ptr{MPI_Request}, msgcnt::Ptr{Cint}, msgcntsU::Ptr{Cint}, arg4::Ptr{gridinfo_t}, arg5::Ptr{SCT_t})::int_t
 end
 
 function dISend_UDiagBlock(k0, ublk_ptr, size, arg4, arg5, arg6)
-    @ccall libsuperlu_ddefs.dISend_UDiagBlock(k0::int_t, ublk_ptr::Ptr{Cdouble}, size::int_t, arg4::Ptr{MPI_Request}, arg5::Ptr{gridinfo_t}, arg6::Cint)::int_t
+    @ccall libsuperlu_dist_Int64.dISend_UDiagBlock(k0::int_t, ublk_ptr::Ptr{Cdouble}, size::int_t, arg4::Ptr{MPI_Request}, arg5::Ptr{gridinfo_t}, arg6::Cint)::int_t
 end
 
 function dRecv_UDiagBlock(k0, ublk_ptr, size, src, arg5, arg6, arg7)
-    @ccall libsuperlu_ddefs.dRecv_UDiagBlock(k0::int_t, ublk_ptr::Ptr{Cdouble}, size::int_t, src::int_t, arg5::Ptr{gridinfo_t}, arg6::Ptr{SCT_t}, arg7::Cint)::int_t
+    @ccall libsuperlu_dist_Int64.dRecv_UDiagBlock(k0::int_t, ublk_ptr::Ptr{Cdouble}, size::int_t, src::int_t, arg5::Ptr{gridinfo_t}, arg6::Ptr{SCT_t}, arg7::Cint)::int_t
 end
 
 function dPackLBlock(k, Dest, arg3, arg4, arg5)
-    @ccall libsuperlu_ddefs.dPackLBlock(k::int_t, Dest::Ptr{Cdouble}, arg3::Ptr{Glu_persist_t}, arg4::Ptr{gridinfo_t}, arg5::Ptr{dLocalLU_t})::int_t
+    @ccall libsuperlu_dist_Int64.dPackLBlock(k::int_t, Dest::Ptr{Cdouble}, arg3::Ptr{Glu_persist_t}, arg4::Ptr{gridinfo_t}, arg5::Ptr{dLocalLU_t})::int_t
 end
 
 function dISend_LDiagBlock(k0, lblk_ptr, size, arg4, arg5, arg6)
-    @ccall libsuperlu_ddefs.dISend_LDiagBlock(k0::int_t, lblk_ptr::Ptr{Cdouble}, size::int_t, arg4::Ptr{MPI_Request}, arg5::Ptr{gridinfo_t}, arg6::Cint)::int_t
+    @ccall libsuperlu_dist_Int64.dISend_LDiagBlock(k0::int_t, lblk_ptr::Ptr{Cdouble}, size::int_t, arg4::Ptr{MPI_Request}, arg5::Ptr{gridinfo_t}, arg6::Cint)::int_t
 end
 
 function dIRecv_UDiagBlock(k0, ublk_ptr, size, src, arg5, arg6, arg7, arg8)
-    @ccall libsuperlu_ddefs.dIRecv_UDiagBlock(k0::int_t, ublk_ptr::Ptr{Cdouble}, size::int_t, src::int_t, arg5::Ptr{MPI_Request}, arg6::Ptr{gridinfo_t}, arg7::Ptr{SCT_t}, arg8::Cint)::int_t
+    @ccall libsuperlu_dist_Int64.dIRecv_UDiagBlock(k0::int_t, ublk_ptr::Ptr{Cdouble}, size::int_t, src::int_t, arg5::Ptr{MPI_Request}, arg6::Ptr{gridinfo_t}, arg7::Ptr{SCT_t}, arg8::Cint)::int_t
 end
 
 function dIRecv_LDiagBlock(k0, L_blk_ptr, size, src, arg5, arg6, arg7, arg8)
-    @ccall libsuperlu_ddefs.dIRecv_LDiagBlock(k0::int_t, L_blk_ptr::Ptr{Cdouble}, size::int_t, src::int_t, arg5::Ptr{MPI_Request}, arg6::Ptr{gridinfo_t}, arg7::Ptr{SCT_t}, arg8::Cint)::int_t
+    @ccall libsuperlu_dist_Int64.dIRecv_LDiagBlock(k0::int_t, L_blk_ptr::Ptr{Cdouble}, size::int_t, src::int_t, arg5::Ptr{MPI_Request}, arg6::Ptr{gridinfo_t}, arg7::Ptr{SCT_t}, arg8::Cint)::int_t
 end
 
 function dUDiagBlockRecvWait(k, IrecvPlcd_D, factored_L, arg4, arg5, arg6, arg7)
-    @ccall libsuperlu_ddefs.dUDiagBlockRecvWait(k::int_t, IrecvPlcd_D::Ptr{int_t}, factored_L::Ptr{int_t}, arg4::Ptr{MPI_Request}, arg5::Ptr{gridinfo_t}, arg6::Ptr{dLUstruct_t}, arg7::Ptr{SCT_t})::int_t
+    @ccall libsuperlu_dist_Int64.dUDiagBlockRecvWait(k::int_t, IrecvPlcd_D::Ptr{int_t}, factored_L::Ptr{int_t}, arg4::Ptr{MPI_Request}, arg5::Ptr{gridinfo_t}, arg6::Ptr{dLUstruct_t}, arg7::Ptr{SCT_t})::int_t
 end
 
 function LDiagBlockRecvWait(k, factored_U, arg3, arg4)
-    @ccall libsuperlu_ddefs.LDiagBlockRecvWait(k::int_t, factored_U::Ptr{int_t}, arg3::Ptr{MPI_Request}, arg4::Ptr{gridinfo_t})::int_t
+    @ccall libsuperlu_dist_Int64.LDiagBlockRecvWait(k::int_t, factored_U::Ptr{int_t}, arg3::Ptr{MPI_Request}, arg4::Ptr{gridinfo_t})::int_t
 end
 
 function dIBcast_UDiagBlock(k, ublk_ptr, size, arg4, arg5)
-    @ccall libsuperlu_ddefs.dIBcast_UDiagBlock(k::int_t, ublk_ptr::Ptr{Cdouble}, size::int_t, arg4::Ptr{MPI_Request}, arg5::Ptr{gridinfo_t})::int_t
+    @ccall libsuperlu_dist_Int64.dIBcast_UDiagBlock(k::int_t, ublk_ptr::Ptr{Cdouble}, size::int_t, arg4::Ptr{MPI_Request}, arg5::Ptr{gridinfo_t})::int_t
 end
 
 function dIBcast_LDiagBlock(k, lblk_ptr, size, arg4, arg5)
-    @ccall libsuperlu_ddefs.dIBcast_LDiagBlock(k::int_t, lblk_ptr::Ptr{Cdouble}, size::int_t, arg4::Ptr{MPI_Request}, arg5::Ptr{gridinfo_t})::int_t
+    @ccall libsuperlu_dist_Int64.dIBcast_LDiagBlock(k::int_t, lblk_ptr::Ptr{Cdouble}, size::int_t, arg4::Ptr{MPI_Request}, arg5::Ptr{gridinfo_t})::int_t
 end
 
 function dDiagFactIBCast(k, k0, BlockUFactor, BlockLFactor, IrecvPlcd_D, arg6, arg7, arg8, arg9, arg10, arg11, thresh, LUstruct, arg14, info, arg16, tag_ub)
-    @ccall libsuperlu_ddefs.dDiagFactIBCast(k::int_t, k0::int_t, BlockUFactor::Ptr{Cdouble}, BlockLFactor::Ptr{Cdouble}, IrecvPlcd_D::Ptr{int_t}, arg6::Ptr{MPI_Request}, arg7::Ptr{MPI_Request}, arg8::Ptr{MPI_Request}, arg9::Ptr{MPI_Request}, arg10::Ptr{gridinfo_t}, arg11::Ptr{superlu_dist_options_t}, thresh::Cdouble, LUstruct::Ptr{dLUstruct_t}, arg14::Ptr{SuperLUStat_t}, info::Ptr{Cint}, arg16::Ptr{SCT_t}, tag_ub::Cint)::int_t
+    @ccall libsuperlu_dist_Int64.dDiagFactIBCast(k::int_t, k0::int_t, BlockUFactor::Ptr{Cdouble}, BlockLFactor::Ptr{Cdouble}, IrecvPlcd_D::Ptr{int_t}, arg6::Ptr{MPI_Request}, arg7::Ptr{MPI_Request}, arg8::Ptr{MPI_Request}, arg9::Ptr{MPI_Request}, arg10::Ptr{gridinfo_t}, arg11::Ptr{superlu_dist_options_t}, thresh::Cdouble, LUstruct::Ptr{dLUstruct_t}, arg14::Ptr{SuperLUStat_t}, info::Ptr{Cint}, arg16::Ptr{SCT_t}, tag_ub::Cint)::int_t
 end
 
 function dUPanelTrSolve(k, BlockLFactor, bigV, ldt, arg5, arg6, arg7, arg8, arg9)
-    @ccall libsuperlu_ddefs.dUPanelTrSolve(k::int_t, BlockLFactor::Ptr{Cdouble}, bigV::Ptr{Cdouble}, ldt::int_t, arg5::Ptr{Ublock_info_t}, arg6::Ptr{gridinfo_t}, arg7::Ptr{dLUstruct_t}, arg8::Ptr{SuperLUStat_t}, arg9::Ptr{SCT_t})::int_t
+    @ccall libsuperlu_dist_Int64.dUPanelTrSolve(k::int_t, BlockLFactor::Ptr{Cdouble}, bigV::Ptr{Cdouble}, ldt::int_t, arg5::Ptr{Ublock_info_t}, arg6::Ptr{gridinfo_t}, arg7::Ptr{dLUstruct_t}, arg8::Ptr{SuperLUStat_t}, arg9::Ptr{SCT_t})::int_t
 end
 
 function dLPanelUpdate(k, IrecvPlcd_D, factored_L, arg4, BlockUFactor, arg6, arg7, arg8)
-    @ccall libsuperlu_ddefs.dLPanelUpdate(k::int_t, IrecvPlcd_D::Ptr{int_t}, factored_L::Ptr{int_t}, arg4::Ptr{MPI_Request}, BlockUFactor::Ptr{Cdouble}, arg6::Ptr{gridinfo_t}, arg7::Ptr{dLUstruct_t}, arg8::Ptr{SCT_t})::int_t
+    @ccall libsuperlu_dist_Int64.dLPanelUpdate(k::int_t, IrecvPlcd_D::Ptr{int_t}, factored_L::Ptr{int_t}, arg4::Ptr{MPI_Request}, BlockUFactor::Ptr{Cdouble}, arg6::Ptr{gridinfo_t}, arg7::Ptr{dLUstruct_t}, arg8::Ptr{SCT_t})::int_t
 end
 
 function dUPanelUpdate(k, factored_U, arg3, BlockLFactor, bigV, ldt, arg7, arg8, arg9, arg10, arg11)
-    @ccall libsuperlu_ddefs.dUPanelUpdate(k::int_t, factored_U::Ptr{int_t}, arg3::Ptr{MPI_Request}, BlockLFactor::Ptr{Cdouble}, bigV::Ptr{Cdouble}, ldt::int_t, arg7::Ptr{Ublock_info_t}, arg8::Ptr{gridinfo_t}, arg9::Ptr{dLUstruct_t}, arg10::Ptr{SuperLUStat_t}, arg11::Ptr{SCT_t})::int_t
+    @ccall libsuperlu_dist_Int64.dUPanelUpdate(k::int_t, factored_U::Ptr{int_t}, arg3::Ptr{MPI_Request}, BlockLFactor::Ptr{Cdouble}, bigV::Ptr{Cdouble}, ldt::int_t, arg7::Ptr{Ublock_info_t}, arg8::Ptr{gridinfo_t}, arg9::Ptr{dLUstruct_t}, arg10::Ptr{SuperLUStat_t}, arg11::Ptr{SCT_t})::int_t
 end
 
 function dIBcastRecvLPanel(k, k0, msgcnt, arg4, arg5, Lsub_buf, Lval_buf, factored, arg9, arg10, arg11, tag_ub)
-    @ccall libsuperlu_ddefs.dIBcastRecvLPanel(k::int_t, k0::int_t, msgcnt::Ptr{Cint}, arg4::Ptr{MPI_Request}, arg5::Ptr{MPI_Request}, Lsub_buf::Ptr{int_t}, Lval_buf::Ptr{Cdouble}, factored::Ptr{int_t}, arg9::Ptr{gridinfo_t}, arg10::Ptr{dLUstruct_t}, arg11::Ptr{SCT_t}, tag_ub::Cint)::int_t
+    @ccall libsuperlu_dist_Int64.dIBcastRecvLPanel(k::int_t, k0::int_t, msgcnt::Ptr{Cint}, arg4::Ptr{MPI_Request}, arg5::Ptr{MPI_Request}, Lsub_buf::Ptr{int_t}, Lval_buf::Ptr{Cdouble}, factored::Ptr{int_t}, arg9::Ptr{gridinfo_t}, arg10::Ptr{dLUstruct_t}, arg11::Ptr{SCT_t}, tag_ub::Cint)::int_t
 end
 
 function dIBcastRecvUPanel(k, k0, msgcnt, arg4, arg5, Usub_buf, Uval_buf, arg8, arg9, arg10, tag_ub)
-    @ccall libsuperlu_ddefs.dIBcastRecvUPanel(k::int_t, k0::int_t, msgcnt::Ptr{Cint}, arg4::Ptr{MPI_Request}, arg5::Ptr{MPI_Request}, Usub_buf::Ptr{int_t}, Uval_buf::Ptr{Cdouble}, arg8::Ptr{gridinfo_t}, arg9::Ptr{dLUstruct_t}, arg10::Ptr{SCT_t}, tag_ub::Cint)::int_t
+    @ccall libsuperlu_dist_Int64.dIBcastRecvUPanel(k::int_t, k0::int_t, msgcnt::Ptr{Cint}, arg4::Ptr{MPI_Request}, arg5::Ptr{MPI_Request}, Usub_buf::Ptr{int_t}, Uval_buf::Ptr{Cdouble}, arg8::Ptr{gridinfo_t}, arg9::Ptr{dLUstruct_t}, arg10::Ptr{SCT_t}, tag_ub::Cint)::int_t
 end
 
 function dWaitL(k, msgcnt, msgcntU, arg4, arg5, arg6, arg7, arg8)
-    @ccall libsuperlu_ddefs.dWaitL(k::int_t, msgcnt::Ptr{Cint}, msgcntU::Ptr{Cint}, arg4::Ptr{MPI_Request}, arg5::Ptr{MPI_Request}, arg6::Ptr{gridinfo_t}, arg7::Ptr{dLUstruct_t}, arg8::Ptr{SCT_t})::int_t
+    @ccall libsuperlu_dist_Int64.dWaitL(k::int_t, msgcnt::Ptr{Cint}, msgcntU::Ptr{Cint}, arg4::Ptr{MPI_Request}, arg5::Ptr{MPI_Request}, arg6::Ptr{gridinfo_t}, arg7::Ptr{dLUstruct_t}, arg8::Ptr{SCT_t})::int_t
 end
 
 function dWaitU(k, msgcnt, arg3, arg4, arg5, arg6, arg7)
-    @ccall libsuperlu_ddefs.dWaitU(k::int_t, msgcnt::Ptr{Cint}, arg3::Ptr{MPI_Request}, arg4::Ptr{MPI_Request}, arg5::Ptr{gridinfo_t}, arg6::Ptr{dLUstruct_t}, arg7::Ptr{SCT_t})::int_t
+    @ccall libsuperlu_dist_Int64.dWaitU(k::int_t, msgcnt::Ptr{Cint}, arg3::Ptr{MPI_Request}, arg4::Ptr{MPI_Request}, arg5::Ptr{gridinfo_t}, arg6::Ptr{dLUstruct_t}, arg7::Ptr{SCT_t})::int_t
 end
 
 function dLPanelTrSolve(k, factored_L, BlockUFactor, arg4, arg5)
-    @ccall libsuperlu_ddefs.dLPanelTrSolve(k::int_t, factored_L::Ptr{int_t}, BlockUFactor::Ptr{Cdouble}, arg4::Ptr{gridinfo_t}, arg5::Ptr{dLUstruct_t})::int_t
+    @ccall libsuperlu_dist_Int64.dLPanelTrSolve(k::int_t, factored_L::Ptr{int_t}, BlockUFactor::Ptr{Cdouble}, arg4::Ptr{gridinfo_t}, arg5::Ptr{dLUstruct_t})::int_t
 end
 
 function getNsupers(arg1, arg2)
-    @ccall libsuperlu_ddefs.getNsupers(arg1::Cint, arg2::Ptr{Glu_persist_t})::Cint
+    @ccall libsuperlu_dist_Int64.getNsupers(arg1::Cint, arg2::Ptr{Glu_persist_t})::Cint
 end
 
 struct uPanelInfo_t
@@ -1597,15 +1462,15 @@ struct packLUInfo_t
 end
 
 function initPackLUInfo(nsupers, packLUInfo)
-    @ccall libsuperlu_ddefs.initPackLUInfo(nsupers::int_t, packLUInfo::Ptr{packLUInfo_t})::int_t
+    @ccall libsuperlu_dist_Int64.initPackLUInfo(nsupers::int_t, packLUInfo::Ptr{packLUInfo_t})::int_t
 end
 
 function freePackLUInfo(packLUInfo)
-    @ccall libsuperlu_ddefs.freePackLUInfo(packLUInfo::Ptr{packLUInfo_t})::Cint
+    @ccall libsuperlu_dist_Int64.freePackLUInfo(packLUInfo::Ptr{packLUInfo_t})::Cint
 end
 
 function dSchurComplementSetup(k, msgcnt, arg3, arg4, arg5, arg6, arg7, arg8, arg9, bigU, Lsub_buf, Lval_buf, Usub_buf, Uval_buf, arg15, arg16)
-    @ccall libsuperlu_ddefs.dSchurComplementSetup(k::int_t, msgcnt::Ptr{Cint}, arg3::Ptr{Ublock_info_t}, arg4::Ptr{Remain_info_t}, arg5::Ptr{uPanelInfo_t}, arg6::Ptr{lPanelInfo_t}, arg7::Ptr{int_t}, arg8::Ptr{int_t}, arg9::Ptr{int_t}, bigU::Ptr{Cdouble}, Lsub_buf::Ptr{int_t}, Lval_buf::Ptr{Cdouble}, Usub_buf::Ptr{int_t}, Uval_buf::Ptr{Cdouble}, arg15::Ptr{gridinfo_t}, arg16::Ptr{dLUstruct_t})::int_t
+    @ccall libsuperlu_dist_Int64.dSchurComplementSetup(k::int_t, msgcnt::Ptr{Cint}, arg3::Ptr{Ublock_info_t}, arg4::Ptr{Remain_info_t}, arg5::Ptr{uPanelInfo_t}, arg6::Ptr{lPanelInfo_t}, arg7::Ptr{int_t}, arg8::Ptr{int_t}, arg9::Ptr{int_t}, bigU::Ptr{Cdouble}, Lsub_buf::Ptr{int_t}, Lval_buf::Ptr{Cdouble}, Usub_buf::Ptr{int_t}, Uval_buf::Ptr{Cdouble}, arg15::Ptr{gridinfo_t}, arg16::Ptr{dLUstruct_t})::int_t
 end
 
 struct msgs_t
@@ -1622,27 +1487,27 @@ struct factNodelists_t
 end
 
 function dSchurComplementSetupGPU(k, msgs, arg3, arg4, arg5, arg6, arg7, arg8, arg9, LUvsb, arg11, arg12, arg13)
-    @ccall libsuperlu_ddefs.dSchurComplementSetupGPU(k::int_t, msgs::Ptr{msgs_t}, arg3::Ptr{packLUInfo_t}, arg4::Ptr{int_t}, arg5::Ptr{int_t}, arg6::Ptr{int_t}, arg7::Ptr{gEtreeInfo_t}, arg8::Ptr{factNodelists_t}, arg9::Ptr{dscuBufs_t}, LUvsb::Ptr{dLUValSubBuf_t}, arg11::Ptr{gridinfo_t}, arg12::Ptr{dLUstruct_t}, arg13::Ptr{HyP_t})::int_t
+    @ccall libsuperlu_dist_Int64.dSchurComplementSetupGPU(k::int_t, msgs::Ptr{msgs_t}, arg3::Ptr{packLUInfo_t}, arg4::Ptr{int_t}, arg5::Ptr{int_t}, arg6::Ptr{int_t}, arg7::Ptr{gEtreeInfo_t}, arg8::Ptr{factNodelists_t}, arg9::Ptr{dscuBufs_t}, LUvsb::Ptr{dLUValSubBuf_t}, arg11::Ptr{gridinfo_t}, arg12::Ptr{dLUstruct_t}, arg13::Ptr{HyP_t})::int_t
 end
 
 function dgetBigV(arg1, arg2)
-    @ccall libsuperlu_ddefs.dgetBigV(arg1::int_t, arg2::int_t)::Ptr{Cdouble}
+    @ccall libsuperlu_dist_Int64.dgetBigV(arg1::int_t, arg2::int_t)::Ptr{Cdouble}
 end
 
 function dgetBigU(arg1, arg2, arg3, arg4)
-    @ccall libsuperlu_ddefs.dgetBigU(arg1::Ptr{superlu_dist_options_t}, arg2::int_t, arg3::Ptr{gridinfo_t}, arg4::Ptr{dLUstruct_t})::Ptr{Cdouble}
+    @ccall libsuperlu_dist_Int64.dgetBigU(arg1::Ptr{superlu_dist_options_t}, arg2::int_t, arg3::Ptr{gridinfo_t}, arg4::Ptr{dLUstruct_t})::Ptr{Cdouble}
 end
 
 function dLluBufInit(arg1, arg2)
-    @ccall libsuperlu_ddefs.dLluBufInit(arg1::Ptr{dLUValSubBuf_t}, arg2::Ptr{dLUstruct_t})::int_t
+    @ccall libsuperlu_dist_Int64.dLluBufInit(arg1::Ptr{dLUValSubBuf_t}, arg2::Ptr{dLUstruct_t})::int_t
 end
 
 function dinitScuBufs(arg1, ldt, num_threads, nsupers, arg5, arg6, arg7)
-    @ccall libsuperlu_ddefs.dinitScuBufs(arg1::Ptr{superlu_dist_options_t}, ldt::int_t, num_threads::int_t, nsupers::int_t, arg5::Ptr{dscuBufs_t}, arg6::Ptr{dLUstruct_t}, arg7::Ptr{gridinfo_t})::int_t
+    @ccall libsuperlu_dist_Int64.dinitScuBufs(arg1::Ptr{superlu_dist_options_t}, ldt::int_t, num_threads::int_t, nsupers::int_t, arg5::Ptr{dscuBufs_t}, arg6::Ptr{dLUstruct_t}, arg7::Ptr{gridinfo_t})::int_t
 end
 
 function dfreeScuBufs(scuBufs)
-    @ccall libsuperlu_ddefs.dfreeScuBufs(scuBufs::Ptr{dscuBufs_t})::Cint
+    @ccall libsuperlu_dist_Int64.dfreeScuBufs(scuBufs::Ptr{dscuBufs_t})::Cint
 end
 
 struct commRequests_t
@@ -1669,46 +1534,46 @@ struct factStat_t
 end
 
 function dsparseTreeFactor(nnodes, perm_c_supno, treeTopoInfo, comReqs, scuBufs, packLUInfo, msgs, LUvsb, dFBuf, factStat, fNlists, options, gIperm_c_supno, ldt, LUstruct, grid3d, stat, thresh, SCT, info)
-    @ccall libsuperlu_ddefs.dsparseTreeFactor(nnodes::int_t, perm_c_supno::Ptr{int_t}, treeTopoInfo::Ptr{treeTopoInfo_t}, comReqs::Ptr{commRequests_t}, scuBufs::Ptr{dscuBufs_t}, packLUInfo::Ptr{packLUInfo_t}, msgs::Ptr{msgs_t}, LUvsb::Ptr{dLUValSubBuf_t}, dFBuf::Ptr{ddiagFactBufs_t}, factStat::Ptr{factStat_t}, fNlists::Ptr{factNodelists_t}, options::Ptr{superlu_dist_options_t}, gIperm_c_supno::Ptr{int_t}, ldt::int_t, LUstruct::Ptr{dLUstruct_t}, grid3d::Ptr{gridinfo3d_t}, stat::Ptr{SuperLUStat_t}, thresh::Cdouble, SCT::Ptr{SCT_t}, info::Ptr{Cint})::int_t
+    @ccall libsuperlu_dist_Int64.dsparseTreeFactor(nnodes::int_t, perm_c_supno::Ptr{int_t}, treeTopoInfo::Ptr{treeTopoInfo_t}, comReqs::Ptr{commRequests_t}, scuBufs::Ptr{dscuBufs_t}, packLUInfo::Ptr{packLUInfo_t}, msgs::Ptr{msgs_t}, LUvsb::Ptr{dLUValSubBuf_t}, dFBuf::Ptr{ddiagFactBufs_t}, factStat::Ptr{factStat_t}, fNlists::Ptr{factNodelists_t}, options::Ptr{superlu_dist_options_t}, gIperm_c_supno::Ptr{int_t}, ldt::int_t, LUstruct::Ptr{dLUstruct_t}, grid3d::Ptr{gridinfo3d_t}, stat::Ptr{SuperLUStat_t}, thresh::Cdouble, SCT::Ptr{SCT_t}, info::Ptr{Cint})::int_t
 end
 
 function ddenseTreeFactor(nnnodes, perm_c_supno, comReqs, scuBufs, packLUInfo, msgs, LUvsb, dFBuf, factStat, fNlists, options, gIperm_c_supno, ldt, LUstruct, grid3d, stat, thresh, SCT, tag_ub, info)
-    @ccall libsuperlu_ddefs.ddenseTreeFactor(nnnodes::int_t, perm_c_supno::Ptr{int_t}, comReqs::Ptr{commRequests_t}, scuBufs::Ptr{dscuBufs_t}, packLUInfo::Ptr{packLUInfo_t}, msgs::Ptr{msgs_t}, LUvsb::Ptr{dLUValSubBuf_t}, dFBuf::Ptr{ddiagFactBufs_t}, factStat::Ptr{factStat_t}, fNlists::Ptr{factNodelists_t}, options::Ptr{superlu_dist_options_t}, gIperm_c_supno::Ptr{int_t}, ldt::int_t, LUstruct::Ptr{dLUstruct_t}, grid3d::Ptr{gridinfo3d_t}, stat::Ptr{SuperLUStat_t}, thresh::Cdouble, SCT::Ptr{SCT_t}, tag_ub::Cint, info::Ptr{Cint})::int_t
+    @ccall libsuperlu_dist_Int64.ddenseTreeFactor(nnnodes::int_t, perm_c_supno::Ptr{int_t}, comReqs::Ptr{commRequests_t}, scuBufs::Ptr{dscuBufs_t}, packLUInfo::Ptr{packLUInfo_t}, msgs::Ptr{msgs_t}, LUvsb::Ptr{dLUValSubBuf_t}, dFBuf::Ptr{ddiagFactBufs_t}, factStat::Ptr{factStat_t}, fNlists::Ptr{factNodelists_t}, options::Ptr{superlu_dist_options_t}, gIperm_c_supno::Ptr{int_t}, ldt::int_t, LUstruct::Ptr{dLUstruct_t}, grid3d::Ptr{gridinfo3d_t}, stat::Ptr{SuperLUStat_t}, thresh::Cdouble, SCT::Ptr{SCT_t}, tag_ub::Cint, info::Ptr{Cint})::int_t
 end
 
 function dsparseTreeFactor_ASYNC(sforest, comReqss, scuBufs, packLUInfo, msgss, LUvsbs, dFBufs, factStat, fNlists, gEtreeInfo, options, gIperm_c_supno, ldt, HyP, LUstruct, grid3d, stat, thresh, SCT, tag_ub, info)
-    @ccall libsuperlu_ddefs.dsparseTreeFactor_ASYNC(sforest::Ptr{sForest_t}, comReqss::Ptr{Ptr{commRequests_t}}, scuBufs::Ptr{dscuBufs_t}, packLUInfo::Ptr{packLUInfo_t}, msgss::Ptr{Ptr{msgs_t}}, LUvsbs::Ptr{Ptr{dLUValSubBuf_t}}, dFBufs::Ptr{Ptr{ddiagFactBufs_t}}, factStat::Ptr{factStat_t}, fNlists::Ptr{factNodelists_t}, gEtreeInfo::Ptr{gEtreeInfo_t}, options::Ptr{superlu_dist_options_t}, gIperm_c_supno::Ptr{int_t}, ldt::int_t, HyP::Ptr{HyP_t}, LUstruct::Ptr{dLUstruct_t}, grid3d::Ptr{gridinfo3d_t}, stat::Ptr{SuperLUStat_t}, thresh::Cdouble, SCT::Ptr{SCT_t}, tag_ub::Cint, info::Ptr{Cint})::int_t
+    @ccall libsuperlu_dist_Int64.dsparseTreeFactor_ASYNC(sforest::Ptr{sForest_t}, comReqss::Ptr{Ptr{commRequests_t}}, scuBufs::Ptr{dscuBufs_t}, packLUInfo::Ptr{packLUInfo_t}, msgss::Ptr{Ptr{msgs_t}}, LUvsbs::Ptr{Ptr{dLUValSubBuf_t}}, dFBufs::Ptr{Ptr{ddiagFactBufs_t}}, factStat::Ptr{factStat_t}, fNlists::Ptr{factNodelists_t}, gEtreeInfo::Ptr{gEtreeInfo_t}, options::Ptr{superlu_dist_options_t}, gIperm_c_supno::Ptr{int_t}, ldt::int_t, HyP::Ptr{HyP_t}, LUstruct::Ptr{dLUstruct_t}, grid3d::Ptr{gridinfo3d_t}, stat::Ptr{SuperLUStat_t}, thresh::Cdouble, SCT::Ptr{SCT_t}, tag_ub::Cint, info::Ptr{Cint})::int_t
 end
 
 function dLluBufInitArr(numLA, LUstruct)
-    @ccall libsuperlu_ddefs.dLluBufInitArr(numLA::int_t, LUstruct::Ptr{dLUstruct_t})::Ptr{Ptr{dLUValSubBuf_t}}
+    @ccall libsuperlu_dist_Int64.dLluBufInitArr(numLA::int_t, LUstruct::Ptr{dLUstruct_t})::Ptr{Ptr{dLUValSubBuf_t}}
 end
 
 function dLluBufFreeArr(numLA, LUvsbs)
-    @ccall libsuperlu_ddefs.dLluBufFreeArr(numLA::int_t, LUvsbs::Ptr{Ptr{dLUValSubBuf_t}})::Cint
+    @ccall libsuperlu_dist_Int64.dLluBufFreeArr(numLA::int_t, LUvsbs::Ptr{Ptr{dLUValSubBuf_t}})::Cint
 end
 
 function dinitDiagFactBufsArr(mxLeafNode, ldt, grid)
-    @ccall libsuperlu_ddefs.dinitDiagFactBufsArr(mxLeafNode::int_t, ldt::int_t, grid::Ptr{gridinfo_t})::Ptr{Ptr{ddiagFactBufs_t}}
+    @ccall libsuperlu_dist_Int64.dinitDiagFactBufsArr(mxLeafNode::int_t, ldt::int_t, grid::Ptr{gridinfo_t})::Ptr{Ptr{ddiagFactBufs_t}}
 end
 
 function dfreeDiagFactBufsArr(mxLeafNode, dFBufs)
-    @ccall libsuperlu_ddefs.dfreeDiagFactBufsArr(mxLeafNode::int_t, dFBufs::Ptr{Ptr{ddiagFactBufs_t}})::Cint
+    @ccall libsuperlu_dist_Int64.dfreeDiagFactBufsArr(mxLeafNode::int_t, dFBufs::Ptr{Ptr{ddiagFactBufs_t}})::Cint
 end
 
 function dinitDiagFactBufs(ldt, dFBuf)
-    @ccall libsuperlu_ddefs.dinitDiagFactBufs(ldt::int_t, dFBuf::Ptr{ddiagFactBufs_t})::int_t
+    @ccall libsuperlu_dist_Int64.dinitDiagFactBufs(ldt::int_t, dFBuf::Ptr{ddiagFactBufs_t})::int_t
 end
 
 function checkRecvUDiag(k, comReqs, grid, SCT)
-    @ccall libsuperlu_ddefs.checkRecvUDiag(k::int_t, comReqs::Ptr{commRequests_t}, grid::Ptr{gridinfo_t}, SCT::Ptr{SCT_t})::int_t
+    @ccall libsuperlu_dist_Int64.checkRecvUDiag(k::int_t, comReqs::Ptr{commRequests_t}, grid::Ptr{gridinfo_t}, SCT::Ptr{SCT_t})::int_t
 end
 
 function checkRecvLDiag(k, comReqs, arg3, arg4)
-    @ccall libsuperlu_ddefs.checkRecvLDiag(k::int_t, comReqs::Ptr{commRequests_t}, arg3::Ptr{gridinfo_t}, arg4::Ptr{SCT_t})::int_t
+    @ccall libsuperlu_dist_Int64.checkRecvLDiag(k::int_t, comReqs::Ptr{commRequests_t}, arg3::Ptr{gridinfo_t}, arg4::Ptr{SCT_t})::int_t
 end
 
-# no prototype is found for this function at superlu_defs.h:1116:15, please use with caution
+# no prototype is found for this function at superlu_defs.h:1122:15, please use with caution
 function SuperLU_timer_dist_()
     @ccall libsuperlu_dist_Int64.SuperLU_timer_dist_()::Cdouble
 end
@@ -1811,6 +1676,10 @@ end
 
 function superlu_gridinit3d(Bcomm, nprow, npcol, npdep, grid)
     @ccall libsuperlu_dist_Int64.superlu_gridinit3d(Bcomm::MPI_Comm, nprow::Cint, npcol::Cint, npdep::Cint, grid::Ptr{gridinfo3d_t})::Cvoid
+end
+
+function superlu_gridmap3d(arg1, arg2, arg3, arg4, arg5, arg6)
+    @ccall libsuperlu_dist_Int64.superlu_gridmap3d(arg1::MPI_Comm, arg2::Cint, arg3::Cint, arg4::Cint, arg5::Ptr{Cint}, arg6::Ptr{gridinfo3d_t})::Cvoid
 end
 
 function superlu_gridexit3d(grid)
@@ -2049,12 +1918,12 @@ function estimate_cpu_time(m, n, k)
     @ccall libsuperlu_dist_Int64.estimate_cpu_time(m::Cint, n::Cint, k::Cint)::Cdouble
 end
 
-# no prototype is found for this function at superlu_defs.h:1192:12, please use with caution
+# no prototype is found for this function at superlu_defs.h:1198:12, please use with caution
 function get_thread_per_process()
     @ccall libsuperlu_dist_Int64.get_thread_per_process()::Cint
 end
 
-# no prototype is found for this function at superlu_defs.h:1193:14, please use with caution
+# no prototype is found for this function at superlu_defs.h:1199:14, please use with caution
 function get_max_buffer_size()
     @ccall libsuperlu_dist_Int64.get_max_buffer_size()::int_t
 end
@@ -2071,7 +1940,7 @@ function static_partition(arg1, arg2, arg3, arg4, arg5, arg6, arg7)
     @ccall libsuperlu_dist_Int64.static_partition(arg1::Ptr{superlu_pair}, arg2::int_t, arg3::Ptr{int_t}, arg4::int_t, arg5::Ptr{int_t}, arg6::Ptr{int_t}, arg7::Cint)::int_t
 end
 
-# no prototype is found for this function at superlu_defs.h:1198:12, please use with caution
+# no prototype is found for this function at superlu_defs.h:1204:12, please use with caution
 function get_acc_offload()
     @ccall libsuperlu_dist_Int64.get_acc_offload()::Cint
 end
@@ -2372,7 +2241,7 @@ function Wait_LUDiagSend(k, U_diag_blk_send_req, L_diag_blk_send_req, grid, SCT)
     @ccall libsuperlu_dist_Int64.Wait_LUDiagSend(k::int_t, U_diag_blk_send_req::Ptr{MPI_Request}, L_diag_blk_send_req::Ptr{MPI_Request}, grid::Ptr{gridinfo_t}, SCT::Ptr{SCT_t})::Cint
 end
 
-# no prototype is found for this function at superlu_defs.h:1362:12, please use with caution
+# no prototype is found for this function at superlu_defs.h:1368:12, please use with caution
 function set_tag_ub()
     @ccall libsuperlu_dist_Int64.set_tag_ub()::Cint
 end
@@ -3457,4 +3326,1103 @@ end
 
 function sinitDiagFactBufs(ldt, dFBuf)
     @ccall libsuperlu_dist_Int64.sinitDiagFactBufs(ldt::int_t, dFBuf::Ptr{sdiagFactBufs_t})::int_t
+end
+
+struct doublecomplex
+    r::Cdouble
+    i::Cdouble
+end
+
+function slud_z_div(arg1, arg2, arg3)
+    @ccall libsuperlu_dist_Int64.slud_z_div(arg1::Ptr{doublecomplex}, arg2::Ptr{doublecomplex}, arg3::Ptr{doublecomplex})::Cvoid
+end
+
+function slud_z_abs(arg1)
+    @ccall libsuperlu_dist_Int64.slud_z_abs(arg1::Ptr{doublecomplex})::Cdouble
+end
+
+function slud_z_abs1(arg1)
+    @ccall libsuperlu_dist_Int64.slud_z_abs1(arg1::Ptr{doublecomplex})::Cdouble
+end
+
+struct zScalePermstruct_t
+    DiagScale::DiagScale_t
+    R::Ptr{Cdouble}
+    C::Ptr{Cdouble}
+    perm_r::Ptr{int_t}
+    perm_c::Ptr{int_t}
+end
+
+struct zLocalLU_t
+    Lrowind_bc_ptr::Ptr{Ptr{int_t}}
+    Lrowind_bc_dat::Ptr{int_t}
+    Lrowind_bc_offset::Ptr{Clong}
+    Lrowind_bc_cnt::Clong
+    Lnzval_bc_ptr::Ptr{Ptr{doublecomplex}}
+    Lnzval_bc_dat::Ptr{doublecomplex}
+    Lnzval_bc_offset::Ptr{Clong}
+    Lnzval_bc_cnt::Clong
+    Linv_bc_ptr::Ptr{Ptr{doublecomplex}}
+    Linv_bc_dat::Ptr{doublecomplex}
+    Linv_bc_offset::Ptr{Clong}
+    Linv_bc_cnt::Clong
+    Lindval_loc_bc_ptr::Ptr{Ptr{int_t}}
+    Lindval_loc_bc_dat::Ptr{int_t}
+    Lindval_loc_bc_offset::Ptr{Clong}
+    Lindval_loc_bc_cnt::Clong
+    Unnz::Ptr{int_t}
+    Lrowind_bc_2_lsum::Ptr{Ptr{int_t}}
+    Uinv_bc_ptr::Ptr{Ptr{doublecomplex}}
+    Uinv_bc_dat::Ptr{doublecomplex}
+    Uinv_bc_offset::Ptr{Clong}
+    Uinv_bc_cnt::Clong
+    Ufstnz_br_ptr::Ptr{Ptr{int_t}}
+    Ufstnz_br_dat::Ptr{int_t}
+    Ufstnz_br_offset::Ptr{Clong}
+    Ufstnz_br_cnt::Clong
+    Unzval_br_ptr::Ptr{Ptr{doublecomplex}}
+    Unzval_br_dat::Ptr{doublecomplex}
+    Unzval_br_offset::Ptr{Clong}
+    Unzval_br_cnt::Clong
+    LBtree_ptr::Ptr{C_Tree}
+    LRtree_ptr::Ptr{C_Tree}
+    UBtree_ptr::Ptr{C_Tree}
+    URtree_ptr::Ptr{C_Tree}
+    Lsub_buf_2::NTuple{50, Ptr{int_t}}
+    Lval_buf_2::NTuple{50, Ptr{doublecomplex}}
+    Usub_buf_2::NTuple{50, Ptr{int_t}}
+    Uval_buf_2::NTuple{50, Ptr{doublecomplex}}
+    ujrow::Ptr{doublecomplex}
+    bufmax::NTuple{5, int_t}
+    ToRecv::Ptr{Cint}
+    ToSendD::Ptr{Cint}
+    ToSendR::Ptr{Ptr{Cint}}
+    fmod::Ptr{Cint}
+    fsendx_plist::Ptr{Ptr{Cint}}
+    frecv::Ptr{Cint}
+    nfrecvx::Cint
+    nfsendx::Cint
+    bmod::Ptr{Cint}
+    bsendx_plist::Ptr{Ptr{Cint}}
+    brecv::Ptr{Cint}
+    nbrecvx::Cint
+    nbsendx::Cint
+    mod_bit::Ptr{Cint}
+    ilsum::Ptr{int_t}
+    ldalsum::int_t
+    SolveMsgSent::int_t
+    SolveMsgVol::int_t
+    UT_SOLVE::int_t
+    L_SOLVE::int_t
+    FRECV::int_t
+    ut_ldalsum::int_t
+    ut_ilsum::Ptr{int_t}
+    utmod::Ptr{int_t}
+    ut_sendx_plist::Ptr{Ptr{int_t}}
+    utrecv::Ptr{int_t}
+    n_utsendx::int_t
+    n_utrecvx::int_t
+    n_utrecvmod::int_t
+    nroot::int_t
+    ut_modbit::Ptr{int_t}
+    Urbs::Ptr{int_t}
+    Ucb_indptr::Ptr{Ptr{Ucb_indptr_t}}
+    Ucb_inddat::Ptr{Ucb_indptr_t}
+    Ucb_indoffset::Ptr{Clong}
+    Ucb_indcnt::Clong
+    Ucb_valptr::Ptr{Ptr{int_t}}
+    Ucb_valdat::Ptr{int_t}
+    Ucb_valoffset::Ptr{Clong}
+    Ucb_valcnt::Clong
+    n::int_t
+    nleaf::int_t
+    nfrecvmod::int_t
+    inv::int_t
+end
+
+struct zLUstruct_t
+    etree::Ptr{int_t}
+    Glu_persist::Ptr{Glu_persist_t}
+    Llu::Ptr{zLocalLU_t}
+    dt::Cchar
+end
+
+struct pzgsmv_comm_t
+    extern_start::Ptr{int_t}
+    ind_tosend::Ptr{int_t}
+    ind_torecv::Ptr{int_t}
+    ptr_ind_tosend::Ptr{int_t}
+    ptr_ind_torecv::Ptr{int_t}
+    SendCounts::Ptr{Cint}
+    RecvCounts::Ptr{Cint}
+    val_tosend::Ptr{doublecomplex}
+    val_torecv::Ptr{doublecomplex}
+    TotalIndSend::int_t
+    TotalValSend::int_t
+end
+
+struct zSOLVEstruct_t
+    row_to_proc::Ptr{int_t}
+    inv_perm_c::Ptr{int_t}
+    num_diag_procs::int_t
+    diag_procs::Ptr{int_t}
+    diag_len::Ptr{int_t}
+    gsmv_comm::Ptr{pzgsmv_comm_t}
+    gstrs_comm::Ptr{pxgstrs_comm_t}
+    A_colind_gsmv::Ptr{int_t}
+    xrow_to_proc::Ptr{int_t}
+    A3d::Ptr{NRformat_loc3d}
+end
+
+struct zLUValSubBuf_t
+    Lsub_buf::Ptr{int_t}
+    Lval_buf::Ptr{doublecomplex}
+    Usub_buf::Ptr{int_t}
+    Uval_buf::Ptr{doublecomplex}
+end
+
+struct ztrf3Dpartition_t
+    gEtreeInfo::gEtreeInfo_t
+    iperm_c_supno::Ptr{int_t}
+    myNodeCount::Ptr{int_t}
+    myTreeIdxs::Ptr{int_t}
+    myZeroTrIdxs::Ptr{int_t}
+    treePerm::Ptr{Ptr{int_t}}
+    sForests::Ptr{Ptr{sForest_t}}
+    supernode2treeMap::Ptr{int_t}
+    LUvsb::Ptr{zLUValSubBuf_t}
+end
+
+struct zscuBufs_t
+    bigU::Ptr{doublecomplex}
+    bigV::Ptr{doublecomplex}
+end
+
+struct zdiagFactBufs_t
+    BlockLFactor::Ptr{doublecomplex}
+    BlockUFactor::Ptr{doublecomplex}
+end
+
+function zCreate_CompCol_Matrix_dist(arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8, arg9, arg10)
+    @ccall libsuperlu_dist_Int64.zCreate_CompCol_Matrix_dist(arg1::Ptr{SuperMatrix}, arg2::int_t, arg3::int_t, arg4::int_t, arg5::Ptr{doublecomplex}, arg6::Ptr{int_t}, arg7::Ptr{int_t}, arg8::Stype_t, arg9::Dtype_t, arg10::Mtype_t)::Cvoid
+end
+
+function zCreate_CompRowLoc_Matrix_dist(arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8, arg9, arg10, arg11, arg12)
+    @ccall libsuperlu_dist_Int64.zCreate_CompRowLoc_Matrix_dist(arg1::Ptr{SuperMatrix}, arg2::int_t, arg3::int_t, arg4::int_t, arg5::int_t, arg6::int_t, arg7::Ptr{doublecomplex}, arg8::Ptr{int_t}, arg9::Ptr{int_t}, arg10::Stype_t, arg11::Dtype_t, arg12::Mtype_t)::Cvoid
+end
+
+function zCompRow_to_CompCol_dist(arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8, arg9)
+    @ccall libsuperlu_dist_Int64.zCompRow_to_CompCol_dist(arg1::int_t, arg2::int_t, arg3::int_t, arg4::Ptr{doublecomplex}, arg5::Ptr{int_t}, arg6::Ptr{int_t}, arg7::Ptr{Ptr{doublecomplex}}, arg8::Ptr{Ptr{int_t}}, arg9::Ptr{Ptr{int_t}})::Cvoid
+end
+
+function pzCompRow_loc_to_CompCol_global(arg1, arg2, arg3, arg4)
+    @ccall libsuperlu_dist_Int64.pzCompRow_loc_to_CompCol_global(arg1::int_t, arg2::Ptr{SuperMatrix}, arg3::Ptr{gridinfo_t}, arg4::Ptr{SuperMatrix})::Cint
+end
+
+function zCopy_CompCol_Matrix_dist(arg1, arg2)
+    @ccall libsuperlu_dist_Int64.zCopy_CompCol_Matrix_dist(arg1::Ptr{SuperMatrix}, arg2::Ptr{SuperMatrix})::Cvoid
+end
+
+function zCreate_Dense_Matrix_dist(arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8)
+    @ccall libsuperlu_dist_Int64.zCreate_Dense_Matrix_dist(arg1::Ptr{SuperMatrix}, arg2::int_t, arg3::int_t, arg4::Ptr{doublecomplex}, arg5::int_t, arg6::Stype_t, arg7::Dtype_t, arg8::Mtype_t)::Cvoid
+end
+
+function zCreate_SuperNode_Matrix_dist(arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8, arg9, arg10, arg11, arg12, arg13)
+    @ccall libsuperlu_dist_Int64.zCreate_SuperNode_Matrix_dist(arg1::Ptr{SuperMatrix}, arg2::int_t, arg3::int_t, arg4::int_t, arg5::Ptr{doublecomplex}, arg6::Ptr{int_t}, arg7::Ptr{int_t}, arg8::Ptr{int_t}, arg9::Ptr{int_t}, arg10::Ptr{int_t}, arg11::Stype_t, arg12::Dtype_t, arg13::Mtype_t)::Cvoid
+end
+
+function zCopy_Dense_Matrix_dist(arg1, arg2, arg3, arg4, arg5, arg6)
+    @ccall libsuperlu_dist_Int64.zCopy_Dense_Matrix_dist(arg1::int_t, arg2::int_t, arg3::Ptr{doublecomplex}, arg4::int_t, arg5::Ptr{doublecomplex}, arg6::int_t)::Cvoid
+end
+
+function zallocateA_dist(arg1, arg2, arg3, arg4, arg5)
+    @ccall libsuperlu_dist_Int64.zallocateA_dist(arg1::int_t, arg2::int_t, arg3::Ptr{Ptr{doublecomplex}}, arg4::Ptr{Ptr{int_t}}, arg5::Ptr{Ptr{int_t}})::Cvoid
+end
+
+function zGenXtrue_dist(arg1, arg2, arg3, arg4)
+    @ccall libsuperlu_dist_Int64.zGenXtrue_dist(arg1::int_t, arg2::int_t, arg3::Ptr{doublecomplex}, arg4::int_t)::Cvoid
+end
+
+function zFillRHS_dist(arg1, arg2, arg3, arg4, arg5, arg6, arg7)
+    @ccall libsuperlu_dist_Int64.zFillRHS_dist(arg1::Ptr{Cchar}, arg2::int_t, arg3::Ptr{doublecomplex}, arg4::int_t, arg5::Ptr{SuperMatrix}, arg6::Ptr{doublecomplex}, arg7::int_t)::Cvoid
+end
+
+function zcreate_matrix(arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8)
+    @ccall libsuperlu_dist_Int64.zcreate_matrix(arg1::Ptr{SuperMatrix}, arg2::Cint, arg3::Ptr{Ptr{doublecomplex}}, arg4::Ptr{Cint}, arg5::Ptr{Ptr{doublecomplex}}, arg6::Ptr{Cint}, arg7::Ptr{Libc.FILE}, arg8::Ptr{gridinfo_t})::Cint
+end
+
+function zcreate_matrix_rb(arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8)
+    @ccall libsuperlu_dist_Int64.zcreate_matrix_rb(arg1::Ptr{SuperMatrix}, arg2::Cint, arg3::Ptr{Ptr{doublecomplex}}, arg4::Ptr{Cint}, arg5::Ptr{Ptr{doublecomplex}}, arg6::Ptr{Cint}, arg7::Ptr{Libc.FILE}, arg8::Ptr{gridinfo_t})::Cint
+end
+
+function zcreate_matrix_dat(arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8)
+    @ccall libsuperlu_dist_Int64.zcreate_matrix_dat(arg1::Ptr{SuperMatrix}, arg2::Cint, arg3::Ptr{Ptr{doublecomplex}}, arg4::Ptr{Cint}, arg5::Ptr{Ptr{doublecomplex}}, arg6::Ptr{Cint}, arg7::Ptr{Libc.FILE}, arg8::Ptr{gridinfo_t})::Cint
+end
+
+function zcreate_matrix_postfix(arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8, arg9)
+    @ccall libsuperlu_dist_Int64.zcreate_matrix_postfix(arg1::Ptr{SuperMatrix}, arg2::Cint, arg3::Ptr{Ptr{doublecomplex}}, arg4::Ptr{Cint}, arg5::Ptr{Ptr{doublecomplex}}, arg6::Ptr{Cint}, arg7::Ptr{Libc.FILE}, arg8::Ptr{Cchar}, arg9::Ptr{gridinfo_t})::Cint
+end
+
+function zScalePermstructInit(arg1, arg2, arg3)
+    @ccall libsuperlu_dist_Int64.zScalePermstructInit(arg1::int_t, arg2::int_t, arg3::Ptr{zScalePermstruct_t})::Cvoid
+end
+
+function zScalePermstructFree(arg1)
+    @ccall libsuperlu_dist_Int64.zScalePermstructFree(arg1::Ptr{zScalePermstruct_t})::Cvoid
+end
+
+function zgsequ_dist(arg1, arg2, arg3, arg4, arg5, arg6, arg7)
+    @ccall libsuperlu_dist_Int64.zgsequ_dist(arg1::Ptr{SuperMatrix}, arg2::Ptr{Cdouble}, arg3::Ptr{Cdouble}, arg4::Ptr{Cdouble}, arg5::Ptr{Cdouble}, arg6::Ptr{Cdouble}, arg7::Ptr{int_t})::Cvoid
+end
+
+function zlangs_dist(arg1, arg2)
+    @ccall libsuperlu_dist_Int64.zlangs_dist(arg1::Ptr{Cchar}, arg2::Ptr{SuperMatrix})::Cdouble
+end
+
+function zlaqgs_dist(arg1, arg2, arg3, arg4, arg5, arg6, arg7)
+    @ccall libsuperlu_dist_Int64.zlaqgs_dist(arg1::Ptr{SuperMatrix}, arg2::Ptr{Cdouble}, arg3::Ptr{Cdouble}, arg4::Cdouble, arg5::Cdouble, arg6::Cdouble, arg7::Ptr{Cchar})::Cvoid
+end
+
+function pzgsequ(arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8)
+    @ccall libsuperlu_dist_Int64.pzgsequ(arg1::Ptr{SuperMatrix}, arg2::Ptr{Cdouble}, arg3::Ptr{Cdouble}, arg4::Ptr{Cdouble}, arg5::Ptr{Cdouble}, arg6::Ptr{Cdouble}, arg7::Ptr{int_t}, arg8::Ptr{gridinfo_t})::Cvoid
+end
+
+function pzlangs(arg1, arg2, arg3)
+    @ccall libsuperlu_dist_Int64.pzlangs(arg1::Ptr{Cchar}, arg2::Ptr{SuperMatrix}, arg3::Ptr{gridinfo_t})::Cdouble
+end
+
+function pzlaqgs(arg1, arg2, arg3, arg4, arg5, arg6, arg7)
+    @ccall libsuperlu_dist_Int64.pzlaqgs(arg1::Ptr{SuperMatrix}, arg2::Ptr{Cdouble}, arg3::Ptr{Cdouble}, arg4::Cdouble, arg5::Cdouble, arg6::Cdouble, arg7::Ptr{Cchar})::Cvoid
+end
+
+function pzPermute_Dense_Matrix(arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8, arg9, arg10)
+    @ccall libsuperlu_dist_Int64.pzPermute_Dense_Matrix(arg1::int_t, arg2::int_t, arg3::Ptr{int_t}, arg4::Ptr{int_t}, arg5::Ptr{doublecomplex}, arg6::Cint, arg7::Ptr{doublecomplex}, arg8::Cint, arg9::Cint, arg10::Ptr{gridinfo_t})::Cint
+end
+
+function sp_ztrsv_dist(arg1, arg2, arg3, arg4, arg5, arg6, arg7)
+    @ccall libsuperlu_dist_Int64.sp_ztrsv_dist(arg1::Ptr{Cchar}, arg2::Ptr{Cchar}, arg3::Ptr{Cchar}, arg4::Ptr{SuperMatrix}, arg5::Ptr{SuperMatrix}, arg6::Ptr{doublecomplex}, arg7::Ptr{Cint})::Cint
+end
+
+function sp_zgemv_dist(arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8)
+    @ccall libsuperlu_dist_Int64.sp_zgemv_dist(arg1::Ptr{Cchar}, arg2::doublecomplex, arg3::Ptr{SuperMatrix}, arg4::Ptr{doublecomplex}, arg5::Cint, arg6::doublecomplex, arg7::Ptr{doublecomplex}, arg8::Cint)::Cint
+end
+
+function sp_zgemm_dist(arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8, arg9)
+    @ccall libsuperlu_dist_Int64.sp_zgemm_dist(arg1::Ptr{Cchar}, arg2::Cint, arg3::doublecomplex, arg4::Ptr{SuperMatrix}, arg5::Ptr{doublecomplex}, arg6::Cint, arg7::doublecomplex, arg8::Ptr{doublecomplex}, arg9::Cint)::Cint
+end
+
+function zdistribute(arg1, arg2, arg3, arg4, arg5, arg6)
+    @ccall libsuperlu_dist_Int64.zdistribute(arg1::Ptr{superlu_dist_options_t}, arg2::int_t, arg3::Ptr{SuperMatrix}, arg4::Ptr{Glu_freeable_t}, arg5::Ptr{zLUstruct_t}, arg6::Ptr{gridinfo_t})::Cfloat
+end
+
+function pzgssvx_ABglobal(arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8, arg9, arg10, arg11)
+    @ccall libsuperlu_dist_Int64.pzgssvx_ABglobal(arg1::Ptr{superlu_dist_options_t}, arg2::Ptr{SuperMatrix}, arg3::Ptr{zScalePermstruct_t}, arg4::Ptr{doublecomplex}, arg5::Cint, arg6::Cint, arg7::Ptr{gridinfo_t}, arg8::Ptr{zLUstruct_t}, arg9::Ptr{Cdouble}, arg10::Ptr{SuperLUStat_t}, arg11::Ptr{Cint})::Cvoid
+end
+
+function pzdistribute(arg1, arg2, arg3, arg4, arg5, arg6, arg7)
+    @ccall libsuperlu_dist_Int64.pzdistribute(arg1::Ptr{superlu_dist_options_t}, arg2::int_t, arg3::Ptr{SuperMatrix}, arg4::Ptr{zScalePermstruct_t}, arg5::Ptr{Glu_freeable_t}, arg6::Ptr{zLUstruct_t}, arg7::Ptr{gridinfo_t})::Cfloat
+end
+
+function pzgssvx(arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8, arg9, arg10, arg11, arg12)
+    @ccall libsuperlu_dist_Int64.pzgssvx(arg1::Ptr{superlu_dist_options_t}, arg2::Ptr{SuperMatrix}, arg3::Ptr{zScalePermstruct_t}, arg4::Ptr{doublecomplex}, arg5::Cint, arg6::Cint, arg7::Ptr{gridinfo_t}, arg8::Ptr{zLUstruct_t}, arg9::Ptr{zSOLVEstruct_t}, arg10::Ptr{Cdouble}, arg11::Ptr{SuperLUStat_t}, arg12::Ptr{Cint})::Cvoid
+end
+
+function pzCompute_Diag_Inv(arg1, arg2, arg3, arg4, arg5)
+    @ccall libsuperlu_dist_Int64.pzCompute_Diag_Inv(arg1::int_t, arg2::Ptr{zLUstruct_t}, arg3::Ptr{gridinfo_t}, arg4::Ptr{SuperLUStat_t}, arg5::Ptr{Cint})::Cvoid
+end
+
+function zSolveInit(arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8)
+    @ccall libsuperlu_dist_Int64.zSolveInit(arg1::Ptr{superlu_dist_options_t}, arg2::Ptr{SuperMatrix}, arg3::Ptr{int_t}, arg4::Ptr{int_t}, arg5::int_t, arg6::Ptr{zLUstruct_t}, arg7::Ptr{gridinfo_t}, arg8::Ptr{zSOLVEstruct_t})::Cint
+end
+
+function zSolveFinalize(arg1, arg2)
+    @ccall libsuperlu_dist_Int64.zSolveFinalize(arg1::Ptr{superlu_dist_options_t}, arg2::Ptr{zSOLVEstruct_t})::Cvoid
+end
+
+function zDestroy_A3d_gathered_on_2d(arg1, arg2)
+    @ccall libsuperlu_dist_Int64.zDestroy_A3d_gathered_on_2d(arg1::Ptr{zSOLVEstruct_t}, arg2::Ptr{gridinfo3d_t})::Cvoid
+end
+
+function pzgstrs_init(arg1, arg2, arg3, arg4, arg5, arg6, grid, arg8, arg9)
+    @ccall libsuperlu_dist_Int64.pzgstrs_init(arg1::int_t, arg2::int_t, arg3::int_t, arg4::int_t, arg5::Ptr{int_t}, arg6::Ptr{int_t}, grid::Ptr{gridinfo_t}, arg8::Ptr{Glu_persist_t}, arg9::Ptr{zSOLVEstruct_t})::int_t
+end
+
+function zldperm_dist(arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8, arg9)
+    @ccall libsuperlu_dist_Int64.zldperm_dist(arg1::Cint, arg2::Cint, arg3::int_t, arg4::Ptr{int_t}, arg5::Ptr{int_t}, arg6::Ptr{doublecomplex}, arg7::Ptr{int_t}, arg8::Ptr{Cdouble}, arg9::Ptr{Cdouble})::Cint
+end
+
+function zstatic_schedule(arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8, arg9)
+    @ccall libsuperlu_dist_Int64.zstatic_schedule(arg1::Ptr{superlu_dist_options_t}, arg2::Cint, arg3::Cint, arg4::Ptr{zLUstruct_t}, arg5::Ptr{gridinfo_t}, arg6::Ptr{SuperLUStat_t}, arg7::Ptr{int_t}, arg8::Ptr{int_t}, arg9::Ptr{Cint})::Cint
+end
+
+function zLUstructInit(arg1, arg2)
+    @ccall libsuperlu_dist_Int64.zLUstructInit(arg1::int_t, arg2::Ptr{zLUstruct_t})::Cvoid
+end
+
+function zLUstructFree(arg1)
+    @ccall libsuperlu_dist_Int64.zLUstructFree(arg1::Ptr{zLUstruct_t})::Cvoid
+end
+
+function zDestroy_LU(arg1, arg2, arg3)
+    @ccall libsuperlu_dist_Int64.zDestroy_LU(arg1::int_t, arg2::Ptr{gridinfo_t}, arg3::Ptr{zLUstruct_t})::Cvoid
+end
+
+function zDestroy_Tree(arg1, arg2, arg3)
+    @ccall libsuperlu_dist_Int64.zDestroy_Tree(arg1::int_t, arg2::Ptr{gridinfo_t}, arg3::Ptr{zLUstruct_t})::Cvoid
+end
+
+function zscatter_l(ib, ljb, nsupc, iukp, xsup, klst, nbrow, lptr, temp_nbrow, usub, lsub, tempv, indirect_thread, indirect2, Lrowind_bc_ptr, Lnzval_bc_ptr, grid)
+    @ccall libsuperlu_dist_Int64.zscatter_l(ib::Cint, ljb::Cint, nsupc::Cint, iukp::int_t, xsup::Ptr{int_t}, klst::Cint, nbrow::Cint, lptr::int_t, temp_nbrow::Cint, usub::Ptr{int_t}, lsub::Ptr{int_t}, tempv::Ptr{doublecomplex}, indirect_thread::Ptr{Cint}, indirect2::Ptr{Cint}, Lrowind_bc_ptr::Ptr{Ptr{int_t}}, Lnzval_bc_ptr::Ptr{Ptr{doublecomplex}}, grid::Ptr{gridinfo_t})::Cvoid
+end
+
+function zscatter_u(ib, jb, nsupc, iukp, xsup, klst, nbrow, lptr, temp_nbrow, lsub, usub, tempv, Ufstnz_br_ptr, Unzval_br_ptr, grid)
+    @ccall libsuperlu_dist_Int64.zscatter_u(ib::Cint, jb::Cint, nsupc::Cint, iukp::int_t, xsup::Ptr{int_t}, klst::Cint, nbrow::Cint, lptr::int_t, temp_nbrow::Cint, lsub::Ptr{int_t}, usub::Ptr{int_t}, tempv::Ptr{doublecomplex}, Ufstnz_br_ptr::Ptr{Ptr{int_t}}, Unzval_br_ptr::Ptr{Ptr{doublecomplex}}, grid::Ptr{gridinfo_t})::Cvoid
+end
+
+function pzgstrf(arg1, arg2, arg3, anorm, arg5, arg6, arg7, arg8)
+    @ccall libsuperlu_dist_Int64.pzgstrf(arg1::Ptr{superlu_dist_options_t}, arg2::Cint, arg3::Cint, anorm::Cdouble, arg5::Ptr{zLUstruct_t}, arg6::Ptr{gridinfo_t}, arg7::Ptr{SuperLUStat_t}, arg8::Ptr{Cint})::int_t
+end
+
+function pzgstrs_Bglobal(arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8, arg9)
+    @ccall libsuperlu_dist_Int64.pzgstrs_Bglobal(arg1::Ptr{superlu_dist_options_t}, arg2::int_t, arg3::Ptr{zLUstruct_t}, arg4::Ptr{gridinfo_t}, arg5::Ptr{doublecomplex}, arg6::int_t, arg7::Cint, arg8::Ptr{SuperLUStat_t}, arg9::Ptr{Cint})::Cvoid
+end
+
+function pzgstrs(arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8, arg9, arg10, arg11, arg12, arg13)
+    @ccall libsuperlu_dist_Int64.pzgstrs(arg1::Ptr{superlu_dist_options_t}, arg2::int_t, arg3::Ptr{zLUstruct_t}, arg4::Ptr{zScalePermstruct_t}, arg5::Ptr{gridinfo_t}, arg6::Ptr{doublecomplex}, arg7::int_t, arg8::int_t, arg9::int_t, arg10::Cint, arg11::Ptr{zSOLVEstruct_t}, arg12::Ptr{SuperLUStat_t}, arg13::Ptr{Cint})::Cvoid
+end
+
+function pzgstrf2_trsm(options, k0, k, thresh, arg5, arg6, arg7, arg8, tag_ub, arg10, info)
+    @ccall libsuperlu_dist_Int64.pzgstrf2_trsm(options::Ptr{superlu_dist_options_t}, k0::int_t, k::int_t, thresh::Cdouble, arg5::Ptr{Glu_persist_t}, arg6::Ptr{gridinfo_t}, arg7::Ptr{zLocalLU_t}, arg8::Ptr{MPI_Request}, tag_ub::Cint, arg10::Ptr{SuperLUStat_t}, info::Ptr{Cint})::Cvoid
+end
+
+function pzgstrs2_omp(k0, k, arg3, arg4, arg5, arg6, arg7)
+    @ccall libsuperlu_dist_Int64.pzgstrs2_omp(k0::int_t, k::int_t, arg3::Ptr{Glu_persist_t}, arg4::Ptr{gridinfo_t}, arg5::Ptr{zLocalLU_t}, arg6::Ptr{Ublock_info_t}, arg7::Ptr{SuperLUStat_t})::Cvoid
+end
+
+function pzReDistribute_B_to_X(B, m_loc, nrhs, ldb, fst_row, ilsum, x, arg8, arg9, arg10, arg11)
+    @ccall libsuperlu_dist_Int64.pzReDistribute_B_to_X(B::Ptr{doublecomplex}, m_loc::int_t, nrhs::Cint, ldb::int_t, fst_row::int_t, ilsum::Ptr{int_t}, x::Ptr{doublecomplex}, arg8::Ptr{zScalePermstruct_t}, arg9::Ptr{Glu_persist_t}, arg10::Ptr{gridinfo_t}, arg11::Ptr{zSOLVEstruct_t})::int_t
+end
+
+function zlsum_fmod(arg1, arg2, arg3, arg4, arg5, arg6, arg7, fmod, arg9, arg10, arg11, arg12, arg13, arg14, arg15, arg16)
+    @ccall libsuperlu_dist_Int64.zlsum_fmod(arg1::Ptr{doublecomplex}, arg2::Ptr{doublecomplex}, arg3::Ptr{doublecomplex}, arg4::Ptr{doublecomplex}, arg5::Cint, arg6::Cint, arg7::int_t, fmod::Ptr{Cint}, arg9::int_t, arg10::int_t, arg11::int_t, arg12::Ptr{int_t}, arg13::Ptr{gridinfo_t}, arg14::Ptr{zLocalLU_t}, arg15::Ptr{MPI_Request}, arg16::Ptr{SuperLUStat_t})::Cvoid
+end
+
+function zlsum_bmod(arg1, arg2, arg3, arg4, arg5, bmod, arg7, arg8, arg9, arg10, arg11, arg12, arg13, arg14)
+    @ccall libsuperlu_dist_Int64.zlsum_bmod(arg1::Ptr{doublecomplex}, arg2::Ptr{doublecomplex}, arg3::Ptr{doublecomplex}, arg4::Cint, arg5::int_t, bmod::Ptr{Cint}, arg7::Ptr{int_t}, arg8::Ptr{Ptr{Ucb_indptr_t}}, arg9::Ptr{Ptr{int_t}}, arg10::Ptr{int_t}, arg11::Ptr{gridinfo_t}, arg12::Ptr{zLocalLU_t}, arg13::Ptr{MPI_Request}, arg14::Ptr{SuperLUStat_t})::Cvoid
+end
+
+function zlsum_fmod_inv(arg1, arg2, arg3, arg4, arg5, arg6, fmod, arg8, arg9, arg10, arg11, arg12, arg13, arg14, arg15, arg16, arg17, arg18, arg19)
+    @ccall libsuperlu_dist_Int64.zlsum_fmod_inv(arg1::Ptr{doublecomplex}, arg2::Ptr{doublecomplex}, arg3::Ptr{doublecomplex}, arg4::Ptr{doublecomplex}, arg5::Cint, arg6::int_t, fmod::Ptr{Cint}, arg8::Ptr{int_t}, arg9::Ptr{gridinfo_t}, arg10::Ptr{zLocalLU_t}, arg11::Ptr{Ptr{SuperLUStat_t}}, arg12::Ptr{int_t}, arg13::Ptr{int_t}, arg14::int_t, arg15::int_t, arg16::int_t, arg17::int_t, arg18::Cint, arg19::Cint)::Cvoid
+end
+
+function zlsum_fmod_inv_master(arg1, arg2, arg3, arg4, arg5, arg6, arg7, fmod, arg9, arg10, arg11, arg12, arg13, arg14, arg15, arg16, arg17, arg18, arg19)
+    @ccall libsuperlu_dist_Int64.zlsum_fmod_inv_master(arg1::Ptr{doublecomplex}, arg2::Ptr{doublecomplex}, arg3::Ptr{doublecomplex}, arg4::Ptr{doublecomplex}, arg5::Cint, arg6::Cint, arg7::int_t, fmod::Ptr{Cint}, arg9::int_t, arg10::Ptr{int_t}, arg11::Ptr{gridinfo_t}, arg12::Ptr{zLocalLU_t}, arg13::Ptr{Ptr{SuperLUStat_t}}, arg14::int_t, arg15::int_t, arg16::int_t, arg17::int_t, arg18::Cint, arg19::Cint)::Cvoid
+end
+
+function zlsum_bmod_inv(arg1, arg2, arg3, arg4, arg5, arg6, bmod, arg8, arg9, arg10, arg11, arg12, arg13, arg14, arg15, arg16, arg17, arg18, arg19, arg20)
+    @ccall libsuperlu_dist_Int64.zlsum_bmod_inv(arg1::Ptr{doublecomplex}, arg2::Ptr{doublecomplex}, arg3::Ptr{doublecomplex}, arg4::Ptr{doublecomplex}, arg5::Cint, arg6::int_t, bmod::Ptr{Cint}, arg8::Ptr{int_t}, arg9::Ptr{Ptr{Ucb_indptr_t}}, arg10::Ptr{Ptr{int_t}}, arg11::Ptr{int_t}, arg12::Ptr{gridinfo_t}, arg13::Ptr{zLocalLU_t}, arg14::Ptr{Ptr{SuperLUStat_t}}, arg15::Ptr{int_t}, arg16::Ptr{int_t}, arg17::int_t, arg18::int_t, arg19::Cint, arg20::Cint)::Cvoid
+end
+
+function zlsum_bmod_inv_master(arg1, arg2, arg3, arg4, arg5, arg6, bmod, arg8, arg9, arg10, arg11, arg12, arg13, arg14, arg15, arg16, arg17, arg18)
+    @ccall libsuperlu_dist_Int64.zlsum_bmod_inv_master(arg1::Ptr{doublecomplex}, arg2::Ptr{doublecomplex}, arg3::Ptr{doublecomplex}, arg4::Ptr{doublecomplex}, arg5::Cint, arg6::int_t, bmod::Ptr{Cint}, arg8::Ptr{int_t}, arg9::Ptr{Ptr{Ucb_indptr_t}}, arg10::Ptr{Ptr{int_t}}, arg11::Ptr{int_t}, arg12::Ptr{gridinfo_t}, arg13::Ptr{zLocalLU_t}, arg14::Ptr{Ptr{SuperLUStat_t}}, arg15::int_t, arg16::int_t, arg17::Cint, arg18::Cint)::Cvoid
+end
+
+function zComputeLevelsets(arg1, arg2, arg3, arg4, arg5, arg6)
+    @ccall libsuperlu_dist_Int64.zComputeLevelsets(arg1::Cint, arg2::int_t, arg3::Ptr{gridinfo_t}, arg4::Ptr{Glu_persist_t}, arg5::Ptr{zLocalLU_t}, arg6::Ptr{int_t})::Cvoid
+end
+
+function pzgsrfs(arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8, arg9, arg10, arg11, arg12, arg13, arg14, arg15, arg16)
+    @ccall libsuperlu_dist_Int64.pzgsrfs(arg1::Ptr{superlu_dist_options_t}, arg2::int_t, arg3::Ptr{SuperMatrix}, arg4::Cdouble, arg5::Ptr{zLUstruct_t}, arg6::Ptr{zScalePermstruct_t}, arg7::Ptr{gridinfo_t}, arg8::Ptr{doublecomplex}, arg9::int_t, arg10::Ptr{doublecomplex}, arg11::int_t, arg12::Cint, arg13::Ptr{zSOLVEstruct_t}, arg14::Ptr{Cdouble}, arg15::Ptr{SuperLUStat_t}, arg16::Ptr{Cint})::Cvoid
+end
+
+function pzgsrfs_ABXglobal(arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8, arg9, arg10, arg11, arg12, arg13, arg14)
+    @ccall libsuperlu_dist_Int64.pzgsrfs_ABXglobal(arg1::Ptr{superlu_dist_options_t}, arg2::int_t, arg3::Ptr{SuperMatrix}, arg4::Cdouble, arg5::Ptr{zLUstruct_t}, arg6::Ptr{gridinfo_t}, arg7::Ptr{doublecomplex}, arg8::int_t, arg9::Ptr{doublecomplex}, arg10::int_t, arg11::Cint, arg12::Ptr{Cdouble}, arg13::Ptr{SuperLUStat_t}, arg14::Ptr{Cint})::Cvoid
+end
+
+function pzgsmv_AXglobal_setup(arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8)
+    @ccall libsuperlu_dist_Int64.pzgsmv_AXglobal_setup(arg1::Ptr{SuperMatrix}, arg2::Ptr{Glu_persist_t}, arg3::Ptr{gridinfo_t}, arg4::Ptr{int_t}, arg5::Ptr{Ptr{int_t}}, arg6::Ptr{Ptr{doublecomplex}}, arg7::Ptr{Ptr{int_t}}, arg8::Ptr{int_t})::Cint
+end
+
+function pzgsmv_AXglobal(arg1, arg2, arg3, arg4, arg5, arg6)
+    @ccall libsuperlu_dist_Int64.pzgsmv_AXglobal(arg1::int_t, arg2::Ptr{int_t}, arg3::Ptr{doublecomplex}, arg4::Ptr{int_t}, arg5::Ptr{doublecomplex}, arg6::Ptr{doublecomplex})::Cint
+end
+
+function pzgsmv_AXglobal_abs(arg1, arg2, arg3, arg4, arg5, arg6)
+    @ccall libsuperlu_dist_Int64.pzgsmv_AXglobal_abs(arg1::int_t, arg2::Ptr{int_t}, arg3::Ptr{doublecomplex}, arg4::Ptr{int_t}, arg5::Ptr{doublecomplex}, arg6::Ptr{Cdouble})::Cint
+end
+
+function pzgsmv_init(arg1, arg2, arg3, arg4)
+    @ccall libsuperlu_dist_Int64.pzgsmv_init(arg1::Ptr{SuperMatrix}, arg2::Ptr{int_t}, arg3::Ptr{gridinfo_t}, arg4::Ptr{pzgsmv_comm_t})::Cvoid
+end
+
+function pzgsmv(arg1, arg2, arg3, arg4, x, ax)
+    @ccall libsuperlu_dist_Int64.pzgsmv(arg1::int_t, arg2::Ptr{SuperMatrix}, arg3::Ptr{gridinfo_t}, arg4::Ptr{pzgsmv_comm_t}, x::Ptr{doublecomplex}, ax::Ptr{doublecomplex})::Cvoid
+end
+
+function pzgsmv_finalize(arg1)
+    @ccall libsuperlu_dist_Int64.pzgsmv_finalize(arg1::Ptr{pzgsmv_comm_t})::Cvoid
+end
+
+function doublecomplexMalloc_dist(arg1)
+    @ccall libsuperlu_dist_Int64.doublecomplexMalloc_dist(arg1::int_t)::Ptr{doublecomplex}
+end
+
+function doublecomplexCalloc_dist(arg1)
+    @ccall libsuperlu_dist_Int64.doublecomplexCalloc_dist(arg1::int_t)::Ptr{doublecomplex}
+end
+
+function zQuerySpace_dist(arg1, arg2, arg3, arg4, arg5)
+    @ccall libsuperlu_dist_Int64.zQuerySpace_dist(arg1::int_t, arg2::Ptr{zLUstruct_t}, arg3::Ptr{gridinfo_t}, arg4::Ptr{SuperLUStat_t}, arg5::Ptr{superlu_dist_mem_usage_t})::int_t
+end
+
+function zClone_CompRowLoc_Matrix_dist(arg1, arg2)
+    @ccall libsuperlu_dist_Int64.zClone_CompRowLoc_Matrix_dist(arg1::Ptr{SuperMatrix}, arg2::Ptr{SuperMatrix})::Cvoid
+end
+
+function zCopy_CompRowLoc_Matrix_dist(arg1, arg2)
+    @ccall libsuperlu_dist_Int64.zCopy_CompRowLoc_Matrix_dist(arg1::Ptr{SuperMatrix}, arg2::Ptr{SuperMatrix})::Cvoid
+end
+
+function zZero_CompRowLoc_Matrix_dist(arg1)
+    @ccall libsuperlu_dist_Int64.zZero_CompRowLoc_Matrix_dist(arg1::Ptr{SuperMatrix})::Cvoid
+end
+
+function zScaleAddId_CompRowLoc_Matrix_dist(arg1, arg2)
+    @ccall libsuperlu_dist_Int64.zScaleAddId_CompRowLoc_Matrix_dist(arg1::Ptr{SuperMatrix}, arg2::doublecomplex)::Cvoid
+end
+
+function zScaleAdd_CompRowLoc_Matrix_dist(arg1, arg2, arg3)
+    @ccall libsuperlu_dist_Int64.zScaleAdd_CompRowLoc_Matrix_dist(arg1::Ptr{SuperMatrix}, arg2::Ptr{SuperMatrix}, arg3::doublecomplex)::Cvoid
+end
+
+function zZeroLblocks(arg1, arg2, arg3, arg4)
+    @ccall libsuperlu_dist_Int64.zZeroLblocks(arg1::Cint, arg2::Cint, arg3::Ptr{gridinfo_t}, arg4::Ptr{zLUstruct_t})::Cvoid
+end
+
+function zZeroUblocks(iam, n, arg3, arg4)
+    @ccall libsuperlu_dist_Int64.zZeroUblocks(iam::Cint, n::Cint, arg3::Ptr{gridinfo_t}, arg4::Ptr{zLUstruct_t})::Cvoid
+end
+
+function zfill_dist(arg1, arg2, arg3)
+    @ccall libsuperlu_dist_Int64.zfill_dist(arg1::Ptr{doublecomplex}, arg2::int_t, arg3::doublecomplex)::Cvoid
+end
+
+function zinf_norm_error_dist(arg1, arg2, arg3, arg4, arg5, arg6, arg7)
+    @ccall libsuperlu_dist_Int64.zinf_norm_error_dist(arg1::int_t, arg2::int_t, arg3::Ptr{doublecomplex}, arg4::int_t, arg5::Ptr{doublecomplex}, arg6::int_t, arg7::Ptr{gridinfo_t})::Cvoid
+end
+
+function pzinf_norm_error(arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8)
+    @ccall libsuperlu_dist_Int64.pzinf_norm_error(arg1::Cint, arg2::int_t, arg3::int_t, arg4::Ptr{doublecomplex}, arg5::int_t, arg6::Ptr{doublecomplex}, arg7::int_t, arg8::MPI_Comm)::Cvoid
+end
+
+function zreadhb_dist(arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8)
+    @ccall libsuperlu_dist_Int64.zreadhb_dist(arg1::Cint, arg2::Ptr{Libc.FILE}, arg3::Ptr{int_t}, arg4::Ptr{int_t}, arg5::Ptr{int_t}, arg6::Ptr{Ptr{doublecomplex}}, arg7::Ptr{Ptr{int_t}}, arg8::Ptr{Ptr{int_t}})::Cvoid
+end
+
+function zreadtriple_dist(arg1, arg2, arg3, arg4, arg5, arg6, arg7)
+    @ccall libsuperlu_dist_Int64.zreadtriple_dist(arg1::Ptr{Libc.FILE}, arg2::Ptr{int_t}, arg3::Ptr{int_t}, arg4::Ptr{int_t}, arg5::Ptr{Ptr{doublecomplex}}, arg6::Ptr{Ptr{int_t}}, arg7::Ptr{Ptr{int_t}})::Cvoid
+end
+
+function zreadtriple_noheader(arg1, arg2, arg3, arg4, arg5, arg6, arg7)
+    @ccall libsuperlu_dist_Int64.zreadtriple_noheader(arg1::Ptr{Libc.FILE}, arg2::Ptr{int_t}, arg3::Ptr{int_t}, arg4::Ptr{int_t}, arg5::Ptr{Ptr{doublecomplex}}, arg6::Ptr{Ptr{int_t}}, arg7::Ptr{Ptr{int_t}})::Cvoid
+end
+
+function zreadrb_dist(arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8)
+    @ccall libsuperlu_dist_Int64.zreadrb_dist(arg1::Cint, arg2::Ptr{Libc.FILE}, arg3::Ptr{int_t}, arg4::Ptr{int_t}, arg5::Ptr{int_t}, arg6::Ptr{Ptr{doublecomplex}}, arg7::Ptr{Ptr{int_t}}, arg8::Ptr{Ptr{int_t}})::Cvoid
+end
+
+function zreadMM_dist(arg1, arg2, arg3, arg4, arg5, arg6, arg7)
+    @ccall libsuperlu_dist_Int64.zreadMM_dist(arg1::Ptr{Libc.FILE}, arg2::Ptr{int_t}, arg3::Ptr{int_t}, arg4::Ptr{int_t}, arg5::Ptr{Ptr{doublecomplex}}, arg6::Ptr{Ptr{int_t}}, arg7::Ptr{Ptr{int_t}})::Cvoid
+end
+
+function zread_binary(arg1, arg2, arg3, arg4, arg5, arg6, arg7)
+    @ccall libsuperlu_dist_Int64.zread_binary(arg1::Ptr{Libc.FILE}, arg2::Ptr{int_t}, arg3::Ptr{int_t}, arg4::Ptr{int_t}, arg5::Ptr{Ptr{doublecomplex}}, arg6::Ptr{Ptr{int_t}}, arg7::Ptr{Ptr{int_t}})::Cint
+end
+
+function zdist_psymbtonum(arg1, arg2, arg3, arg4, arg5, arg6, arg7)
+    @ccall libsuperlu_dist_Int64.zdist_psymbtonum(arg1::Ptr{superlu_dist_options_t}, arg2::int_t, arg3::Ptr{SuperMatrix}, arg4::Ptr{zScalePermstruct_t}, arg5::Ptr{Pslu_freeable_t}, arg6::Ptr{zLUstruct_t}, arg7::Ptr{gridinfo_t})::Cfloat
+end
+
+function pzGetDiagU(arg1, arg2, arg3, arg4)
+    @ccall libsuperlu_dist_Int64.pzGetDiagU(arg1::int_t, arg2::Ptr{zLUstruct_t}, arg3::Ptr{gridinfo_t}, arg4::Ptr{doublecomplex})::Cvoid
+end
+
+function z_c2cpp_GetHWPM(arg1, arg2, arg3)
+    @ccall libsuperlu_dist_Int64.z_c2cpp_GetHWPM(arg1::Ptr{SuperMatrix}, arg2::Ptr{gridinfo_t}, arg3::Ptr{zScalePermstruct_t})::Cint
+end
+
+function zPrintLblocks(arg1, arg2, arg3, arg4, arg5)
+    @ccall libsuperlu_dist_Int64.zPrintLblocks(arg1::Cint, arg2::int_t, arg3::Ptr{gridinfo_t}, arg4::Ptr{Glu_persist_t}, arg5::Ptr{zLocalLU_t})::Cvoid
+end
+
+function zPrintUblocks(arg1, arg2, arg3, arg4, arg5)
+    @ccall libsuperlu_dist_Int64.zPrintUblocks(arg1::Cint, arg2::int_t, arg3::Ptr{gridinfo_t}, arg4::Ptr{Glu_persist_t}, arg5::Ptr{zLocalLU_t})::Cvoid
+end
+
+function zPrint_CompCol_Matrix_dist(arg1)
+    @ccall libsuperlu_dist_Int64.zPrint_CompCol_Matrix_dist(arg1::Ptr{SuperMatrix})::Cvoid
+end
+
+function zPrint_Dense_Matrix_dist(arg1)
+    @ccall libsuperlu_dist_Int64.zPrint_Dense_Matrix_dist(arg1::Ptr{SuperMatrix})::Cvoid
+end
+
+function zPrint_CompRowLoc_Matrix_dist(arg1)
+    @ccall libsuperlu_dist_Int64.zPrint_CompRowLoc_Matrix_dist(arg1::Ptr{SuperMatrix})::Cint
+end
+
+function file_zPrint_CompRowLoc_Matrix_dist(fp, A)
+    @ccall libsuperlu_dist_Int64.file_zPrint_CompRowLoc_Matrix_dist(fp::Ptr{Libc.FILE}, A::Ptr{SuperMatrix})::Cint
+end
+
+function PrintDoublecomplex(arg1, arg2, arg3)
+    @ccall libsuperlu_dist_Int64.PrintDoublecomplex(arg1::Ptr{Cchar}, arg2::int_t, arg3::Ptr{doublecomplex})::Cvoid
+end
+
+function file_PrintDoublecomplex(fp, arg2, arg3, arg4)
+    @ccall libsuperlu_dist_Int64.file_PrintDoublecomplex(fp::Ptr{Libc.FILE}, arg2::Ptr{Cchar}, arg3::int_t, arg4::Ptr{doublecomplex})::Cint
+end
+
+function zGenCOOLblocks(arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8, arg9, arg10)
+    @ccall libsuperlu_dist_Int64.zGenCOOLblocks(arg1::Cint, arg2::int_t, arg3::Ptr{gridinfo_t}, arg4::Ptr{Glu_persist_t}, arg5::Ptr{zLocalLU_t}, arg6::Ptr{Ptr{int_t}}, arg7::Ptr{Ptr{int_t}}, arg8::Ptr{Ptr{doublecomplex}}, arg9::Ptr{int_t}, arg10::Ptr{int_t})::Cvoid
+end
+
+function zGenCSCLblocks(arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8, arg9, arg10)
+    @ccall libsuperlu_dist_Int64.zGenCSCLblocks(arg1::Cint, arg2::int_t, arg3::Ptr{gridinfo_t}, arg4::Ptr{Glu_persist_t}, arg5::Ptr{zLocalLU_t}, arg6::Ptr{Ptr{doublecomplex}}, arg7::Ptr{Ptr{int_t}}, arg8::Ptr{Ptr{int_t}}, arg9::Ptr{int_t}, arg10::Ptr{int_t})::Cvoid
+end
+
+function zGenCSRLblocks(arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8, arg9, arg10)
+    @ccall libsuperlu_dist_Int64.zGenCSRLblocks(arg1::Cint, arg2::int_t, arg3::Ptr{gridinfo_t}, arg4::Ptr{Glu_persist_t}, arg5::Ptr{zLocalLU_t}, arg6::Ptr{Ptr{doublecomplex}}, arg7::Ptr{Ptr{int_t}}, arg8::Ptr{Ptr{int_t}}, arg9::Ptr{int_t}, arg10::Ptr{int_t})::Cvoid
+end
+
+function superlu_zgemm(transa, transb, m, n, k, alpha, a, lda, b, ldb, beta, c, ldc)
+    @ccall libsuperlu_dist_Int64.superlu_zgemm(transa::Ptr{Cchar}, transb::Ptr{Cchar}, m::Cint, n::Cint, k::Cint, alpha::doublecomplex, a::Ptr{doublecomplex}, lda::Cint, b::Ptr{doublecomplex}, ldb::Cint, beta::doublecomplex, c::Ptr{doublecomplex}, ldc::Cint)::Cint
+end
+
+function superlu_ztrsm(sideRL, uplo, transa, diag, m, n, alpha, a, lda, b, ldb)
+    @ccall libsuperlu_dist_Int64.superlu_ztrsm(sideRL::Ptr{Cchar}, uplo::Ptr{Cchar}, transa::Ptr{Cchar}, diag::Ptr{Cchar}, m::Cint, n::Cint, alpha::doublecomplex, a::Ptr{doublecomplex}, lda::Cint, b::Ptr{doublecomplex}, ldb::Cint)::Cint
+end
+
+function superlu_zger(m, n, alpha, x, incx, y, incy, a, lda)
+    @ccall libsuperlu_dist_Int64.superlu_zger(m::Cint, n::Cint, alpha::doublecomplex, x::Ptr{doublecomplex}, incx::Cint, y::Ptr{doublecomplex}, incy::Cint, a::Ptr{doublecomplex}, lda::Cint)::Cint
+end
+
+function superlu_zscal(n, alpha, x, incx)
+    @ccall libsuperlu_dist_Int64.superlu_zscal(n::Cint, alpha::doublecomplex, x::Ptr{doublecomplex}, incx::Cint)::Cint
+end
+
+function superlu_zaxpy(n, alpha, x, incx, y, incy)
+    @ccall libsuperlu_dist_Int64.superlu_zaxpy(n::Cint, alpha::doublecomplex, x::Ptr{doublecomplex}, incx::Cint, y::Ptr{doublecomplex}, incy::Cint)::Cint
+end
+
+function superlu_zgemv(trans, m, n, alpha, a, lda, x, incx, beta, y, incy)
+    @ccall libsuperlu_dist_Int64.superlu_zgemv(trans::Ptr{Cchar}, m::Cint, n::Cint, alpha::doublecomplex, a::Ptr{doublecomplex}, lda::Cint, x::Ptr{doublecomplex}, incx::Cint, beta::doublecomplex, y::Ptr{doublecomplex}, incy::Cint)::Cint
+end
+
+function superlu_ztrsv(uplo, trans, diag, n, a, lda, x, incx)
+    @ccall libsuperlu_dist_Int64.superlu_ztrsv(uplo::Ptr{Cchar}, trans::Ptr{Cchar}, diag::Ptr{Cchar}, n::Cint, a::Ptr{doublecomplex}, lda::Cint, x::Ptr{doublecomplex}, incx::Cint)::Cint
+end
+
+function zcreate_matrix3d(A, nrhs, rhs, ldb, x, ldx, fp, grid3d)
+    @ccall libsuperlu_dist_Int64.zcreate_matrix3d(A::Ptr{SuperMatrix}, nrhs::Cint, rhs::Ptr{Ptr{doublecomplex}}, ldb::Ptr{Cint}, x::Ptr{Ptr{doublecomplex}}, ldx::Ptr{Cint}, fp::Ptr{Libc.FILE}, grid3d::Ptr{gridinfo3d_t})::Cint
+end
+
+function zcreate_matrix_postfix3d(A, nrhs, rhs, ldb, x, ldx, fp, postfix, grid3d)
+    @ccall libsuperlu_dist_Int64.zcreate_matrix_postfix3d(A::Ptr{SuperMatrix}, nrhs::Cint, rhs::Ptr{Ptr{doublecomplex}}, ldb::Ptr{Cint}, x::Ptr{Ptr{doublecomplex}}, ldx::Ptr{Cint}, fp::Ptr{Libc.FILE}, postfix::Ptr{Cchar}, grid3d::Ptr{gridinfo3d_t})::Cint
+end
+
+function zGatherNRformat_loc3d(Fact, A, B, ldb, nrhs, grid3d, arg7)
+    @ccall libsuperlu_dist_Int64.zGatherNRformat_loc3d(Fact::fact_t, A::Ptr{NRformat_loc}, B::Ptr{doublecomplex}, ldb::Cint, nrhs::Cint, grid3d::Ptr{gridinfo3d_t}, arg7::Ptr{Ptr{NRformat_loc3d}})::Cvoid
+end
+
+function zScatter_B3d(A3d, grid3d)
+    @ccall libsuperlu_dist_Int64.zScatter_B3d(A3d::Ptr{NRformat_loc3d}, grid3d::Ptr{gridinfo3d_t})::Cint
+end
+
+function pzgssvx3d(arg1, arg2, arg3, B, ldb, nrhs, arg7, arg8, arg9, berr, arg11, info)
+    @ccall libsuperlu_dist_Int64.pzgssvx3d(arg1::Ptr{superlu_dist_options_t}, arg2::Ptr{SuperMatrix}, arg3::Ptr{zScalePermstruct_t}, B::Ptr{doublecomplex}, ldb::Cint, nrhs::Cint, arg7::Ptr{gridinfo3d_t}, arg8::Ptr{zLUstruct_t}, arg9::Ptr{zSOLVEstruct_t}, berr::Ptr{Cdouble}, arg11::Ptr{SuperLUStat_t}, info::Ptr{Cint})::Cvoid
+end
+
+function pzgstrf3d(arg1, m, n, anorm, arg5, arg6, arg7, arg8, arg9, arg10)
+    @ccall libsuperlu_dist_Int64.pzgstrf3d(arg1::Ptr{superlu_dist_options_t}, m::Cint, n::Cint, anorm::Cdouble, arg5::Ptr{ztrf3Dpartition_t}, arg6::Ptr{SCT_t}, arg7::Ptr{zLUstruct_t}, arg8::Ptr{gridinfo3d_t}, arg9::Ptr{SuperLUStat_t}, arg10::Ptr{Cint})::int_t
+end
+
+function zInit_HyP(HyP, Llu, mcb, mrb)
+    @ccall libsuperlu_dist_Int64.zInit_HyP(HyP::Ptr{HyP_t}, Llu::Ptr{zLocalLU_t}, mcb::int_t, mrb::int_t)::Cvoid
+end
+
+function zblock_gemm_scatter(lb, j, Ublock_info, Remain_info, L_mat, ldl, U_mat, ldu, bigV, knsupc, klst, lsub, usub, ldt, thread_id, indirect, indirect2, Lrowind_bc_ptr, Lnzval_bc_ptr, Ufstnz_br_ptr, Unzval_br_ptr, xsup, arg23, arg24)
+    @ccall libsuperlu_dist_Int64.zblock_gemm_scatter(lb::int_t, j::int_t, Ublock_info::Ptr{Ublock_info_t}, Remain_info::Ptr{Remain_info_t}, L_mat::Ptr{doublecomplex}, ldl::Cint, U_mat::Ptr{doublecomplex}, ldu::Cint, bigV::Ptr{doublecomplex}, knsupc::int_t, klst::int_t, lsub::Ptr{int_t}, usub::Ptr{int_t}, ldt::int_t, thread_id::int_t, indirect::Ptr{Cint}, indirect2::Ptr{Cint}, Lrowind_bc_ptr::Ptr{Ptr{int_t}}, Lnzval_bc_ptr::Ptr{Ptr{doublecomplex}}, Ufstnz_br_ptr::Ptr{Ptr{int_t}}, Unzval_br_ptr::Ptr{Ptr{doublecomplex}}, xsup::Ptr{int_t}, arg23::Ptr{gridinfo_t}, arg24::Ptr{SuperLUStat_t})::Cvoid
+end
+
+function zblock_gemm_scatterTopLeft(lb, j, bigV, knsupc, klst, lsub, usub, ldt, indirect, indirect2, HyP, arg12, arg13, SCT, arg15)
+    @ccall libsuperlu_dist_Int64.zblock_gemm_scatterTopLeft(lb::int_t, j::int_t, bigV::Ptr{doublecomplex}, knsupc::int_t, klst::int_t, lsub::Ptr{int_t}, usub::Ptr{int_t}, ldt::int_t, indirect::Ptr{Cint}, indirect2::Ptr{Cint}, HyP::Ptr{HyP_t}, arg12::Ptr{zLUstruct_t}, arg13::Ptr{gridinfo_t}, SCT::Ptr{SCT_t}, arg15::Ptr{SuperLUStat_t})::int_t
+end
+
+function zblock_gemm_scatterTopRight(lb, j, bigV, knsupc, klst, lsub, usub, ldt, indirect, indirect2, HyP, arg12, arg13, SCT, arg15)
+    @ccall libsuperlu_dist_Int64.zblock_gemm_scatterTopRight(lb::int_t, j::int_t, bigV::Ptr{doublecomplex}, knsupc::int_t, klst::int_t, lsub::Ptr{int_t}, usub::Ptr{int_t}, ldt::int_t, indirect::Ptr{Cint}, indirect2::Ptr{Cint}, HyP::Ptr{HyP_t}, arg12::Ptr{zLUstruct_t}, arg13::Ptr{gridinfo_t}, SCT::Ptr{SCT_t}, arg15::Ptr{SuperLUStat_t})::int_t
+end
+
+function zblock_gemm_scatterBottomLeft(lb, j, bigV, knsupc, klst, lsub, usub, ldt, indirect, indirect2, HyP, arg12, arg13, SCT, arg15)
+    @ccall libsuperlu_dist_Int64.zblock_gemm_scatterBottomLeft(lb::int_t, j::int_t, bigV::Ptr{doublecomplex}, knsupc::int_t, klst::int_t, lsub::Ptr{int_t}, usub::Ptr{int_t}, ldt::int_t, indirect::Ptr{Cint}, indirect2::Ptr{Cint}, HyP::Ptr{HyP_t}, arg12::Ptr{zLUstruct_t}, arg13::Ptr{gridinfo_t}, SCT::Ptr{SCT_t}, arg15::Ptr{SuperLUStat_t})::int_t
+end
+
+function zblock_gemm_scatterBottomRight(lb, j, bigV, knsupc, klst, lsub, usub, ldt, indirect, indirect2, HyP, arg12, arg13, SCT, arg15)
+    @ccall libsuperlu_dist_Int64.zblock_gemm_scatterBottomRight(lb::int_t, j::int_t, bigV::Ptr{doublecomplex}, knsupc::int_t, klst::int_t, lsub::Ptr{int_t}, usub::Ptr{int_t}, ldt::int_t, indirect::Ptr{Cint}, indirect2::Ptr{Cint}, HyP::Ptr{HyP_t}, arg12::Ptr{zLUstruct_t}, arg13::Ptr{gridinfo_t}, SCT::Ptr{SCT_t}, arg15::Ptr{SuperLUStat_t})::int_t
+end
+
+function zgather_u(num_u_blks, Ublock_info, usub, uval, bigU, ldu, xsup, klst)
+    @ccall libsuperlu_dist_Int64.zgather_u(num_u_blks::int_t, Ublock_info::Ptr{Ublock_info_t}, usub::Ptr{int_t}, uval::Ptr{doublecomplex}, bigU::Ptr{doublecomplex}, ldu::int_t, xsup::Ptr{int_t}, klst::int_t)::Cvoid
+end
+
+function zgather_l(num_LBlk, knsupc, L_info, lval, LD_lval, L_buff)
+    @ccall libsuperlu_dist_Int64.zgather_l(num_LBlk::int_t, knsupc::int_t, L_info::Ptr{Remain_info_t}, lval::Ptr{doublecomplex}, LD_lval::int_t, L_buff::Ptr{doublecomplex})::Cvoid
+end
+
+function zRgather_L(k, lsub, lusup, arg4, arg5, arg6, arg7, myIperm, iperm_c_supno)
+    @ccall libsuperlu_dist_Int64.zRgather_L(k::int_t, lsub::Ptr{int_t}, lusup::Ptr{doublecomplex}, arg4::Ptr{gEtreeInfo_t}, arg5::Ptr{Glu_persist_t}, arg6::Ptr{gridinfo_t}, arg7::Ptr{HyP_t}, myIperm::Ptr{int_t}, iperm_c_supno::Ptr{int_t})::Cvoid
+end
+
+function zRgather_U(k, jj0, usub, uval, bigU, arg6, arg7, arg8, arg9, myIperm, iperm_c_supno, perm_u)
+    @ccall libsuperlu_dist_Int64.zRgather_U(k::int_t, jj0::int_t, usub::Ptr{int_t}, uval::Ptr{doublecomplex}, bigU::Ptr{doublecomplex}, arg6::Ptr{gEtreeInfo_t}, arg7::Ptr{Glu_persist_t}, arg8::Ptr{gridinfo_t}, arg9::Ptr{HyP_t}, myIperm::Ptr{int_t}, iperm_c_supno::Ptr{int_t}, perm_u::Ptr{int_t})::Cvoid
+end
+
+function zinitTrf3Dpartition(nsupers, options, LUstruct, grid3d)
+    @ccall libsuperlu_dist_Int64.zinitTrf3Dpartition(nsupers::int_t, options::Ptr{superlu_dist_options_t}, LUstruct::Ptr{zLUstruct_t}, grid3d::Ptr{gridinfo3d_t})::Ptr{ztrf3Dpartition_t}
+end
+
+function zDestroy_trf3Dpartition(trf3Dpartition, grid3d)
+    @ccall libsuperlu_dist_Int64.zDestroy_trf3Dpartition(trf3Dpartition::Ptr{ztrf3Dpartition_t}, grid3d::Ptr{gridinfo3d_t})::Cvoid
+end
+
+function z3D_printMemUse(trf3Dpartition, LUstruct, grid3d)
+    @ccall libsuperlu_dist_Int64.z3D_printMemUse(trf3Dpartition::Ptr{ztrf3Dpartition_t}, LUstruct::Ptr{zLUstruct_t}, grid3d::Ptr{gridinfo3d_t})::Cvoid
+end
+
+function zinit3DLUstructForest(myTreeIdxs, myZeroTrIdxs, sForests, LUstruct, grid3d)
+    @ccall libsuperlu_dist_Int64.zinit3DLUstructForest(myTreeIdxs::Ptr{int_t}, myZeroTrIdxs::Ptr{int_t}, sForests::Ptr{Ptr{sForest_t}}, LUstruct::Ptr{zLUstruct_t}, grid3d::Ptr{gridinfo3d_t})::Cvoid
+end
+
+function zgatherAllFactoredLUFr(myZeroTrIdxs, sForests, LUstruct, grid3d, SCT)
+    @ccall libsuperlu_dist_Int64.zgatherAllFactoredLUFr(myZeroTrIdxs::Ptr{int_t}, sForests::Ptr{sForest_t}, LUstruct::Ptr{zLUstruct_t}, grid3d::Ptr{gridinfo3d_t}, SCT::Ptr{SCT_t})::int_t
+end
+
+function zLpanelUpdate(off0, nsupc, ublk_ptr, ld_ujrow, lusup, nsupr, arg7)
+    @ccall libsuperlu_dist_Int64.zLpanelUpdate(off0::int_t, nsupc::int_t, ublk_ptr::Ptr{doublecomplex}, ld_ujrow::int_t, lusup::Ptr{doublecomplex}, nsupr::int_t, arg7::Ptr{SCT_t})::int_t
+end
+
+function Local_Zgstrf2(options, k, thresh, BlockUFactor, arg5, arg6, arg7, arg8, info, arg10)
+    @ccall libsuperlu_dist_Int64.Local_Zgstrf2(options::Ptr{superlu_dist_options_t}, k::int_t, thresh::Cdouble, BlockUFactor::Ptr{doublecomplex}, arg5::Ptr{Glu_persist_t}, arg6::Ptr{gridinfo_t}, arg7::Ptr{zLocalLU_t}, arg8::Ptr{SuperLUStat_t}, info::Ptr{Cint}, arg10::Ptr{SCT_t})::Cvoid
+end
+
+function zTrs2_GatherU(iukp, rukp, klst, nsupc, ldu, usub, uval, tempv)
+    @ccall libsuperlu_dist_Int64.zTrs2_GatherU(iukp::int_t, rukp::int_t, klst::int_t, nsupc::int_t, ldu::int_t, usub::Ptr{int_t}, uval::Ptr{doublecomplex}, tempv::Ptr{doublecomplex})::int_t
+end
+
+function zTrs2_ScatterU(iukp, rukp, klst, nsupc, ldu, usub, uval, tempv)
+    @ccall libsuperlu_dist_Int64.zTrs2_ScatterU(iukp::int_t, rukp::int_t, klst::int_t, nsupc::int_t, ldu::int_t, usub::Ptr{int_t}, uval::Ptr{doublecomplex}, tempv::Ptr{doublecomplex})::int_t
+end
+
+function zTrs2_GatherTrsmScatter(klst, iukp, rukp, usub, uval, tempv, knsupc, nsupr, lusup, Glu_persist)
+    @ccall libsuperlu_dist_Int64.zTrs2_GatherTrsmScatter(klst::int_t, iukp::int_t, rukp::int_t, usub::Ptr{int_t}, uval::Ptr{doublecomplex}, tempv::Ptr{doublecomplex}, knsupc::int_t, nsupr::Cint, lusup::Ptr{doublecomplex}, Glu_persist::Ptr{Glu_persist_t})::int_t
+end
+
+function pzgstrs2(m, k0, k, Glu_persist, grid, Llu, stat)
+    @ccall libsuperlu_dist_Int64.pzgstrs2(m::int_t, k0::int_t, k::int_t, Glu_persist::Ptr{Glu_persist_t}, grid::Ptr{gridinfo_t}, Llu::Ptr{zLocalLU_t}, stat::Ptr{SuperLUStat_t})::Cvoid
+end
+
+function pzgstrf2(arg1, nsupers, k0, k, thresh, arg6, arg7, arg8, arg9, arg10, arg11, arg12)
+    @ccall libsuperlu_dist_Int64.pzgstrf2(arg1::Ptr{superlu_dist_options_t}, nsupers::int_t, k0::int_t, k::int_t, thresh::Cdouble, arg6::Ptr{Glu_persist_t}, arg7::Ptr{gridinfo_t}, arg8::Ptr{zLocalLU_t}, arg9::Ptr{MPI_Request}, arg10::Cint, arg11::Ptr{SuperLUStat_t}, arg12::Ptr{Cint})::Cvoid
+end
+
+function zAllocLlu_3d(nsupers, LUstruct, grid3d)
+    @ccall libsuperlu_dist_Int64.zAllocLlu_3d(nsupers::int_t, LUstruct::Ptr{zLUstruct_t}, grid3d::Ptr{gridinfo3d_t})::int_t
+end
+
+function zp3dScatter(n, LUstruct, grid3d)
+    @ccall libsuperlu_dist_Int64.zp3dScatter(n::int_t, LUstruct::Ptr{zLUstruct_t}, grid3d::Ptr{gridinfo3d_t})::int_t
+end
+
+function zscatter3dLPanels(nsupers, LUstruct, grid3d)
+    @ccall libsuperlu_dist_Int64.zscatter3dLPanels(nsupers::int_t, LUstruct::Ptr{zLUstruct_t}, grid3d::Ptr{gridinfo3d_t})::int_t
+end
+
+function zscatter3dUPanels(nsupers, LUstruct, grid3d)
+    @ccall libsuperlu_dist_Int64.zscatter3dUPanels(nsupers::int_t, LUstruct::Ptr{zLUstruct_t}, grid3d::Ptr{gridinfo3d_t})::int_t
+end
+
+function zcollect3dLpanels(layer, nsupers, LUstruct, grid3d)
+    @ccall libsuperlu_dist_Int64.zcollect3dLpanels(layer::int_t, nsupers::int_t, LUstruct::Ptr{zLUstruct_t}, grid3d::Ptr{gridinfo3d_t})::int_t
+end
+
+function zcollect3dUpanels(layer, nsupers, LUstruct, grid3d)
+    @ccall libsuperlu_dist_Int64.zcollect3dUpanels(layer::int_t, nsupers::int_t, LUstruct::Ptr{zLUstruct_t}, grid3d::Ptr{gridinfo3d_t})::int_t
+end
+
+function zp3dCollect(layer, n, LUstruct, grid3d)
+    @ccall libsuperlu_dist_Int64.zp3dCollect(layer::int_t, n::int_t, LUstruct::Ptr{zLUstruct_t}, grid3d::Ptr{gridinfo3d_t})::int_t
+end
+
+function zzeroSetLU(nnodes, nodeList, arg3, arg4)
+    @ccall libsuperlu_dist_Int64.zzeroSetLU(nnodes::int_t, nodeList::Ptr{int_t}, arg3::Ptr{zLUstruct_t}, arg4::Ptr{gridinfo3d_t})::int_t
+end
+
+function zAllocGlu_3d(n, nsupers, arg3)
+    @ccall libsuperlu_dist_Int64.zAllocGlu_3d(n::int_t, nsupers::int_t, arg3::Ptr{zLUstruct_t})::Cint
+end
+
+function zDeAllocLlu_3d(n, arg2, arg3)
+    @ccall libsuperlu_dist_Int64.zDeAllocLlu_3d(n::int_t, arg2::Ptr{zLUstruct_t}, arg3::Ptr{gridinfo3d_t})::Cint
+end
+
+function zDeAllocGlu_3d(arg1)
+    @ccall libsuperlu_dist_Int64.zDeAllocGlu_3d(arg1::Ptr{zLUstruct_t})::Cint
+end
+
+function zreduceAncestors3d(sender, receiver, nnodes, nodeList, Lval_buf, Uval_buf, LUstruct, grid3d, SCT)
+    @ccall libsuperlu_dist_Int64.zreduceAncestors3d(sender::int_t, receiver::int_t, nnodes::int_t, nodeList::Ptr{int_t}, Lval_buf::Ptr{doublecomplex}, Uval_buf::Ptr{doublecomplex}, LUstruct::Ptr{zLUstruct_t}, grid3d::Ptr{gridinfo3d_t}, SCT::Ptr{SCT_t})::int_t
+end
+
+function zreduceAllAncestors3d(ilvl, myNodeCount, treePerm, LUvsb, LUstruct, grid3d, SCT)
+    @ccall libsuperlu_dist_Int64.zreduceAllAncestors3d(ilvl::int_t, myNodeCount::Ptr{int_t}, treePerm::Ptr{Ptr{int_t}}, LUvsb::Ptr{zLUValSubBuf_t}, LUstruct::Ptr{zLUstruct_t}, grid3d::Ptr{gridinfo3d_t}, SCT::Ptr{SCT_t})::Cint
+end
+
+function zgatherFactoredLU(sender, receiver, nnodes, nodeList, LUvsb, LUstruct, grid3d, SCT)
+    @ccall libsuperlu_dist_Int64.zgatherFactoredLU(sender::int_t, receiver::int_t, nnodes::int_t, nodeList::Ptr{int_t}, LUvsb::Ptr{zLUValSubBuf_t}, LUstruct::Ptr{zLUstruct_t}, grid3d::Ptr{gridinfo3d_t}, SCT::Ptr{SCT_t})::int_t
+end
+
+function zgatherAllFactoredLU(trf3Dpartition, LUstruct, grid3d, SCT)
+    @ccall libsuperlu_dist_Int64.zgatherAllFactoredLU(trf3Dpartition::Ptr{ztrf3Dpartition_t}, LUstruct::Ptr{zLUstruct_t}, grid3d::Ptr{gridinfo3d_t}, SCT::Ptr{SCT_t})::int_t
+end
+
+function zinit3DLUstruct(myTreeIdxs, myZeroTrIdxs, nodeCount, nodeList, LUstruct, grid3d)
+    @ccall libsuperlu_dist_Int64.zinit3DLUstruct(myTreeIdxs::Ptr{int_t}, myZeroTrIdxs::Ptr{int_t}, nodeCount::Ptr{int_t}, nodeList::Ptr{Ptr{int_t}}, LUstruct::Ptr{zLUstruct_t}, grid3d::Ptr{gridinfo3d_t})::int_t
+end
+
+function zzSendLPanel(k, receiver, LUstruct, grid3d, SCT)
+    @ccall libsuperlu_dist_Int64.zzSendLPanel(k::int_t, receiver::int_t, LUstruct::Ptr{zLUstruct_t}, grid3d::Ptr{gridinfo3d_t}, SCT::Ptr{SCT_t})::int_t
+end
+
+function zzRecvLPanel(k, sender, alpha, beta, Lval_buf, LUstruct, grid3d, SCT)
+    @ccall libsuperlu_dist_Int64.zzRecvLPanel(k::int_t, sender::int_t, alpha::doublecomplex, beta::doublecomplex, Lval_buf::Ptr{doublecomplex}, LUstruct::Ptr{zLUstruct_t}, grid3d::Ptr{gridinfo3d_t}, SCT::Ptr{SCT_t})::int_t
+end
+
+function zzSendUPanel(k, receiver, LUstruct, grid3d, SCT)
+    @ccall libsuperlu_dist_Int64.zzSendUPanel(k::int_t, receiver::int_t, LUstruct::Ptr{zLUstruct_t}, grid3d::Ptr{gridinfo3d_t}, SCT::Ptr{SCT_t})::int_t
+end
+
+function zzRecvUPanel(k, sender, alpha, beta, Uval_buf, LUstruct, grid3d, SCT)
+    @ccall libsuperlu_dist_Int64.zzRecvUPanel(k::int_t, sender::int_t, alpha::doublecomplex, beta::doublecomplex, Uval_buf::Ptr{doublecomplex}, LUstruct::Ptr{zLUstruct_t}, grid3d::Ptr{gridinfo3d_t}, SCT::Ptr{SCT_t})::int_t
+end
+
+function zIBcast_LPanel(k, k0, lsub, lusup, arg5, msgcnt, arg7, ToSendR, xsup, arg10)
+    @ccall libsuperlu_dist_Int64.zIBcast_LPanel(k::int_t, k0::int_t, lsub::Ptr{int_t}, lusup::Ptr{doublecomplex}, arg5::Ptr{gridinfo_t}, msgcnt::Ptr{Cint}, arg7::Ptr{MPI_Request}, ToSendR::Ptr{Ptr{Cint}}, xsup::Ptr{int_t}, arg10::Cint)::int_t
+end
+
+function zBcast_LPanel(k, k0, lsub, lusup, arg5, msgcnt, ToSendR, xsup, arg9, arg10)
+    @ccall libsuperlu_dist_Int64.zBcast_LPanel(k::int_t, k0::int_t, lsub::Ptr{int_t}, lusup::Ptr{doublecomplex}, arg5::Ptr{gridinfo_t}, msgcnt::Ptr{Cint}, ToSendR::Ptr{Ptr{Cint}}, xsup::Ptr{int_t}, arg9::Ptr{SCT_t}, arg10::Cint)::int_t
+end
+
+function zIBcast_UPanel(k, k0, usub, uval, arg5, msgcnt, arg7, ToSendD, arg9)
+    @ccall libsuperlu_dist_Int64.zIBcast_UPanel(k::int_t, k0::int_t, usub::Ptr{int_t}, uval::Ptr{doublecomplex}, arg5::Ptr{gridinfo_t}, msgcnt::Ptr{Cint}, arg7::Ptr{MPI_Request}, ToSendD::Ptr{Cint}, arg9::Cint)::int_t
+end
+
+function zBcast_UPanel(k, k0, usub, uval, arg5, msgcnt, ToSendD, arg8, arg9)
+    @ccall libsuperlu_dist_Int64.zBcast_UPanel(k::int_t, k0::int_t, usub::Ptr{int_t}, uval::Ptr{doublecomplex}, arg5::Ptr{gridinfo_t}, msgcnt::Ptr{Cint}, ToSendD::Ptr{Cint}, arg8::Ptr{SCT_t}, arg9::Cint)::int_t
+end
+
+function zIrecv_LPanel(k, k0, Lsub_buf, Lval_buf, arg5, arg6, arg7, arg8)
+    @ccall libsuperlu_dist_Int64.zIrecv_LPanel(k::int_t, k0::int_t, Lsub_buf::Ptr{int_t}, Lval_buf::Ptr{doublecomplex}, arg5::Ptr{gridinfo_t}, arg6::Ptr{MPI_Request}, arg7::Ptr{zLocalLU_t}, arg8::Cint)::int_t
+end
+
+function zIrecv_UPanel(k, k0, Usub_buf, arg4, arg5, arg6, arg7, arg8)
+    @ccall libsuperlu_dist_Int64.zIrecv_UPanel(k::int_t, k0::int_t, Usub_buf::Ptr{int_t}, arg4::Ptr{doublecomplex}, arg5::Ptr{zLocalLU_t}, arg6::Ptr{gridinfo_t}, arg7::Ptr{MPI_Request}, arg8::Cint)::int_t
+end
+
+function zWait_URecv(arg1, msgcnt, arg3)
+    @ccall libsuperlu_dist_Int64.zWait_URecv(arg1::Ptr{MPI_Request}, msgcnt::Ptr{Cint}, arg3::Ptr{SCT_t})::int_t
+end
+
+function zWait_LRecv(arg1, msgcnt, msgcntsU, arg4, arg5)
+    @ccall libsuperlu_dist_Int64.zWait_LRecv(arg1::Ptr{MPI_Request}, msgcnt::Ptr{Cint}, msgcntsU::Ptr{Cint}, arg4::Ptr{gridinfo_t}, arg5::Ptr{SCT_t})::int_t
+end
+
+function zISend_UDiagBlock(k0, ublk_ptr, size, arg4, arg5, arg6)
+    @ccall libsuperlu_dist_Int64.zISend_UDiagBlock(k0::int_t, ublk_ptr::Ptr{doublecomplex}, size::int_t, arg4::Ptr{MPI_Request}, arg5::Ptr{gridinfo_t}, arg6::Cint)::int_t
+end
+
+function zRecv_UDiagBlock(k0, ublk_ptr, size, src, arg5, arg6, arg7)
+    @ccall libsuperlu_dist_Int64.zRecv_UDiagBlock(k0::int_t, ublk_ptr::Ptr{doublecomplex}, size::int_t, src::int_t, arg5::Ptr{gridinfo_t}, arg6::Ptr{SCT_t}, arg7::Cint)::int_t
+end
+
+function zPackLBlock(k, Dest, arg3, arg4, arg5)
+    @ccall libsuperlu_dist_Int64.zPackLBlock(k::int_t, Dest::Ptr{doublecomplex}, arg3::Ptr{Glu_persist_t}, arg4::Ptr{gridinfo_t}, arg5::Ptr{zLocalLU_t})::int_t
+end
+
+function zISend_LDiagBlock(k0, lblk_ptr, size, arg4, arg5, arg6)
+    @ccall libsuperlu_dist_Int64.zISend_LDiagBlock(k0::int_t, lblk_ptr::Ptr{doublecomplex}, size::int_t, arg4::Ptr{MPI_Request}, arg5::Ptr{gridinfo_t}, arg6::Cint)::int_t
+end
+
+function zIRecv_UDiagBlock(k0, ublk_ptr, size, src, arg5, arg6, arg7, arg8)
+    @ccall libsuperlu_dist_Int64.zIRecv_UDiagBlock(k0::int_t, ublk_ptr::Ptr{doublecomplex}, size::int_t, src::int_t, arg5::Ptr{MPI_Request}, arg6::Ptr{gridinfo_t}, arg7::Ptr{SCT_t}, arg8::Cint)::int_t
+end
+
+function zIRecv_LDiagBlock(k0, L_blk_ptr, size, src, arg5, arg6, arg7, arg8)
+    @ccall libsuperlu_dist_Int64.zIRecv_LDiagBlock(k0::int_t, L_blk_ptr::Ptr{doublecomplex}, size::int_t, src::int_t, arg5::Ptr{MPI_Request}, arg6::Ptr{gridinfo_t}, arg7::Ptr{SCT_t}, arg8::Cint)::int_t
+end
+
+function zUDiagBlockRecvWait(k, IrecvPlcd_D, factored_L, arg4, arg5, arg6, arg7)
+    @ccall libsuperlu_dist_Int64.zUDiagBlockRecvWait(k::int_t, IrecvPlcd_D::Ptr{int_t}, factored_L::Ptr{int_t}, arg4::Ptr{MPI_Request}, arg5::Ptr{gridinfo_t}, arg6::Ptr{zLUstruct_t}, arg7::Ptr{SCT_t})::int_t
+end
+
+function zIBcast_UDiagBlock(k, ublk_ptr, size, arg4, arg5)
+    @ccall libsuperlu_dist_Int64.zIBcast_UDiagBlock(k::int_t, ublk_ptr::Ptr{doublecomplex}, size::int_t, arg4::Ptr{MPI_Request}, arg5::Ptr{gridinfo_t})::int_t
+end
+
+function zIBcast_LDiagBlock(k, lblk_ptr, size, arg4, arg5)
+    @ccall libsuperlu_dist_Int64.zIBcast_LDiagBlock(k::int_t, lblk_ptr::Ptr{doublecomplex}, size::int_t, arg4::Ptr{MPI_Request}, arg5::Ptr{gridinfo_t})::int_t
+end
+
+function zDiagFactIBCast(k, k0, BlockUFactor, BlockLFactor, IrecvPlcd_D, arg6, arg7, arg8, arg9, arg10, arg11, thresh, LUstruct, arg14, info, arg16, tag_ub)
+    @ccall libsuperlu_dist_Int64.zDiagFactIBCast(k::int_t, k0::int_t, BlockUFactor::Ptr{doublecomplex}, BlockLFactor::Ptr{doublecomplex}, IrecvPlcd_D::Ptr{int_t}, arg6::Ptr{MPI_Request}, arg7::Ptr{MPI_Request}, arg8::Ptr{MPI_Request}, arg9::Ptr{MPI_Request}, arg10::Ptr{gridinfo_t}, arg11::Ptr{superlu_dist_options_t}, thresh::Cdouble, LUstruct::Ptr{zLUstruct_t}, arg14::Ptr{SuperLUStat_t}, info::Ptr{Cint}, arg16::Ptr{SCT_t}, tag_ub::Cint)::int_t
+end
+
+function zUPanelTrSolve(k, BlockLFactor, bigV, ldt, arg5, arg6, arg7, arg8, arg9)
+    @ccall libsuperlu_dist_Int64.zUPanelTrSolve(k::int_t, BlockLFactor::Ptr{doublecomplex}, bigV::Ptr{doublecomplex}, ldt::int_t, arg5::Ptr{Ublock_info_t}, arg6::Ptr{gridinfo_t}, arg7::Ptr{zLUstruct_t}, arg8::Ptr{SuperLUStat_t}, arg9::Ptr{SCT_t})::int_t
+end
+
+function zLPanelUpdate(k, IrecvPlcd_D, factored_L, arg4, BlockUFactor, arg6, arg7, arg8)
+    @ccall libsuperlu_dist_Int64.zLPanelUpdate(k::int_t, IrecvPlcd_D::Ptr{int_t}, factored_L::Ptr{int_t}, arg4::Ptr{MPI_Request}, BlockUFactor::Ptr{doublecomplex}, arg6::Ptr{gridinfo_t}, arg7::Ptr{zLUstruct_t}, arg8::Ptr{SCT_t})::int_t
+end
+
+function zUPanelUpdate(k, factored_U, arg3, BlockLFactor, bigV, ldt, arg7, arg8, arg9, arg10, arg11)
+    @ccall libsuperlu_dist_Int64.zUPanelUpdate(k::int_t, factored_U::Ptr{int_t}, arg3::Ptr{MPI_Request}, BlockLFactor::Ptr{doublecomplex}, bigV::Ptr{doublecomplex}, ldt::int_t, arg7::Ptr{Ublock_info_t}, arg8::Ptr{gridinfo_t}, arg9::Ptr{zLUstruct_t}, arg10::Ptr{SuperLUStat_t}, arg11::Ptr{SCT_t})::int_t
+end
+
+function zIBcastRecvLPanel(k, k0, msgcnt, arg4, arg5, Lsub_buf, Lval_buf, factored, arg9, arg10, arg11, tag_ub)
+    @ccall libsuperlu_dist_Int64.zIBcastRecvLPanel(k::int_t, k0::int_t, msgcnt::Ptr{Cint}, arg4::Ptr{MPI_Request}, arg5::Ptr{MPI_Request}, Lsub_buf::Ptr{int_t}, Lval_buf::Ptr{doublecomplex}, factored::Ptr{int_t}, arg9::Ptr{gridinfo_t}, arg10::Ptr{zLUstruct_t}, arg11::Ptr{SCT_t}, tag_ub::Cint)::int_t
+end
+
+function zIBcastRecvUPanel(k, k0, msgcnt, arg4, arg5, Usub_buf, Uval_buf, arg8, arg9, arg10, tag_ub)
+    @ccall libsuperlu_dist_Int64.zIBcastRecvUPanel(k::int_t, k0::int_t, msgcnt::Ptr{Cint}, arg4::Ptr{MPI_Request}, arg5::Ptr{MPI_Request}, Usub_buf::Ptr{int_t}, Uval_buf::Ptr{doublecomplex}, arg8::Ptr{gridinfo_t}, arg9::Ptr{zLUstruct_t}, arg10::Ptr{SCT_t}, tag_ub::Cint)::int_t
+end
+
+function zWaitL(k, msgcnt, msgcntU, arg4, arg5, arg6, arg7, arg8)
+    @ccall libsuperlu_dist_Int64.zWaitL(k::int_t, msgcnt::Ptr{Cint}, msgcntU::Ptr{Cint}, arg4::Ptr{MPI_Request}, arg5::Ptr{MPI_Request}, arg6::Ptr{gridinfo_t}, arg7::Ptr{zLUstruct_t}, arg8::Ptr{SCT_t})::int_t
+end
+
+function zWaitU(k, msgcnt, arg3, arg4, arg5, arg6, arg7)
+    @ccall libsuperlu_dist_Int64.zWaitU(k::int_t, msgcnt::Ptr{Cint}, arg3::Ptr{MPI_Request}, arg4::Ptr{MPI_Request}, arg5::Ptr{gridinfo_t}, arg6::Ptr{zLUstruct_t}, arg7::Ptr{SCT_t})::int_t
+end
+
+function zLPanelTrSolve(k, factored_L, BlockUFactor, arg4, arg5)
+    @ccall libsuperlu_dist_Int64.zLPanelTrSolve(k::int_t, factored_L::Ptr{int_t}, BlockUFactor::Ptr{doublecomplex}, arg4::Ptr{gridinfo_t}, arg5::Ptr{zLUstruct_t})::int_t
+end
+
+function zSchurComplementSetup(k, msgcnt, arg3, arg4, arg5, arg6, arg7, arg8, arg9, bigU, Lsub_buf, Lval_buf, Usub_buf, Uval_buf, arg15, arg16)
+    @ccall libsuperlu_dist_Int64.zSchurComplementSetup(k::int_t, msgcnt::Ptr{Cint}, arg3::Ptr{Ublock_info_t}, arg4::Ptr{Remain_info_t}, arg5::Ptr{uPanelInfo_t}, arg6::Ptr{lPanelInfo_t}, arg7::Ptr{int_t}, arg8::Ptr{int_t}, arg9::Ptr{int_t}, bigU::Ptr{doublecomplex}, Lsub_buf::Ptr{int_t}, Lval_buf::Ptr{doublecomplex}, Usub_buf::Ptr{int_t}, Uval_buf::Ptr{doublecomplex}, arg15::Ptr{gridinfo_t}, arg16::Ptr{zLUstruct_t})::int_t
+end
+
+function zSchurComplementSetupGPU(k, msgs, arg3, arg4, arg5, arg6, arg7, arg8, arg9, LUvsb, arg11, arg12, arg13)
+    @ccall libsuperlu_dist_Int64.zSchurComplementSetupGPU(k::int_t, msgs::Ptr{msgs_t}, arg3::Ptr{packLUInfo_t}, arg4::Ptr{int_t}, arg5::Ptr{int_t}, arg6::Ptr{int_t}, arg7::Ptr{gEtreeInfo_t}, arg8::Ptr{factNodelists_t}, arg9::Ptr{zscuBufs_t}, LUvsb::Ptr{zLUValSubBuf_t}, arg11::Ptr{gridinfo_t}, arg12::Ptr{zLUstruct_t}, arg13::Ptr{HyP_t})::int_t
+end
+
+function zgetBigV(arg1, arg2)
+    @ccall libsuperlu_dist_Int64.zgetBigV(arg1::int_t, arg2::int_t)::Ptr{doublecomplex}
+end
+
+function zgetBigU(arg1, arg2, arg3, arg4)
+    @ccall libsuperlu_dist_Int64.zgetBigU(arg1::Ptr{superlu_dist_options_t}, arg2::int_t, arg3::Ptr{gridinfo_t}, arg4::Ptr{zLUstruct_t})::Ptr{doublecomplex}
+end
+
+function zLluBufInit(arg1, arg2)
+    @ccall libsuperlu_dist_Int64.zLluBufInit(arg1::Ptr{zLUValSubBuf_t}, arg2::Ptr{zLUstruct_t})::int_t
+end
+
+function zinitScuBufs(arg1, ldt, num_threads, nsupers, arg5, arg6, arg7)
+    @ccall libsuperlu_dist_Int64.zinitScuBufs(arg1::Ptr{superlu_dist_options_t}, ldt::int_t, num_threads::int_t, nsupers::int_t, arg5::Ptr{zscuBufs_t}, arg6::Ptr{zLUstruct_t}, arg7::Ptr{gridinfo_t})::int_t
+end
+
+function zfreeScuBufs(scuBufs)
+    @ccall libsuperlu_dist_Int64.zfreeScuBufs(scuBufs::Ptr{zscuBufs_t})::Cint
+end
+
+function zsparseTreeFactor(nnodes, perm_c_supno, treeTopoInfo, comReqs, scuBufs, packLUInfo, msgs, LUvsb, dFBuf, factStat, fNlists, options, gIperm_c_supno, ldt, LUstruct, grid3d, stat, thresh, SCT, info)
+    @ccall libsuperlu_dist_Int64.zsparseTreeFactor(nnodes::int_t, perm_c_supno::Ptr{int_t}, treeTopoInfo::Ptr{treeTopoInfo_t}, comReqs::Ptr{commRequests_t}, scuBufs::Ptr{zscuBufs_t}, packLUInfo::Ptr{packLUInfo_t}, msgs::Ptr{msgs_t}, LUvsb::Ptr{zLUValSubBuf_t}, dFBuf::Ptr{zdiagFactBufs_t}, factStat::Ptr{factStat_t}, fNlists::Ptr{factNodelists_t}, options::Ptr{superlu_dist_options_t}, gIperm_c_supno::Ptr{int_t}, ldt::int_t, LUstruct::Ptr{zLUstruct_t}, grid3d::Ptr{gridinfo3d_t}, stat::Ptr{SuperLUStat_t}, thresh::Cdouble, SCT::Ptr{SCT_t}, info::Ptr{Cint})::int_t
+end
+
+function zdenseTreeFactor(nnnodes, perm_c_supno, comReqs, scuBufs, packLUInfo, msgs, LUvsb, dFBuf, factStat, fNlists, options, gIperm_c_supno, ldt, LUstruct, grid3d, stat, thresh, SCT, tag_ub, info)
+    @ccall libsuperlu_dist_Int64.zdenseTreeFactor(nnnodes::int_t, perm_c_supno::Ptr{int_t}, comReqs::Ptr{commRequests_t}, scuBufs::Ptr{zscuBufs_t}, packLUInfo::Ptr{packLUInfo_t}, msgs::Ptr{msgs_t}, LUvsb::Ptr{zLUValSubBuf_t}, dFBuf::Ptr{zdiagFactBufs_t}, factStat::Ptr{factStat_t}, fNlists::Ptr{factNodelists_t}, options::Ptr{superlu_dist_options_t}, gIperm_c_supno::Ptr{int_t}, ldt::int_t, LUstruct::Ptr{zLUstruct_t}, grid3d::Ptr{gridinfo3d_t}, stat::Ptr{SuperLUStat_t}, thresh::Cdouble, SCT::Ptr{SCT_t}, tag_ub::Cint, info::Ptr{Cint})::int_t
+end
+
+function zsparseTreeFactor_ASYNC(sforest, comReqss, scuBufs, packLUInfo, msgss, LUvsbs, dFBufs, factStat, fNlists, gEtreeInfo, options, gIperm_c_supno, ldt, HyP, LUstruct, grid3d, stat, thresh, SCT, tag_ub, info)
+    @ccall libsuperlu_dist_Int64.zsparseTreeFactor_ASYNC(sforest::Ptr{sForest_t}, comReqss::Ptr{Ptr{commRequests_t}}, scuBufs::Ptr{zscuBufs_t}, packLUInfo::Ptr{packLUInfo_t}, msgss::Ptr{Ptr{msgs_t}}, LUvsbs::Ptr{Ptr{zLUValSubBuf_t}}, dFBufs::Ptr{Ptr{zdiagFactBufs_t}}, factStat::Ptr{factStat_t}, fNlists::Ptr{factNodelists_t}, gEtreeInfo::Ptr{gEtreeInfo_t}, options::Ptr{superlu_dist_options_t}, gIperm_c_supno::Ptr{int_t}, ldt::int_t, HyP::Ptr{HyP_t}, LUstruct::Ptr{zLUstruct_t}, grid3d::Ptr{gridinfo3d_t}, stat::Ptr{SuperLUStat_t}, thresh::Cdouble, SCT::Ptr{SCT_t}, tag_ub::Cint, info::Ptr{Cint})::int_t
+end
+
+function zLluBufInitArr(numLA, LUstruct)
+    @ccall libsuperlu_dist_Int64.zLluBufInitArr(numLA::int_t, LUstruct::Ptr{zLUstruct_t})::Ptr{Ptr{zLUValSubBuf_t}}
+end
+
+function zLluBufFreeArr(numLA, LUvsbs)
+    @ccall libsuperlu_dist_Int64.zLluBufFreeArr(numLA::int_t, LUvsbs::Ptr{Ptr{zLUValSubBuf_t}})::Cint
+end
+
+function zinitDiagFactBufsArr(mxLeafNode, ldt, grid)
+    @ccall libsuperlu_dist_Int64.zinitDiagFactBufsArr(mxLeafNode::int_t, ldt::int_t, grid::Ptr{gridinfo_t})::Ptr{Ptr{zdiagFactBufs_t}}
+end
+
+function zfreeDiagFactBufsArr(mxLeafNode, dFBufs)
+    @ccall libsuperlu_dist_Int64.zfreeDiagFactBufsArr(mxLeafNode::int_t, dFBufs::Ptr{Ptr{zdiagFactBufs_t}})::Cint
+end
+
+function zinitDiagFactBufs(ldt, dFBuf)
+    @ccall libsuperlu_dist_Int64.zinitDiagFactBufs(ldt::int_t, dFBuf::Ptr{zdiagFactBufs_t})::int_t
+end
+
+const TRUE = 1
+
+const HAVE_PARMETIS = TRUE
+
+const XSDK_INDEX_SIZE = 64
+
+const _LONGINT = 1
+
+const EMPTY = -1
+
+const FALSE = 0
+
+const MAX_3D_LEVEL = 32
+
+const CBLOCK = 192
+
+const CACHE_LINE_SIZE = 8
+
+const CSTEPPING = 8
+
+const NO_MARKER = 3
+
+const tag_interLvl = 2
+
+const tag_interLvl_LData = 0
+
+const tag_interLvl_UData = 1
+
+const tag_intraLvl_szMsg = 1000
+
+const tag_intraLvl_LData = 1001
+
+const tag_intraLvl_UData = 1002
+
+const tag_intraLvl = 1003
+
+const DIAG_IND = 0
+
+const NELTS_IND = 1
+
+const RCVD_IND = 2
+
+const SUCCES_RET = 0
+
+const ERROR_RET = 1
+
+const FILLED_SEP = 2
+
+const FILLED_SEPS = 3
+
+const USUB_PR = 0
+
+const LSUB_PR = 1
+
+const RL_SYMB = 0
+
+const DOMAIN_SYMB = 1
+
+const LL_SYMB = 2
+
+const DNS_UPSEPS = 3
+
+const DNS_CURSEP = 4
+
+const MAX_LOOKAHEADS = 50
+
+const SUPERLU_DIST_MAJOR_VERSION = 8
+
+const SUPERLU_DIST_MINOR_VERSION = 1
+
+const SUPERLU_DIST_PATCH_VERSION = 2
+
+const SUPERLU_DIST_RELEASE_DATE = "November 12, 2022"
+
+const MAX_SUPER_SIZE = 512
+
+const BC_HEADER = 2
+
+const LB_DESCRIPTOR = 2
+
+const BR_HEADER = 3
+
+const UB_DESCRIPTOR = 2
+
+const BC_HEADER_NEWU = 3
+
+const UB_DESCRIPTOR_NEWU = 2
+
+const NBUFFERS = 5
+
+const UjROW = 10
+
+const UkSUB = 11
+
+const UkVAL = 12
+
+const LkSUB = 13
+
+const LkVAL = 14
+
+const LkkDIAG = 15
+
+const GSUM = 20
+
+const Xk = 21
+
+const Yk = 22
+
+const LSUM = 23
+
+const COMM_ALL = 100
+
+const COMM_COLUMN = 101
+
+const COMM_ROW = 102
+
+const SUPER_LINEAR = 11
+
+const SUPER_BLOCK = 12
+
+const DIM_X = 16
+
+const DIM_Y = 16
+
+const BLK_M = DIM_X * 4
+
+const BLK_N = DIM_Y * 4
+
+const BLK_K = 2048 ÷ BLK_M
+
+const DIM_XA = DIM_X
+
+const DIM_YA = DIM_Y
+
+const DIM_XB = DIM_X
+
+const DIM_YB = DIM_Y
+
+const NWARP = (DIM_X * DIM_Y) ÷ 32
+
+const THR_M = BLK_M ÷ DIM_X
+
+const THR_N = BLK_N ÷ DIM_Y
+
+const DEG_TREE = 2
+
 end
