@@ -1,5 +1,5 @@
 using MPI
-using SuperLU_DIST
+using SuperLUDIST
 MPI.Init()
 
 comm = MPI.COMM_WORLD
@@ -14,7 +14,7 @@ else
     x = Int64[]
 end
 
-y = SuperLU_DIST._scatterarray(x, [5, 5, 5, 5])
+y = SuperLUDIST._scatterarray(x, [5, 5, 5, 5])
 
 if rank == 0
     println("Original array")

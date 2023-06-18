@@ -1,5 +1,5 @@
 using MPI
-using SuperLU_DIST
+using SuperLUDIST
 #main(int argc, char *argv[]) llel for julia
 gridref = Ref{gridinfo_t}()
 #C_NULL or something else?

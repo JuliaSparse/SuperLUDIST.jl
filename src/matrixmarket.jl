@@ -21,7 +21,7 @@ the matrix.
 
 # Example
 ```julia
-using MPI, SuperLU_DIST, MatrixMarket
+using MPI, SuperLUDIST, MatrixMarket
 A = MatrixMarket.mmread(ReplicatedSuperMatrix{Float64, Int32}, )
 ```
 """
@@ -63,7 +63,7 @@ the matrix.
 
 # Example
 ```julia
-using MPI, SuperLU_DIST, MatrixMarket
+using MPI, SuperLUDIST, MatrixMarket
 A = MatrixMarket.mmread(ReplicatedSuperMatrix{Float64, Int32}, )
 ```
 """
@@ -98,13 +98,13 @@ function mmread_and_generatesolution(Tv, Ti, nrhs, path, grid; root = 0, comm = 
       coo = nothing
   end
   Communication.bcaststore!(csc, root, comm)
-  Acsc = SuperLU_DIST.ReplicatedSuperMatrix(csc)
+  Acsc = SuperLUDIST.ReplicatedSuperMatrix(csc)
   m, n, = size(Acsc)
   xtrue = Matrix{Tv}(undef, n, nrhs)
   b = Matrix{Tv}(undef, m, nrhs)
   if iam == root
-      SuperLU_DIST.GenXtrue_dist!(xtrue, Int32)
-      SuperLU_DIST.FillRHS_dist!(b, Acsc, xtrue)
+      SuperLUDIST.GenXtrue_dist!(xtrue, Int32)
+      SuperLUDIST.FillRHS_dist!(b, Acsc, xtrue)
   end
   MPI.Bcast!(b, root, comm)
   MPI.Bcast!(xtrue, root, comm)

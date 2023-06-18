@@ -1,7 +1,7 @@
 using MPI
-using SuperLU_DIST: Grid, DistributedSuperMatrix,
+using SuperLUDIST: Grid, DistributedSuperMatrix,
 pgssvx!
-using SuperLU_DIST
+using SuperLUDIST
 using SparseBase.Communication
 using SparseBase.Communication: distribute_evenly, localsize
 using MatrixMarket
@@ -18,7 +18,7 @@ isroot = iam == root
 # Utility function for reading a .mtx file and generating suitable
 # rhs and x for testing. 
 # coo is held only on root, b and xtrue are replicated on each rank.
-coo, b, xtrue = SuperLU_DIST.mmread_and_generatesolution(
+coo, b, xtrue = SuperLUDIST.mmread_and_generatesolution(
     Float64, Int32, nrhs, joinpath(@__DIR__, "add32.mtx"), grid; root, comm
 )
 csr = isroot ? convert(SparseBase.CSRStore, coo) : nothing
@@ -40,15 +40,15 @@ xtrue_local = xtrue[A.first_row : A.first_row + localsize(A, 1) - 1, :] # shrink
 # for each user.
 
 # creating options and stat is optional, they will be created if not provided.
-options = SuperLU_DIST.Options()
-stat = SuperLU_DIST.LUStat{Int32}()
+options = SuperLUDIST.Options()
+stat = SuperLUDIST.LUStat{Int32}()
 
 pgssvx!(A, b_local, grid; options, stat)
 
 if !(iam == root)
-    SuperLU_DIST.inf_norm_error_dist(b_local, xtrue_local, grid)
+    SuperLUDIST.inf_norm_error_dist(b_local, xtrue_local, grid)
 end
-SuperLU_DIST.PStatPrint(options, stat, grid)
+SuperLUDIST.PStatPrint(options, stat, grid)
 
 # @show iam b_local xtrue_local
 MPI.Finalize()

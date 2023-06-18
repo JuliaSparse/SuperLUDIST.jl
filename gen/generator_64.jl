@@ -3,16 +3,16 @@ using Pkg
 using Pkg.Artifacts
 using Clang.Generators
 using Clang.Generators.JLLEnvs
-using SuperLU_DIST_jll
+using SuperLUDIST_jll
 using MPICH_jll
 
 cd(@__DIR__)
 
 # headers
-SuperLU_DIST_toml = joinpath(dirname(pathof(SuperLU_DIST_jll)), "..", "Artifacts.toml")
-SuperLU_DIST_dir = Pkg.Artifacts.ensure_artifact_installed("SuperLU_DIST", SuperLU_DIST_toml)
+SuperLUDIST_toml = joinpath(dirname(pathof(SuperLUDIST_jll)), "..", "Artifacts.toml")
+SuperLUDIST_dir = Pkg.Artifacts.ensure_artifact_installed("SuperLUDIST", SuperLUDIST_toml)
 
-include_dir = joinpath(SuperLU_DIST_dir, "include") |> normpath
+include_dir = joinpath(SuperLUDIST_dir, "include") |> normpath
 
 superlu_defs_h = joinpath(include_dir, "superlu_defs.h")
 superlu_ddefs_h = joinpath(include_dir, "superlu_ddefs.h")

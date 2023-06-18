@@ -1,21 +1,21 @@
-# SuperLU_DIST.jl
+# SuperLUDIST.jl
 
-SuperLU_DIST.jl is Julia wrapper around the [superlu_dist](https://github.com/xiaoyeli/superlu_dist) distributed sparse factorization library. superlu_dist contains a set of subroutines to solve a sparse linear system A*X=B.
+SuperLUDIST.jl is Julia wrapper around the [superlu_dist](https://github.com/xiaoyeli/superlu_dist) distributed sparse factorization library. superlu_dist contains a set of subroutines to solve a sparse linear system A*X=B.
 
-SuperLU_DIST is a parallel extension to the serial SuperLU library. It is targeted for the distributed memory parallel machines. SuperLU_DIST is implemented in ANSI C, with OpenMP for on-node parallelism and MPI for off-node communications. We are actively developing GPU acceleration capabilities.
+SuperLUDIST is a parallel extension to the serial SuperLU library. It is targeted for the distributed memory parallel machines. SuperLUDIST is implemented in ANSI C, with OpenMP for on-node parallelism and MPI for off-node communications. We are actively developing GPU acceleration capabilities.
 
-[![Stable](https://img.shields.io/badge/docs-stable-blue.svg)](https://aa25desh.github.io/SuperLU_DIST.jl/stable/)
-[![Dev](https://img.shields.io/badge/docs-dev-blue.svg)](https://aa25desh.github.io/SuperLU_DIST.jl/dev/)
-[![Build Status](https://github.com/aa25desh/SuperLU_DIST.jl/actions/workflows/CI.yml/badge.svg?branch=main)](https://github.com/aa25desh/SuperLU_DIST.jl/actions/workflows/CI.yml?query=branch%3Amain)
-[![Coverage](https://codecov.io/gh/aa25desh/SuperLU_DIST.jl/branch/main/graph/badge.svg)](https://codecov.io/gh/aa25desh/SuperLU_DIST.jl)
+[![Stable](https://img.shields.io/badge/docs-stable-blue.svg)](https://aa25desh.github.io/SuperLUDIST.jl/stable/)
+[![Dev](https://img.shields.io/badge/docs-dev-blue.svg)](https://aa25desh.github.io/SuperLUDIST.jl/dev/)
+[![Build Status](https://github.com/aa25desh/SuperLUDIST.jl/actions/workflows/CI.yml/badge.svg?branch=main)](https://github.com/aa25desh/SuperLUDIST.jl/actions/workflows/CI.yml?query=branch%3Amain)
+[![Coverage](https://codecov.io/gh/aa25desh/SuperLUDIST.jl/branch/main/graph/badge.svg)](https://codecov.io/gh/aa25desh/SuperLUDIST.jl)
 
 
 ## Installation
-To install SuperLU_DIST.jl on your local machine:
+To install SuperLUDIST.jl on your local machine:
 ```julia
-]add https://github.com/Wimmerer/SuperLU_DIST.jl
+]add https://github.com/Wimmerer/SuperLUDIST.jl
 ```
-SuperLU_DIST.jl requires Julia version 1.8 or greater.
+SuperLUDIST.jl requires Julia version 1.8 or greater.
 
 Examples for running in replicated and distributed mode are provided in the examples directory. To run these examples
 follow the instructions provided [here](https://juliaparallel.org/MPI.jl/latest/configuration/) to set up your MPI correctly.

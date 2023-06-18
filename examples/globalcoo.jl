@@ -1,5 +1,5 @@
 using MPI
-using SuperLU_DIST
+using SuperLUDIST
 using MatrixMarket
 MPI.Init()
 
@@ -10,7 +10,7 @@ MPI.Barrier(comm)
 rank = MPI.Comm_rank(comm)
 comm_size = MPI.Comm_size(comm)
 x = MatrixMarket.mmread(
-    SuperLU_DIST.GlobalSuperMatrix{Float64, Int32},
+    SuperLUDIST.GlobalSuperMatrix{Float64, Int32},
     joinpath(@__DIR__, "add32.mtx")
 )
 

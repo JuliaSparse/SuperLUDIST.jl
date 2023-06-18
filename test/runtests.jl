@@ -1,6 +1,6 @@
-using SuperLU_DIST
+using SuperLUDIST
 using Test
 
-@testset "SuperLU_DIST.jl" begin
+@testset "SuperLUDIST.jl" begin
     # Write your tests here.
 end

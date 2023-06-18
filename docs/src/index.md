@@ -1,14 +1,14 @@
 ```@meta
-CurrentModule = SuperLU_DIST
+CurrentModule = SuperLUDIST
 ```
 
-# SuperLU_DIST
+# SuperLUDIST
 
-Documentation for [SuperLU_DIST](https://github.com/aa25desh/SuperLU_DIST.jl).
+Documentation for [SuperLUDIST](https://github.com/aa25desh/SuperLUDIST.jl).
 
 ```@index
 ```
 
 ```@autodocs
-Modules = [SuperLU_DIST]
+Modules = [SuperLUDIST]
 ```

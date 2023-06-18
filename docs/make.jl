@@ -1,16 +1,16 @@
-using SuperLU_DIST
+using SuperLUDIST
 using Documenter
 
-DocMeta.setdocmeta!(SuperLU_DIST, :DocTestSetup, :(using SuperLU_DIST); recursive=true)
+DocMeta.setdocmeta!(SuperLUDIST, :DocTestSetup, :(using SuperLUDIST); recursive=true)
 
 makedocs(;
-    modules=[SuperLU_DIST],
+    modules=[SuperLUDIST],
     authors="Aadesh Deshmukh",
-    repo="https://github.com/aa25desh/SuperLU_DIST.jl/blob/{commit}{path}#{line}",
-    sitename="SuperLU_DIST.jl",
+    repo="https://github.com/aa25desh/SuperLUDIST.jl/blob/{commit}{path}#{line}",
+    sitename="SuperLUDIST.jl",
     format=Documenter.HTML(;
         prettyurls=get(ENV, "CI", "false") == "true",
-        canonical="https://aa25desh.github.io/SuperLU_DIST.jl",
+        canonical="https://aa25desh.github.io/SuperLUDIST.jl",
         edit_link="main",
         assets=String[],
     ),
@@ -20,6 +20,6 @@ makedocs(;
 )
 
 deploydocs(;
-    repo="github.com/aa25desh/SuperLU_DIST.jl",
+    repo="github.com/aa25desh/SuperLUDIST.jl",
     devbranch="main",
 )

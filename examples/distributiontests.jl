@@ -1,5 +1,5 @@
 using MPI
-using SuperLU_DIST
+using SuperLUDIST
 using SparseBase
 using SparseBase: CoordinateStore, CSRStore
 using SparseBase.Communication
@@ -120,7 +120,7 @@ end
 x = rank == 0 ?
     convert(SparseBase.CSRStore, SparseBase.CoordinateStore((CIndex.(rand(1:5, 10)), CIndex.(rand(1:5, 10))), rand(10), (5, 5))) :
     nothing
-y = SuperLU_DIST.DistributedSuperMatrix{Float64, Int}()
+y = SuperLUDIST.DistributedSuperMatrix{Float64, Int}()
 
 if rank == 0
     println("\n================")

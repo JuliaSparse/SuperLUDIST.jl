@@ -1,6 +1,6 @@
 # common structs between int32 and int64:
 
-module SuperLU_DIST_Common
+module SuperLUDIST_Common
 import MPI: MPI_Comm, MPI_Request, MPI_Datatype, MPI_Errhandler
 using SuperLU_Base.Common
 export gridinfo_t, gridinfo3d_t, C_Tree, superlu_scope_t, commRequests_t

@@ -87,7 +87,7 @@ L = Symbol(String(:SuperLU_) * String(I))
             )
         end
     end
-    Base.unsafe_convert(T::Type{Ptr{SuperLU_DIST_Common.gridinfo_t{$I}}}, g::Grid{$I}) = 
+    Base.unsafe_convert(T::Type{Ptr{SuperLUDIST_Common.gridinfo_t{$I}}}, g::Grid{$I}) = 
         Base.unsafe_convert(T, g.grid)
 
     # SuperMatrix functions:

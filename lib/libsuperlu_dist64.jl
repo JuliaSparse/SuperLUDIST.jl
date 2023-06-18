@@ -1,7 +1,7 @@
 module SuperLU_Int64
 import MPI: MPI_Comm, MPI_Request, MPI_Datatype, MPI_Errhandler
 using SuperLU_DIST_jll
-using ..SuperLU_DIST_Common
+using ..SuperLUDIST_Common
 using SuperLU_Base.Common
 const libsuperlu_dist_Int64 = SuperLU_DIST_jll.libsuperlu_dist_Int64
 
