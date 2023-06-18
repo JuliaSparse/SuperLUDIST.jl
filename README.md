@@ -15,6 +15,12 @@ To install SuperLU_DIST.jl on your local machine:
 ```julia
 ]add https://github.com/Wimmerer/SuperLU_DIST.jl
 ```
+or
+```julia
+]dev https://github.com/Wimmerer/SuperLU_DIST.jl
+```
+if you require access to the examples directory.
+
 SuperLU_DIST.jl requires Julia version 1.8 or greater.
 Installation on clusters is WIP. Will provide a method to use system binaries.
 
