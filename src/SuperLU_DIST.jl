@@ -4,6 +4,8 @@ using SparseArrays
 using MPI
 using SuperLU_DIST_jll
 using CIndices: CIndex
+using DocStringExtensions
+using MatrixMarket
 
 include("../lib/common.jl")
 include("../lib/libsuperlu_dist32.jl")
@@ -13,12 +15,23 @@ using .SuperLU_Int32
 using .SuperLU_Int64
 import Base: (\), size, getproperty, setproperty!, propertynames, show
 
+using SparseBase: AbstractSparseStore, indexeltype, storedeltype
+using SparseBase.Communication
+const nstored = SparseBase.nstored
+export ReplicatedSuperMatrix, DistributedSuperMatrix, 
+    nstored
 
+function prefixsymbol(::Type{T}) where T
+    T === Float32 && (return :s)
+    T === Float64 && (return :d)
+    T === ComplexF32 && (return :c)
+    T === ComplexF64 && (return :z)
+end
 function prefixname(::Type{T}, name::Symbol) where T
-    T === Float32 && (return Symbol(:s, name))
-    T === Float64 && (return Symbol(:d, name))
-    T === ComplexF32 && (return Symbol(:c, name))
-    T === ComplexF64 && (return Symbol(:z, name))
+    Symbol(prefixsymbol(T), name)
+    Symbol(prefixsymbol(T), name)
+    Symbol(prefixsymbol(T), name)
+    Symbol(prefixsymbol(T), name)
 end
 
 function toslutype(::Type{T}) where T
@@ -28,8 +41,28 @@ function toslutype(::Type{T}) where T
     T === ComplexF64 && (return Common.SLU_Z)
 end
 
+abstract type AbstractSuperMatrix{Tv, Ti, S} <: AbstractMatrix{Tv} end
+function Base.getproperty(S::AbstractSuperMatrix, s::Symbol)
+    s === :supermatrix && return Base.getfield(S, s)
+    s === :store && return Base.getfield(S, s)
+    s === :format && return Base.getfield(S, s)
+    s === :globalsize && return Base.getfield(S, s)
+    s === :first_row && return Base.getfield(S, s)
+    return getproperty(S.supermatrix[], s)
+end
+# TODO: move to SuperLU_Base.jl
+Base.unsafe_convert(
+    T::Type{Ptr{SuperMatrix{I}}}, 
+    A::AbstractSuperMatrix{<:Any, I}
+) where {I <: Union{Int32, Int64}} = 
+    Base.unsafe_convert(T, A.supermatrix)
+
 include("lowlevel.jl")
+include("distributedmatrix.jl")
+include("replicatedmatrix.jl")
 include("structs.jl")
-include("communication.jl")
+include("drivers.jl")
+include("matrixmarket.jl")
+
 end
 
