@@ -1,4 +1,4 @@
-name = "SuperLU_DIST"
+name = "SuperLUDIST"
 uuid = "4cd002a6-0da4-410d-a012-232df062f478"
 authors = ["Raye Kimmerer <Kimmerer@lbl.gov>"]
 version = "0.1.0"

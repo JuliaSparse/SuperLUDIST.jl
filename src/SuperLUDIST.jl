@@ -6,8 +6,8 @@ using SuperLU_DIST_jll
 using CIndices: CIndex
 using DocStringExtensions
 using MatrixMarket
-using SuperLU_Base
-using SuperLU_Base.Common
+using SuperLUBase
+using SuperLUBase.Common
 
 include("../lib/common.jl")
 include("../lib/libsuperlu_dist32.jl")
@@ -52,7 +52,7 @@ function Base.getproperty(S::AbstractSuperMatrix, s::Symbol)
     s === :first_row && return Base.getfield(S, s)
     return getproperty(S.supermatrix[], s)
 end
-# TODO: move to SuperLU_Base.jl
+# TODO: move to SuperLUBase.jl
 Base.unsafe_convert(
     T::Type{Ptr{SuperMatrix{I}}}, 
     A::AbstractSuperMatrix{<:Any, I}

@@ -2,7 +2,7 @@
 
 module SuperLUDIST_Common
 import MPI: MPI_Comm, MPI_Request, MPI_Datatype, MPI_Errhandler
-using SuperLU_Base.Common
+using SuperLUBase.Common
 export gridinfo_t, gridinfo3d_t, C_Tree, superlu_scope_t, commRequests_t
 
 struct commRequests_t
