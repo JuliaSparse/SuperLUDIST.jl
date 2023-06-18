@@ -11,12 +11,13 @@ SuperLUDIST is a parallel extension to the serial SuperLU library. It is targete
 
 
 ## Installation
-To install SuperLUDIST.jl on your local machine:
+To install SuperLU_DIST.jl on your local machine:
 ```julia
-]add https://github.com/Wimmerer/SuperLUDIST.jl
+]add https://github.com/Wimmerer/SuperLU_DIST.jl
 ```
-SuperLUDIST.jl requires Julia version 1.8 or greater.
+SuperLU_DIST.jl requires Julia version 1.8 or greater.
 
+## Usage
 Examples for running in replicated and distributed mode are provided in the examples directory. To run these examples
 follow the instructions provided [here](https://juliaparallel.org/MPI.jl/latest/configuration/) to set up your MPI correctly.
 
