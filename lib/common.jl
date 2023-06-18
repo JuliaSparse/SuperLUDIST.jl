@@ -2,7 +2,8 @@
 
 module SuperLU_DIST_Common
 import MPI: MPI_Comm, MPI_Request, MPI_Datatype, MPI_Errhandler
-export gridinfo_t
+using SuperLU_Base.Common
+export gridinfo_t, gridinfo3d_t, C_Tree, superlu_scope_t, commRequests_t
 
 struct commRequests_t
     L_diag_blk_recv_req::Ptr{MPI_Request}

@@ -6,11 +6,13 @@ using SuperLU_DIST_jll
 using CIndices: CIndex
 using DocStringExtensions
 using MatrixMarket
+using SuperLU_Base
+using SuperLU_Base.Common
 
 include("../lib/common.jl")
 include("../lib/libsuperlu_dist32.jl")
 include("../lib/libsuperlu_dist64.jl")
-using .Common
+using .SuperLU_DIST_Common
 using .SuperLU_Int32
 using .SuperLU_Int64
 import Base: (\), size, getproperty, setproperty!, propertynames, show

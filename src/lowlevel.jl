@@ -75,14 +75,6 @@ L = Symbol(String(:SuperLU_) * String(I))
             # !MPI.Finalized() && LUstructFree(x)
         end
     end
-    function inf_norm_error_dist(x::Array{$T}, xtrue::Array{$T}, grid::Grid{$I})
-        $L.$(prefixname(T, :inf_norm_error_dist))(
-            $I(size(x, 1)), $I(size(x, 2)),
-            x, $I(size(x, 1)),
-            xtrue, $I(size(xtrue, 1)),
-            grid
-        )
-    end
 end
 end
 end
