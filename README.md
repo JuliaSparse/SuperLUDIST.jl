@@ -1,6 +1,6 @@
 # SuperLU_DIST.jl
 
-SuperLU_DIST.jl is Julia wrapper around the [superlu_dist](https://github.com/xiaoyeli/superlu_dist). superlu_dist contains a set of subroutines to solve a sparse linear system A*X=B. It uses Gaussian elimination with static pivoting (GESP). Static pivoting is a technique that combines the numerical stability of partial pivoting with the scalability of Cholesky (no pivoting), to run accurately and efficiently on large numbers of processors.
+SuperLU_DIST.jl is Julia wrapper around the [superlu_dist](https://github.com/xiaoyeli/superlu_dist) distributed sparse factorization library. superlu_dist contains a set of subroutines to solve a sparse linear system A*X=B.
 
 SuperLU_DIST is a parallel extension to the serial SuperLU library. It is targeted for the distributed memory parallel machines. SuperLU_DIST is implemented in ANSI C, with OpenMP for on-node parallelism and MPI for off-node communications. We are actively developing GPU acceleration capabilities.
 
@@ -11,40 +11,24 @@ SuperLU_DIST is a parallel extension to the serial SuperLU library. It is target
 
 
 ## Installation
-To install SuperLU_DIST.jl on Cori:
+To install SuperLU_DIST.jl on your local machine:
 ```julia
-salloc --exclusive  --nodes 1 --qos interactive --time 00:20:00 --constraint haswell
-
-module swap PrgEnv-intel/6.0.10 PrgEnv-gnu
-module load cmake/3.22.1
-module load gcc
-module load julia
-
-julia
-
-]add Clang
-]dev https://github.com/JuliaBinaryWrappers/LLVMOpenMP_jll.jl.git
-]dev https://github.com/JuliaBinaryWrappers/SuperLU_DIST_jll.jl.git
-
-]dev https://github.com/aa25desh/SuperLU_DIST.jl.git
+]add https://github.com/Wimmerer/SuperLU_DIST.jl
 ```
-SuperLU_DIST.jl requires Julia version 1.7 or greater.
+SuperLU_DIST.jl requires Julia version 1.8 or greater.
 
-## Quickstart 
-```julia
-using SuperLU_DIST
-const LSLU = SuperLU_DIST.Libsuperlu_dist
+Examples for running in replicated and distributed mode are provided in the examples directory. To run these examples
+follow the instructions provided [here](https://juliaparallel.org/MPI.jl/latest/configuration/) to set up your MPI correctly.
 
-# use any function from superlu_dist
-
-LUstruct = LSLU.dLUstruct_t()
+Then you can invoke a driver example:
+```
+mpiexecjl -n <nprocs> julia --project examples/pdrive.jl
 ```
 
-## How contribute
-* If you are interested, please raise an issue or get in touch with me on Julia slack. 
+## Known Issues
+- CUDA support is currently disabled.
+- LBT is not yet a dependency, so the library uses OpenBLAS32_jll for now.
+- OpenBLAS32_jll has a known issue with threading. Currently being investigated.
 
 ## About the project
 This is summer a project at the [Berkeley National Lab](https://www.lbl.gov) with scalable solvers group Led by [Dr. Xiaoye Sherry Li](https://crd.lbl.gov/divisions/amcr/applied-mathematics-dept/scalable-solvers/members/staff-members/xiaoye-li/).
-
-Active maintainers: 
-* [Aadesh Deshmukh](https://github.com/aa25desh)
