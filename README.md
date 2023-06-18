@@ -16,7 +16,9 @@ To install SuperLU_DIST.jl on your local machine:
 ]add https://github.com/Wimmerer/SuperLU_DIST.jl
 ```
 SuperLU_DIST.jl requires Julia version 1.8 or greater.
+Installation on clusters is WIP. Will provide a method to use system binaries.
 
+## Usage
 Examples for running in replicated and distributed mode are provided in the examples directory. To run these examples
 follow the instructions provided [here](https://juliaparallel.org/MPI.jl/latest/configuration/) to set up your MPI correctly.
 
