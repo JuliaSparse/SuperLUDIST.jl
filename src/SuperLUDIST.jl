@@ -1,6 +1,5 @@
 module SuperLUDIST
 using SparseBase
-using SparseArrays
 using MPI
 using SuperLU_DIST_jll
 using CIndices: CIndex

@@ -27,7 +27,7 @@ function ReplicatedSuperMatrix{Tv, Ti}() where
     return ReplicatedSuperMatrix(store)
 end
 
-function ReplicatedSuperMatrix(store::AbstractSparseStore{Tv, <:Any, CIndex{Ti}}, mtype = Common.SLU_GE) where
+function ReplicatedSuperMatrix(store::SparseBase.CSCStore{Tv, CIndex{Ti}}, mtype = Common.SLU_GE) where
     {Tv, Ti}
     fmt, keepstore = Base.unsafe_convert(Common.NCformat, store)
     fmtref = Ref(fmt)
@@ -42,4 +42,14 @@ function ReplicatedSuperMatrix(store::AbstractSparseStore{Tv, <:Any, CIndex{Ti}}
     return ReplicatedSuperMatrix{Tv, Ti, eltype(superref), typeof(fmt), typeof(keepstore)}(
         superref, fmtref, keepstore
     )
+end
+
+# TODO: use new eltype / iltype setup.
+function ReplicatedSuperMatrix(store::SparseBase.AbstractSparseStore{Tv, <:Any, CIndex{Ti}}, mtype = Common.SLU_GE) where
+    {Tv, Ti}
+    return ReplicatedSuperMatrix(convert(SparseBase.CSCStore, store), mtype)
+end
+function ReplicatedSuperMatrix(store::SparseBase.AbstractSparseStore{Tv, <:Any, Ti}, mtype = Common.SLU_GE) where
+    {Tv, Ti}
+    return ReplicatedSuperMatrix(convert(SparseBase.CSCStore{Tv, CIndex{Ti}}, store), mtype)
 end

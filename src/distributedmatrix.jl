@@ -71,6 +71,15 @@ function DistributedSuperMatrix(A::SparseBase.CSRStore{<:Any, CIndex{Ti}}, first
     }(superref, fmtref, A, Ti.(globalsize), firstrow)
 end
 
+function DistributedSuperMatrix(store::SparseBase.AbstractSparseStore{Tv, <:Any, CIndex{Ti}}, firstrow, globalsize) where
+    {Tv, Ti}
+    return DistributedSuperMatrix(convert(SparseBase.CSRStore, store), firstrow, globalsize)
+end
+function DistributedSuperMatrix(store::SparseBase.AbstractSparseStore{Tv, <:Any, Ti}, firstrow, globalsize) where
+    {Tv, Ti}
+    return DistributedSuperMatrix(convert(SparseBase.CSRStore{Tv, CIndex{Ti}}, store), firstrow, globalsize)
+end
+
 """
     $(TYPEDSIGNATURES)
 """
