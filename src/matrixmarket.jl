@@ -1,3 +1,5 @@
+
+using SparseBase: CoordinateStore
 """
     mmread(ReplicatedSuperMatrix{Tv, Ti}, filename::String)
 

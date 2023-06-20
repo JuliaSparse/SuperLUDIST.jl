@@ -4,7 +4,7 @@ using SuperLUDIST: Grid, Options, LUStat, ScalePermStruct,
     ReplicatedSuperMatrix, pgssvx!
 using SuperLUDIST.Common
 using MatrixMarket
-nprow, npcol, nrhs = Int64.((2, 1, 1))
+nprow, npcol, nrhs = Int64.((2, 2, 1))
 root = 0
 comm = MPI.COMM_WORLD
 grid = Grid{Int64}(nprow, npcol, comm)
@@ -13,7 +13,7 @@ iam = grid.iam
 # This function handles broadcasting internally!
 A = MatrixMarket.mmread(
     ReplicatedSuperMatrix{Float64, Int64}, 
-    joinpath(@__DIR__, "cage3.mtx")
+    joinpath(@__DIR__, "/home/wimmerer/add32.mtx")
 )
 
 m, n, = size(A)
@@ -27,7 +27,6 @@ end
 MPI.Bcast!(b, root, comm)
 MPI.Bcast!(xtrue, root, comm)
 
-iam == root && (@show b xtrue)
 options = Options()
 
 LU = SuperLUDIST.LUStruct{Float64, Int64}(n, grid)
