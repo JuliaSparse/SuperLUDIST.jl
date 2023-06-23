@@ -6,11 +6,11 @@ DocMeta.setdocmeta!(SuperLUDIST, :DocTestSetup, :(using SuperLUDIST); recursive=
 makedocs(;
     modules=[SuperLUDIST],
     authors="Aadesh Deshmukh",
-    repo="https://github.com/aa25desh/SuperLUDIST.jl/blob/{commit}{path}#{line}",
+    repo="https://github.com/JuliaSparse/SuperLUDIST.jl/blob/{commit}{path}#{line}",
     sitename="SuperLUDIST.jl",
     format=Documenter.HTML(;
         prettyurls=get(ENV, "CI", "false") == "true",
-        canonical="https://aa25desh.github.io/SuperLUDIST.jl",
+        canonical="https://superludist.juliasparse.org",
         edit_link="main",
         assets=String[],
     ),
@@ -20,6 +20,6 @@ makedocs(;
 )
 
 deploydocs(;
-    repo="github.com/aa25desh/SuperLUDIST.jl",
+    repo="github.com/JuliaSparse/SuperLUDIST.jl",
     devbranch="main",
 )

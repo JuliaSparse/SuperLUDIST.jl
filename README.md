@@ -11,16 +11,18 @@ SuperLUDIST is a parallel extension to the serial SuperLU library. It is targete
 
 
 ## Installation
-To install SuperLUDIST.jl on your local machine:
+`SuperLUDIST.jl` is available in the General registry through Julia's package manager. 
+Enter the Pkg REPL mode by typing `]` in the Julia REPL and then run:
 ```julia
-]add https://github.com/Wimmerer/SuperLUDIST.jl
+pkg> add SuperLUDIST
 ```
-or
+
+or equivalently via the `Pkg.jl` API:
 ```julia
-]dev https://github.com/Wimmerer/SuperLUDIST.jl
+julia> import Pkg; Pkg.add("SuperLUDIST")
 ```
-if you require access to the examples in a convenient location.
-SuperLUDIST.jl requires Julia version 1.8 or greater.
+
+For users that need additional help with installation see the documentation.
 
 ## Usage
 Examples for running in replicated and distributed mode are provided in the examples directory. To run these examples
@@ -33,8 +35,6 @@ mpiexecjl -n <nprocs> julia --project examples/pdrive.jl
 
 ## Known Issues
 - CUDA support is currently disabled.
-- LBT is not yet a dependency, so the library uses OpenBLAS32_jll for now.
-- OpenBLAS32_jll has a known issue with threading. Currently being investigated.
 
 ## About the project
-This is summer a project at the [Berkeley National Lab](https://www.lbl.gov) with scalable solvers group Led by [Dr. Xiaoye Sherry Li](https://crd.lbl.gov/divisions/amcr/applied-mathematics-dept/scalable-solvers/members/staff-members/xiaoye-li/).
+This is summer a project at [Lawrence Berkeley National Lab](https://www.lbl.gov) with scalable solvers group Led by [Dr. Xiaoye Sherry Li](https://crd.lbl.gov/divisions/amcr/applied-mathematics-dept/scalable-solvers/members/staff-members/xiaoye-li/).

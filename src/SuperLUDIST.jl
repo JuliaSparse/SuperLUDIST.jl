@@ -7,6 +7,20 @@ using DocStringExtensions
 using MatrixMarket
 using SuperLUBase
 using SuperLUBase.Common
+using OpenBLAS32_jll # FIX after support for user binary.
+using LinearAlgebra
+
+function __init__()
+    if VERSION ≥ v"1.9"
+      config = LinearAlgebra.BLAS.lbt_get_config()
+      if !any(lib -> lib.interface == :lp64, config.loaded_libs)
+        LinearAlgebra.BLAS.lbt_forward(OpenBLAS32_jll.libopenblas_path)
+      end
+    end
+    LinearAlgebra.BLAS.set_num_threads(1)
+    #superlu_set_num_threads(Int32, 1)
+    #superlu_set_num_threads(Int64, 1)
+end
 
 include("../lib/common.jl")
 include("../lib/libsuperlu_dist32.jl")
@@ -65,5 +79,7 @@ include("structs.jl")
 include("drivers.jl")
 include("matrixmarket.jl")
 
+
+  
 end
 

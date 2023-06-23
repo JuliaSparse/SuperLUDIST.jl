@@ -53,7 +53,12 @@ SOLVE{T, I}(options) where {T, Ti, I<:CIndex{Ti}} =
 
 for I ∈ (:Int32, :Int64)
 L = Symbol(String(:SuperLU_) * String(I))
+libname = Symbol(:libsuperlu_dist_, I)
 @eval begin
+    superlu_set_num_threads(::Type{$I}, n) = ccall((:omp_set_num_threads_, $libname),
+                                Cvoid,
+                            (Ref{Int32},),
+                                Int32(n))
     # Grid functions:
     #################
     function gridmap!(r::Ref{gridinfo_t{$I}}, comm, nprow, npcol, usermap::Matrix{Int32})

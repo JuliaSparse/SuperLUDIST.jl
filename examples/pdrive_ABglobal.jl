@@ -4,7 +4,7 @@ using SuperLUDIST: Grid, Options, LUStat, ScalePermStruct,
     ReplicatedSuperMatrix, pgssvx!
 using SuperLUDIST.Common
 using MatrixMarket
-nprow, npcol, nrhs = Int64.((2, 2, 1))
+nprow, npcol, nrhs = Int64.((2, 1, 1))
 root = 0
 comm = MPI.COMM_WORLD
 grid = Grid{Int64}(nprow, npcol, comm)

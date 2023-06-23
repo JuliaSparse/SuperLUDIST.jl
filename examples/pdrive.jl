@@ -1,3 +1,4 @@
+# ENV["OMP_NUM_THREADS"] = 1
 using MPI
 using SuperLUDIST: Grid, DistributedSuperMatrix,
 pgssvx!
@@ -7,14 +8,16 @@ using SparseBase.Communication: distribute_evenly, localsize
 using MatrixMarket
 using SparseBase
 using CIndices
+using LinearAlgebra
 MPI.Init()
-nprow, npcol, nrhs = 2, 2, 1
+nprow, npcol, nrhs = 2, 1, 1
 root = 0
 comm = MPI.COMM_WORLD
 grid = Grid{Int32}(nprow, npcol, comm)
 iam = grid.iam
 isroot = iam == root
-
+@show BLAS.get_config()
+@show BLAS.get_num_threads()
 # Utility function for reading a .mtx file and generating suitable
 # rhs and x for testing. 
 # coo is held only on root, b and xtrue are replicated on each rank.
