@@ -7,10 +7,9 @@ using SparseBase.Communication
 using SparseBase.Communication: distribute_evenly, localsize
 using MatrixMarket
 using SparseBase
-using CIndices
 using LinearAlgebra
 MPI.Init()
-nprow, npcol, nrhs = 2, 1, 1
+nprow, npcol, nrhs = 1, 1, 1
 root = 0
 comm = MPI.COMM_WORLD
 grid = Grid{Int32}(nprow, npcol, comm)
