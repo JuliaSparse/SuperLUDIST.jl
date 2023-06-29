@@ -63,6 +63,7 @@ function Base.getproperty(S::AbstractSuperMatrix, s::Symbol)
     s === :format && return Base.getfield(S, s)
     s === :globalsize && return Base.getfield(S, s)
     s === :first_row && return Base.getfield(S, s)
+    s === :grid && return Base.getfield(S, s)
     return getproperty(S.supermatrix[], s)
 end
 # TODO: move to SuperLUBase.jl
@@ -73,9 +74,9 @@ Base.unsafe_convert(
     Base.unsafe_convert(T, A.supermatrix)
 
 include("lowlevel.jl")
+include("structs.jl")
 include("distributedmatrix.jl")
 include("replicatedmatrix.jl")
-include("structs.jl")
 include("drivers.jl")
 include("matrixmarket.jl")
 

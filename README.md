@@ -27,6 +27,11 @@ Proper use of `SuperLUDIST.jl` will typically also require `MPI.jl`, `SparseBase
 pkg> add MPI SparseBase MatrixMarket
 ```
 
+or equivalently:
+```julia
+julia> Pkg.add("MPI", "SparseBase", "MatrixMarket")
+```
+
 ## Usage
 Examples for running in replicated and distributed mode are provided in the examples directory. To run these examples
 follow the instructions provided [here](https://juliaparallel.org/MPI.jl/latest/configuration/) to set up your MPI correctly. In particular `mpiexecjl` should be in your path (it is typically found in `~/.julia/bin`)

@@ -1,7 +1,7 @@
 name = "SuperLUDIST"
 uuid = "4cd002a6-0da4-410d-a012-232df062f478"
 authors = ["Raye Kimmerer <Kimmerer@lbl.gov>"]
-version = "0.2.0"
+version = "0.3.0"
 
 [deps]
 CIndices = "5a98b6c4-18fa-405d-92b3-8277d93fed36"

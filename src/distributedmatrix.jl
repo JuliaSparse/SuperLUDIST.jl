@@ -9,7 +9,7 @@ Each local matrix stores a subset of rows specified by `A.globalrows`
 # Extended
 $(FIELDS)
 """
-mutable struct DistributedSuperMatrix{T, I, S, F, J} <: AbstractSuperMatrix{T, I, S}
+mutable struct DistributedSuperMatrix{T, I, S, F, J, G} <: AbstractSuperMatrix{T, I, S}
     """Internal: Reference to `Common.SuperMatrix{I}`"""
     supermatrix::Base.RefValue{S} # the supermatrix
     """Internal: Reference to storage format `Common.NRFormat_loc{I}` held by supermatrix"""
@@ -18,6 +18,7 @@ mutable struct DistributedSuperMatrix{T, I, S, F, J} <: AbstractSuperMatrix{T, I
     store::J #keepalive for format
     globalsize::NTuple{2, I}
     first_row::I
+    grid::G
 end
 Base.size(A::DistributedSuperMatrix) = A.globalsize
 Communication.localpart(A::DistributedSuperMatrix) = A.store
@@ -33,10 +34,10 @@ For instance in order to update the size you must update the size of
     `A::DistributedSuperMatrix.store` as well as the sizes stored in `A.format` and
     `A.supermatrix`.
 """
-function DistributedSuperMatrix{Tv, Ti}() where {Tv, Ti}
+function DistributedSuperMatrix{Tv, Ti}(grid::Grid{Ti}) where {Tv, Ti}
     store = SparseBase.CSRStore{Tv, CIndex{Ti}}()
     firstrow, globalsize = 1, (0, 0)
-    DistributedSuperMatrix(store, firstrow, globalsize)
+    DistributedSuperMatrix(store, firstrow, globalsize, grid)
 end
 
 """
@@ -50,7 +51,9 @@ Construct a DistributedSuperMatrix from a finished `SparseBase.CSRStore`.
   - `firstrow` : the 1-based starting row of A on this rank.
   - `globalsize` : the size of `A` across all ranks.
 """
-function DistributedSuperMatrix(A::SparseBase.CSRStore{<:Any, CIndex{Ti}}, firstrow, globalsize) where {Ti}
+function DistributedSuperMatrix(
+    A::SparseBase.CSRStore{<:Any, CIndex{Ti}}, firstrow, globalsize, grid::Grid{Ti}
+) where {Ti}
     fmtref = Ref(Common.NRformat_loc{Ti}(
         nstored(A),
         A.vdim,
@@ -67,17 +70,17 @@ function DistributedSuperMatrix(A::SparseBase.CSRStore{<:Any, CIndex{Ti}}, first
         Base.unsafe_convert(Ptr{Cvoid}, fmtref)
     ))
     return DistributedSuperMatrix{
-        storedeltype(A), Ti, eltype(superref), eltype(fmtref), typeof(A)
-    }(superref, fmtref, A, Ti.(globalsize), firstrow)
+        storedeltype(A), Ti, eltype(superref), eltype(fmtref), typeof(A), typeof(grid)
+    }(superref, fmtref, A, Ti.(globalsize), firstrow, grid)
 end
 
-function DistributedSuperMatrix(store::SparseBase.AbstractSparseStore{Tv, <:Any, CIndex{Ti}}, firstrow, globalsize) where
+function DistributedSuperMatrix(store::SparseBase.AbstractSparseStore{Tv, <:Any, CIndex{Ti}}, firstrow, globalsize, grid::Grid{Ti}) where
     {Tv, Ti}
-    return DistributedSuperMatrix(convert(SparseBase.CSRStore, store), firstrow, globalsize)
+    return DistributedSuperMatrix(convert(SparseBase.CSRStore, store), firstrow, globalsize, grid)
 end
-function DistributedSuperMatrix(store::SparseBase.AbstractSparseStore{Tv, <:Any, Ti}, firstrow, globalsize) where
+function DistributedSuperMatrix(store::SparseBase.AbstractSparseStore{Tv, <:Any, Ti}, firstrow, globalsize, grid::Grid{Ti}) where
     {Tv, Ti}
-    return DistributedSuperMatrix(convert(SparseBase.CSRStore{Tv, CIndex{Ti}}, store), firstrow, globalsize)
+    return DistributedSuperMatrix(convert(SparseBase.CSRStore{Tv, CIndex{Ti}}, store), firstrow, globalsize, grid)
 end
 
 """

@@ -4,6 +4,7 @@ end
 
 function Base.getproperty(g::Grid, s::Symbol)
     s === :grid && return Base.getfield(g, s)
+    s === :comm && return MPI.Comm(Base.getproperty(g.grid[], s))
     return getproperty(g.grid[], s)
 end
 
@@ -50,6 +51,39 @@ SOLVE{T}(options) where T = SOLVE{T, Int}(options)
 
 SOLVE{T, I}(options) where {T, Ti, I<:CIndex{Ti}} = 
     SOLVE{T, Ti}(options)
+
+
+mutable struct SuperLUFactorization{T, I, A, Solve, Perm, LU, Stat}
+    mat::A
+    options::Options
+    solve::Solve
+    perm::Perm
+    lu::LU
+    stat::Stat
+    berr::Vector{T}
+    function SuperLUFactorization{T, I, A, Solve, Perm, LU, Stat}(
+        mat::A, options::Options, solve::Solve, perm::Perm,
+        lustruct::LU, stat::Stat, berr::Vector{T}
+    ) where {
+        T<:Union{Float32, Float64, ComplexF64}, 
+        I <: Union{Int32, Int64}, 
+        A <: AbstractSuperMatrix{T, I},
+        Solve <: Union{SOLVE{T, I}, Nothing},
+        Perm <: ScalePermStruct{T, I},
+        LU <: LUStruct{T, I},
+        Stat <: LUStat{I}
+    }
+        return new(mat, options, solve, perm, lustruct, stat, berr)
+    end
+end
+function SuperLUFactorization(
+    A::AbstractSuperMatrix{Tv, Ti}, options, 
+    solve::Solve, perm::Perm, lustruct::LU, stat::Stat, berr::Vector{Tv}
+) where {Tv, Ti, Solve, Perm, LU, Stat}
+    return SuperLUFactorization{Tv, Ti, typeof(A), Solve, Perm, LU, Stat}(
+        A, options, solve, perm, lustruct, stat, berr
+    )
+end
 
 for I ∈ (:Int32, :Int64)
 L = Symbol(String(:SuperLU_) * String(I))

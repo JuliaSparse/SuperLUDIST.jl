@@ -28,10 +28,10 @@ A = MatrixMarket.mmread(ReplicatedSuperMatrix{Float64, Int32}, )
 ```
 """
 function MatrixMarket.mmread(
-    ::Type{<:ReplicatedSuperMatrix{Tv, Ti}}, filename; 
-    desymmetrize = true, root = 0, comm = MPI.COMM_WORLD
+    ::Type{<:ReplicatedSuperMatrix{Tv, Ti}}, filename, grid::Grid{Ti}; 
+    desymmetrize = true, root = 0
 ) where {Tv <: Union{Float32, Float64, ComplexF64}, Ti <: Union{Int32, Int64}}
-
+    comm = grid.comm
     rank = MPI.Comm_rank(comm)
     if rank == root
         x = convert(SparseBase.CSCStore, mmread(CoordinateStore{Tv, CIndex{Ti}}, filename; desymmetrize))
@@ -39,7 +39,7 @@ function MatrixMarket.mmread(
         x = SparseBase.CSCStore(CIndex{Ti}[], CIndex{Ti}[], Tv[], (0, 0))
     end
     Communication.bcaststore!(x, root, comm)
-    ReplicatedSuperMatrix(x)
+    ReplicatedSuperMatrix(x, grid)
 end
 
 """
@@ -70,10 +70,10 @@ A = MatrixMarket.mmread(ReplicatedSuperMatrix{Float64, Int32}, )
 ```
 """
 function MatrixMarket.mmread(
-  ::Type{<:DistributedSuperMatrix{Tv, Ti}}, filename; 
-  desymmetrize = true, root = 0, comm = MPI.COMM_WORLD, partitioner = distribute_evenly
+  ::Type{<:DistributedSuperMatrix{Tv, Ti}}, filename, grid::Grid{Ti}; 
+  desymmetrize = true, root = 0, partitioner = distribute_evenly
 ) where {Tv <: Union{Float32, Float64, ComplexF64}, Ti <: Union{Int32, Int64}}
-
+  comm = grid.comm
   rank = MPI.Comm_rank(comm)
   if rank == root
     x = convert(SparseBase.CSRStore, mmread(CoordinateStore{Tv, CIndex{Ti}}, filename; desymmetrize))
@@ -86,10 +86,11 @@ function MatrixMarket.mmread(
   rowsizes = Communication.partition_sizes(part)[1]
   out, globalnrows, startingrow = Communication.scatterstore!(out, x, rowsizes; root, comm)
 
-  out = DistributedSuperMatrix(out, startingrow, (globalnrows, size(out, 2)))
+  out = DistributedSuperMatrix(out, startingrow, (globalnrows, size(out, 2)), grid)
 end
 
-function mmread_and_generatesolution(Tv, Ti, nrhs, path, grid; root = 0, comm = MPI.COMM_WORLD)
+function mmread_and_generatesolution(Tv, Ti, nrhs, path, grid; root = 0)
+  comm = grid.comm
   iam = grid.iam
   if iam == root
       coo = MatrixMarket.mmread(SparseBase.CoordinateStore{Tv, CIndex{Ti}},
@@ -100,7 +101,7 @@ function mmread_and_generatesolution(Tv, Ti, nrhs, path, grid; root = 0, comm = 
       coo = nothing
   end
   Communication.bcaststore!(csc, root, comm)
-  Acsc = SuperLUDIST.ReplicatedSuperMatrix(csc)
+  Acsc = SuperLUDIST.ReplicatedSuperMatrix(csc, grid)
   m, n, = size(Acsc)
   xtrue = Matrix{Tv}(undef, n, nrhs)
   b = Matrix{Tv}(undef, m, nrhs)
