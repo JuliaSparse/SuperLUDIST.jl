@@ -15,21 +15,18 @@ SparseBase = "8047a082-0763-4c4f-a23b-a4a948721f1d"
 SuperLUBase = "79fc8b2a-9fec-41f5-a0c4-660a4203283a"
 SuperLU_DIST_jll = "9a1356b0-3c82-5da3-b77c-7c198e8bd7ab"
 
-[weakdeps]
-SparseArrays = "2f01184e-e22b-5df5-ae63-d93ebab69eaf"
-
-[extensions]
-SparseArraysExt = "SparseArrays"
-
 [compat]
 CIndices = "0.3"
 DocStringExtensions = "0.8"
 MPI = "0.20"
 MatrixMarket = "0.5"
-SparseBase = "0.3"
+SparseBase = "0.3, 0.4"
 SuperLUBase = "0.1.1"
 SuperLU_DIST_jll = "8.0.0"
 julia = "1.7"
+
+[extensions]
+SparseArraysExt = "SparseArrays"
 
 [extras]
 MatrixMarket = "4d4711f2-db25-561a-b6b3-d35e7d4047d3"
@@ -37,3 +34,6 @@ Test = "8dfed614-e22c-5e08-85e1-65c5234f0b40"
 
 [targets]
 test = ["Test", "MatrixMarket"]
+
+[weakdeps]
+SparseArrays = "2f01184e-e22b-5df5-ae63-d93ebab69eaf"
