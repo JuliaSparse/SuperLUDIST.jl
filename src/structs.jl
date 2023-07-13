@@ -8,7 +8,6 @@ function Base.getproperty(g::Grid, s::Symbol)
     return getproperty(g.grid[], s)
 end
 
-
 # Option functions:
 ###################
 const Options = Common.superlu_dist_options_t
@@ -27,6 +26,10 @@ ScalePermStruct{T}(m, n) where T = ScalePermStruct{T, Int}(m, n)
 ScalePermStruct{T, I}(m, n) where {T, Ti, I<:CIndex{Ti}} = 
     ScalePermStruct{T, Ti}(m, n)
 
+function Base.getproperty(g::ScalePermStruct, s::Symbol)
+    s === :scaleperm && return Base.getfield(g, s)
+    return getproperty(g.scaleperm[], s)
+end
 
 struct LUStruct{T, I, S, G}
     LU::Base.RefValue{S}
@@ -35,6 +38,13 @@ struct LUStruct{T, I, S, G}
 end
 LUStruct{T}(n, grid) where T = LUStruct{T, Int}(n, grid)
 LUStruct{T, I}(n, grid) where {T, Ti, I<:CIndex{Ti}} = LUStruct{T, Ti}(n, grid)
+
+function Base.getproperty(g::LUStruct, s::Symbol)
+    s === :LU && return Base.getfield(g, s)
+    s === :grid && return Base.getfield(g, s)
+    s === :n && return Base.getfield(g, s)
+    return getproperty(g.LU[], s)
+end
 
 struct LUStat{I, S}
     stat::Base.RefValue{S}
@@ -52,8 +62,13 @@ SOLVE{T}(options) where T = SOLVE{T, Int}(options)
 SOLVE{T, I}(options) where {T, Ti, I<:CIndex{Ti}} = 
     SOLVE{T, Ti}(options)
 
+function Base.getproperty(g::SOLVE, s::Symbol)
+    s === :options && return Base.getfield(g, s)
+    s === :SOLVEstruct && return Base.getfield(g, s)
+    return getproperty(g.SOLVEstruct[], s)
+end
 
-mutable struct SuperLUFactorization{T, I, A, Solve, Perm, LU, Stat}
+mutable struct SuperLUFactorization{T, I, A, Solve, Perm, LU, Stat, B}
     mat::A
     options::Options
     solve::Solve
@@ -61,9 +76,10 @@ mutable struct SuperLUFactorization{T, I, A, Solve, Perm, LU, Stat}
     lu::LU
     stat::Stat
     berr::Vector{T}
-    function SuperLUFactorization{T, I, A, Solve, Perm, LU, Stat}(
+    b::B
+    function SuperLUFactorization{T, I, A, Solve, Perm, LU, Stat, B}(
         mat::A, options::Options, solve::Solve, perm::Perm,
-        lustruct::LU, stat::Stat, berr::Vector{T}
+        lustruct::LU, stat::Stat, berr::Vector{T}, b::B
     ) where {
         T<:Union{Float32, Float64, ComplexF64}, 
         I <: Union{Int32, Int64}, 
@@ -71,17 +87,21 @@ mutable struct SuperLUFactorization{T, I, A, Solve, Perm, LU, Stat}
         Solve <: Union{SOLVE{T, I}, Nothing},
         Perm <: ScalePermStruct{T, I},
         LU <: LUStruct{T, I},
-        Stat <: LUStat{I}
+        Stat <: LUStat{I},
+        B <: StridedVecOrMat{T}
     }
-        return new(mat, options, solve, perm, lustruct, stat, berr)
+        return new(mat, options, solve, perm, lustruct, stat, berr, b)
     end
 end
+isfactored(F::SuperLUFactorization) = F.options.Fact == Common.FACTORED
+
+
 function SuperLUFactorization(
     A::AbstractSuperMatrix{Tv, Ti}, options, 
-    solve::Solve, perm::Perm, lustruct::LU, stat::Stat, berr::Vector{Tv}
-) where {Tv, Ti, Solve, Perm, LU, Stat}
-    return SuperLUFactorization{Tv, Ti, typeof(A), Solve, Perm, LU, Stat}(
-        A, options, solve, perm, lustruct, stat, berr
+    solve::Solve, perm::Perm, lustruct::LU, stat::Stat, berr::Vector{Tv}, b::B
+) where {Tv, Ti, Solve, Perm, LU, Stat, B}
+    return SuperLUFactorization{Tv, Ti, typeof(A), Solve, Perm, LU, Stat, B}(
+        A, options, solve, perm, lustruct, stat, berr, b
     )
 end
 
@@ -120,7 +140,6 @@ libname = Symbol(:libsuperlu_dist_, I)
         else
             return Grid{$I, gridinfo_t{$I}}(
                 finalizer(r) do ref
-                    
                     !MPI.Finalized() && $L.superlu_gridexit(ref)
                 end
             )
@@ -191,4 +210,8 @@ end
 function gridmap!(r, comm, nprow, npcol)
     usermap = LinearIndices((nprow, npcol))' .- 1
     return gridmap!(r, comm, nprow, npcol, usermap)
+end
+
+function PStatPrint(F::SuperLUFactorization)
+    PStatPrint(F.options, F.stat, F.mat.grid)
 end

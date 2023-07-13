@@ -17,9 +17,8 @@ function pgssvx!(
     stat = LUStat{Ti}(),
     berr = Vector{Tv}(undef, size(b, 2))
 ) where {Tv, Ti}
-    grid = A.grid
-    b, _ = pgssvx_ABglobal!(options, A, perm, b, LU, berr, stat)
-    return b, SuperLUFactorization(A, options, nothing, perm, LU, stat, berr)
+return pgssvx!(SuperLUFactorization(A, options, nothing, perm, LU, stat, berr, b), b)
+
 end
 
 """
@@ -42,30 +41,33 @@ function pgssvx!(
     stat = LUStat{Ti}(),
     berr = Vector{Tv}(undef, size(b, 2))
 ) where {Tv, Ti}
-    grid = A.grid
-    b, _ = pgssvx_ABdist!(options, A, perm, b, LU, Solve, berr, stat)
-    return b, SuperLUFactorization(A, options, Solve, perm, LU, stat, berr)
+    return pgssvx!(SuperLUFactorization(A, options, Solve, perm, LU, stat, berr, b), b)
 end
 
-"""
-    $(TYPEDSIGNATURES)
+function pgssvx!(F::SuperLUFactorization{T, I, <:ReplicatedSuperMatrix{T, I}}, b::VecOrMat{T}) where {T, I}
+    (; mat, options, perm, lu, stat, berr) = F
+    b, _ = pgssvx_ABglobal!(options, mat, perm, b, lu, berr, stat)
+    F.options.Fact = Common.FACTORED
+    F.b = b
+    return b, F
+end
+function pgssvx!(F::SuperLUFactorization{T, I, <:DistributedSuperMatrix{T, I}}, b::VecOrMat{T}) where {T, I}
+    (; mat, options, solve, perm, lu, stat, berr) = F
+    currentnrhs = size(F.b, 2)
+    if currentnrhs != size(b, 2)
+        # F = pgstrs_prep!(F)
+        pgstrs_init!(
+            F.solve, 
+            reverse(Communication.localsize(F.mat))...,
+            size(b, 2), F.mat.first_row - 1, F.perm,
+            F.lu, F.mat.grid
+        )
+    end
 
-Solve the sparse linear system `Ax = b` using an existing factorization of `A` held in `F`.
-
-Returns `b` and a new factorization object which may alias some of `F`.
-"""
-function pgssvx!(
-    F::SuperLUFactorization{T, I},
-    b::VecOrMat{T}
-) where {T, I}
-    options = copy(F.options)
-    options.Fact = Common.FACTORED
-    stat = LUStat{I}()
-    pgstrs_prep!(F)
-    solve = pgstrs_init(
-        F.solve, size(F.A, 2), localsize(F.A, 1), size(b, 2), 
-        F.A.first_row, F.perm, F.lu, 
-    )
+    b, _ = pgssvx_ABdist!(options, mat, perm, b, lu, solve, berr, stat)
+    F.options.Fact = Common.FACTORED
+    F.b = b
+    return b, F
 end
 
 for T ∈ (Float32, Float64, ComplexF64)
@@ -122,7 +124,7 @@ function pgstrs_init!(
     lu::LUStruct{$T, $I},
     grid::Grid{$I}
 )
-    $L(Symbol(:p, prefixsymbol(T), :gstrs_init))(
+    $L.$(Symbol(:p, prefixsymbol(T), :gstrs_init))(
         n, m_local, nrhs, first_row, scaleperm.perm_r,
         scaleperm.perm_c, grid, lu.Glu_persist, solve
     )
@@ -132,14 +134,14 @@ end
 function pgstrs_prep!(
     F::SuperLUFactorization{$T, $I}
 )
-    gstrs = F.solve.gstrs_comm[]
-    $L.superlu_free_dist(gstrs.B_to_X_SendCnt)
-    gstrs.B_to_X_SendCnt[] = C_NULL
-    $L.superlu_free_dist(gstrs.X_to_B_SendCnt)
-    gstrs.X_to_B_SendCnt[] = C_NULL
-    $L.superlu_free_dist(gstrs.ptr_to_ibuf)
-    gstrs.ptr_to_ibuf[] = C_NULL
-    F.solve.gstrs_comm[] = gstrs # is this necessary? Think yes.
+    if size(F.b, 2) != 0
+        gstrs = unsafe_load(F.solve.gstrs_comm)
+        @show gstrs
+        $L.superlu_free_dist(gstrs.B_to_X_SendCnt)
+        $L.superlu_free_dist(gstrs.X_to_B_SendCnt)
+        $L.superlu_free_dist(gstrs.ptr_to_ibuf)
+        @show gstrs
+    end
     return F
 end
 

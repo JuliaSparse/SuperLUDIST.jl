@@ -85,6 +85,54 @@ end
 
 """
     $(TYPEDSIGNATURES)
+
+Construct a DistributedSuperMatrix from the vectors of a CSR matrix, and the necessary metadata.
+
+Valid index types are `{Int32, Int64}`, or `CIndex{Int32}, CIndex{Int64}`, if the indices are already 0-based.
+Valid element types are `{Float32, Float64, ComplexF64}`.
+
+# Arguments
+  - `rowptr, colidx, v` : sparse storage vectors, must be valid CSR matrix internals with types noted above.
+  - `firstrow` : the 1-based starting row of the matrix on this rank.
+  - `localsize` : the local size of the matrix on this rank.
+  - `globalsize` : the size of the matrix across all ranks.
+  - `grid` : the grid on which the matrix is distributed.
+"""
+function DistributedSuperMatrix(rowptr, colidx, v, firstrow, localsize, globalsize, grid::Grid{Ti}) where {Ti}
+    return DistributedSuperMatrix(
+        SparseBase.CSRStore(rowptr, colidx, v, localsize),
+        firstrow,
+        globalsize,
+        grid
+    )
+end
+
+"""
+    $(TYPEDSIGNATURES)
+
+Construct a DistributedSuperMatrix from COO format and the necessary metadata.
+
+Valid index types are `{Int32, Int64}`, or `CIndex{Int32}, CIndex{Int64}`, if the indices are already 0-based.
+Valid element types are `{Float32, Float64, ComplexF64}`.
+
+# Arguments
+  - `(rows, cols), v` : sparse storage vectors, must be valid COO matrix internals with types noted above.
+  - `firstrow` : the 1-based starting row of the matrix on this rank.
+  - `localsize` : the local size of the matrix on this rank.
+  - `globalsize` : the size of the matrix across all ranks.
+  - `grid` : the grid on which the matrix is distributed.
+"""
+function DistributedSuperMatrix((rows, cols)::NTuple{2, <:AbstractVector}, v, firstrow, localsize, globalsize, grid::Grid{Ti}) where {Ti}
+    return DistributedSuperMatrix(
+        SparseBase.CSRStore(ptr, idx, v, localsize),
+        firstrow,
+        globalsize,
+        grid
+    )
+end
+
+"""
+    $(TYPEDSIGNATURES)
 """
 function Communication.scatterstore!(
     rstore::DistributedSuperMatrix{Tv, Ti},

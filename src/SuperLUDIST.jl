@@ -79,8 +79,6 @@ include("distributedmatrix.jl")
 include("replicatedmatrix.jl")
 include("drivers.jl")
 include("matrixmarket.jl")
-
-
-  
+include("highlevel.jl")
 end
 
