@@ -1,9 +1,9 @@
 module SuperLU_Int32
-using SuperLU_DIST_jll
 import MPI: MPI_Comm, MPI_Request, MPI_Datatype, MPI_Errhandler
 using ..SuperLUDIST_Common
+import ..SuperLUDIST: libsuperlu_dist_Int32
 using SuperLUBase.Common
-const libsuperlu_dist_Int32 = SuperLU_DIST_jll.libsuperlu_dist_Int32
+
 function superlu_abort_and_exit_dist(arg1)
     @ccall libsuperlu_dist_Int32.superlu_abort_and_exit_dist(arg1::Ptr{Cchar})::Cvoid
 end

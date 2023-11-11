@@ -32,25 +32,30 @@ or equivalently:
 julia> Pkg.add("MPI", "SparseBase", "MatrixMarket")
 ```
 
+The binaries provided with Julia may not work correctly on your machine (this is currently affecting at least NERSC Perlmutter). 
+If this is the case you may provide your own library with:
+
+```julia
+SuperLUDIST.set_libraries!(; libsuperlu_dist_Int32 = <PATH TO 32 BIT LIBRARY>, libsuperlu_dist_Int64 = <PATH TO 64 BIT LIBRARY>)
+``````
+
+These libraries should be built with the proper integer size (32 bit or 64 bit), 
+and should be linked against the MPI used by MPI.jl (on HPC clusters this should be your system MPI).
+
+You may provide one or the other, or both, but if the 32 or 64 bit integer libraries are unavailable 32 bit or 64 bit matrices will be unavailable respectively.
+
 ## Usage
 Examples for running in replicated and distributed mode are provided in the examples directory. To run these examples
 follow the instructions provided [here](https://juliaparallel.org/MPI.jl/latest/configuration/) to set up your MPI correctly. In particular `mpiexecjl` should be in your path (it is typically found in `~/.julia/bin`)
 
 Then you can invoke a driver example:
 ```
-mpiexecjl -n <nprocs> julia --project examples/pdrive.jl
+mpiexecjl -n <nprocs> julia --project examples/basic_example.jl
 ```
 
 This command does a couple things. The first part launches MPI with `<nprocs>` ranks. The second part `julia --project` activates the current folder. If your installation is in the global environment you may omit `--project`, or provide a path to the environment you would like to use: `--project=~/MySuperLUProject`. Finally `examples/pdrive.jl` is the Julia script to be executed under MPI. 
 
 Driver routine examples are found in the `examples` folder of this repository. The examples currently cover basic usage of `pgssvx` and `pgssvx_ABglobal` driver routines. These routines load matrix market files and generate right hand sides, which is not a typical use-case. Instead users will often build a submatrix on each rank, and construct a `DistributedSuperMatrix`.
-
-More examples will be added over the coming days to illustrate:
-- DistributedSuperMatrix and ReplicatedSuperMatrix construction.
-- Re-using LU factorizations.
-- Use of the computational routines.
-- 3D distribution routines.
-- Extensions for `SparseMatricesCSR.jl`, `LinearSolve.jl`, `PartitionedArrays.jl` and several other packages.
 
 ## Known Issues
 - CUDA support is currently disabled.

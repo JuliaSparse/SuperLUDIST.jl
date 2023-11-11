@@ -106,7 +106,7 @@ function mmread_and_generatesolution(Tv, Ti, nrhs, path, grid; root = 0)
   xtrue = Matrix{Tv}(undef, n, nrhs)
   b = Matrix{Tv}(undef, m, nrhs)
   if iam == root
-      SuperLUDIST.GenXtrue_dist!(xtrue, Int32)
+      SuperLUDIST.GenXtrue_dist!(xtrue, Ti)
       SuperLUDIST.FillRHS_dist!(b, Acsc, xtrue)
   end
   MPI.Bcast!(b, root, comm)

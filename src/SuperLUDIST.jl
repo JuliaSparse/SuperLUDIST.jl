@@ -1,7 +1,7 @@
 module SuperLUDIST
 using SparseBase
 using MPI
-using SuperLU_DIST_jll
+include("libs.jl")
 using CIndices: CIndex
 using DocStringExtensions
 using MatrixMarket
@@ -17,7 +17,7 @@ function __init__()
         LinearAlgebra.BLAS.lbt_forward(OpenBLAS32_jll.libopenblas_path)
       end
     end
-    LinearAlgebra.BLAS.set_num_threads(1)
+    # LinearAlgebra.BLAS.set_num_threads(1)
     #superlu_set_num_threads(Int32, 1)
     #superlu_set_num_threads(Int64, 1)
 end

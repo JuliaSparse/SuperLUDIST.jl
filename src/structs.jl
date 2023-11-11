@@ -2,7 +2,6 @@
 ##############################
 # const Grid{I} = SuperLUDIST_Common.gridinfo_t{I}
 # const Grid3D{I} = SuperLUDIST_Common.gridinfo3d_t{I}
-
 struct Grid{I}
     comm::MPI.Comm
     gridinfo::SuperLUDIST_Common.gridinfo_t{I}
@@ -30,6 +29,11 @@ function gridinit!(g::Grid{$I}, nprow, npcol)
     return g
 end
 function Grid{$I}(nprow::Integer, npcol::Integer, comm = MPI.COMM_WORLD; batch = false, usermap = nothing)
+    $I == Int32 && libsuperlu_dist_Int32 === nothing && 
+        (throw(ArgumentError("libsuperlu_dist_Int32 is not loaded.")))
+    $I == Int64 && libsuperlu_dist_Int64 === nothing && 
+        (throw(ArgumentError("libsuperlu_dist_Int64 is not loaded.")))
+
     !MPI.Initialized() && MPI.Init()
     g = Grid{$I}(
         comm,
