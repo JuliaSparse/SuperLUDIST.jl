@@ -28,7 +28,7 @@ DocStringExtensions = "0.8 - 0"
 MPI = "0.20 - 0"
 MatrixMarket = "0.5"
 SparseBase = "0.4 - 0"
-SuperLUBase = "0.1.1 - 0"
+SuperLUBase = "0.3"
 SuperLU_DIST_jll = "8.0.0"
 julia = "1.7"
 
