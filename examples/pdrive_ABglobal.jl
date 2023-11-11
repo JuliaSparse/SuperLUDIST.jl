@@ -1,10 +1,10 @@
 using MPI
 using SuperLUDIST
-using SuperLUDIST: Grid, Options, LUStat, ScalePermStruct,
+using SuperLUDIST: Grid, Options, LUStat, ScalePerm,
     ReplicatedSuperMatrix, pgssvx!
 using SuperLUDIST.Common
 using MatrixMarket
-nprow, npcol, nrhs = (2, 2, 1)
+nprow, npcol, nrhs = (1, 1, 1)
 root = 0
 MPI.Init()
 comm = MPI.COMM_WORLD
@@ -13,10 +13,10 @@ iam = grid.iam
 
 # This function handles broadcasting internally!
 A = MatrixMarket.mmread(
-    ReplicatedSuperMatrix{Float64, Int}, 
+    SuperLUDIST.ReplicatedSuperMatrix{Float64, Int}, 
     joinpath(@__DIR__, "add32.mtx"),
     grid
-)
+) ;
 
 # on single nodes this will help prevent oversubscription of threads.
 SuperLUDIST.superlu_set_num_threads(Int64, 2)

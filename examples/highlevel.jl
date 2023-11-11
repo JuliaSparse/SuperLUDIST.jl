@@ -9,7 +9,7 @@ using MatrixMarket
 using SparseBase
 using LinearAlgebra
 MPI.Init()
-nprow, npcol, nrhs = 1, 1, 4
+nprow, npcol, nrhs = 2, 2, 4
 root = 0
 comm = MPI.COMM_WORLD
 grid = Grid{Int32}(nprow, npcol, comm)
@@ -22,6 +22,11 @@ isroot = iam == root
 coo, b, xtrue = SuperLUDIST.mmread_and_generatesolution(
     Float64, Int32, nrhs, joinpath(@__DIR__, "add32.mtx"), grid; root
 )
+
+# A second rhs and xtrue for testing different sized b.
+b2 = [b;; b]
+x2 = [xtrue;; xtrue]
+
 csr = isroot ? convert(SparseBase.CSRStore, coo) : nothing
 chunksizes = isroot ? distribute_evenly(size(csr, 1), nprow * npcol) : nothing
 
@@ -37,19 +42,25 @@ A = Communication.scatterstore!(
 
 b_local = b[A.first_row : A.first_row + localsize(A, 1) - 1, :] # shrink b
 xtrue_local = xtrue[A.first_row : A.first_row + localsize(A, 1) - 1, :] # shrink xtrue
+F = lu!(A);
 
-options = SuperLUDIST.Options()
-stat = SuperLUDIST.LUStat{Int32}()
-b1 = Matrix{Float64}(undef, localsize(A, 2), 0)
-_, F = pgssvx!(A, b1; options, stat);
+b_local = F \ b_local
 
-b_local, F = pgssvx!(F, b_local);
-GC.gc()
 if !(iam == root) || (nprow * npcol == 1)
     SuperLUDIST.inf_norm_error_dist(b_local, xtrue_local, grid)
+    SuperLUDIST.PStatPrint(F) # printing may be messy.
 end
-SuperLUDIST.PStatPrint(options, stat, grid)
+
+b2_local = b2[A.first_row : A.first_row + localsize(A, 1) - 1, :] # shrink b2
+xtrue2_local = x2[A.first_row : A.first_row + localsize(A, 1) - 1, :] # shrink xtrue2
+
+b2_local = F \ b2_local
+
+if !(iam == root) || (nprow * npcol == 1)
+    SuperLUDIST.inf_norm_error_dist(b2_local, xtrue2_local, grid)
+    SuperLUDIST.PStatPrint(F) #printing may be messy.
+end
+
 
 # @show iam b_local xtrue_local
 MPI.Finalize()
-

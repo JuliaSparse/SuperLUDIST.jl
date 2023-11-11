@@ -71,7 +71,7 @@ A = MatrixMarket.mmread(ReplicatedSuperMatrix{Float64, Int32}, )
 """
 function MatrixMarket.mmread(
   ::Type{<:DistributedSuperMatrix{Tv, Ti}}, filename, grid::Grid{Ti}; 
-  desymmetrize = true, root = 0, partitioner = distribute_evenly
+  desymmetrize = true, root = 0, partitioner = Communication.distribute_evenly
 ) where {Tv <: Union{Float32, Float64, ComplexF64}, Ti <: Union{Int32, Int64}}
   comm = grid.comm
   rank = MPI.Comm_rank(comm)

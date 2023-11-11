@@ -1,8 +1,8 @@
 function LinearAlgebra.lu!(
-    A::AbstractSuperMatrix{Tv, Ti};
+    A::AbstractSuperMatrix{Tv, Ti}, 
+    b_local = ones(Tv, Communication.localsize(A, 2), 1);
     kwargs...
 ) where {Tv, Ti}
-    b_local = Matrix{Tv}(undef, Communication.localsize(A, 2), 0)
     return pgssvx!(A, b_local; kwargs...)[2] # F, drop b_local.
 end
 

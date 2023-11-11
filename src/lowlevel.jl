@@ -68,7 +68,7 @@ L = Symbol(String(:SuperLU_) * String(I))
     function Destroy_LU(r::Base.RefValue{$(prefixname(T, :LUstruct_t)){$I}}, n, grid)
         $L.$(prefixname(T, :Destroy_LU))(n, grid, r) # why do I have to grid.grid here?!
     end
-    function LUstructInit(r::Base.RefValue{$(prefixname(T, :LUstruct_t)){$I}}, n, grid)
+    function LUstructInit(r::$(prefixname(T, :LUstruct_t)){$I}, n, grid)
         $L.$(prefixname(T, :LUstructInit))(n, r)
         return finalizer(r) do x
             # !MPI.Finalized() && Destroy_LU(x, n, grid)

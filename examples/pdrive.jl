@@ -9,7 +9,7 @@ using MatrixMarket
 using SparseBase
 using LinearAlgebra
 MPI.Init()
-nprow, npcol, nrhs = 1, 1, 2
+nprow, npcol, nrhs = 1, 1, 3
 root = 0
 comm = MPI.COMM_WORLD
 grid = Grid{Int32}(nprow, npcol, comm)
@@ -44,17 +44,15 @@ xtrue_local = xtrue[A.first_row : A.first_row + localsize(A, 1) - 1, :] # shrink
 # for each user.
 
 # creating options and stat is optional, they will be created if not provided.
-options = SuperLUDIST.Options()
-stat = SuperLUDIST.LUStat{Int32}()
+
 # b1 = Matrix{Float64}(undef, localsize(A, 2), 2)
-b1 = rand(localsize(A, 1))
-_, F = pgssvx!(A, b1; options, stat);
-@show F.options
+b1 = rand(localsize(A, 1), 0)
+_, F = pgssvx!(A, b1);
 b_local, F = pgssvx!(F, b_local);
 if !(iam == root) || (nprow * npcol == 1)
     SuperLUDIST.inf_norm_error_dist(b_local, xtrue_local, grid)
 end
-SuperLUDIST.PStatPrint(options, stat, grid)
+SuperLUDIST.PStatPrint(F)
 
 # @show iam b_local xtrue_local
 MPI.Finalize()

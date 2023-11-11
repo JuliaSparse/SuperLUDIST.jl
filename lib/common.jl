@@ -33,7 +33,7 @@ struct superlu_scope_t
     Iam::Cint
 end
 
-struct gridinfo_t{I}
+mutable struct gridinfo_t{I}
     comm::MPI_Comm
     rscp::superlu_scope_t
     cscp::superlu_scope_t
@@ -42,7 +42,7 @@ struct gridinfo_t{I}
     npcol::I
 end
 
-struct gridinfo3d_t{I}
+mutable struct gridinfo3d_t{I}
     comm::MPI_Comm
     rscp::superlu_scope_t
     cscp::superlu_scope_t
