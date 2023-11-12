@@ -7,14 +7,14 @@ const _PREFERENCE_SLUINT64 = @load_preference("libsuperlu_dist_Int64", nothing)
 flags = RTLD_DEEPBIND | RTLD_LAZY
 if _PREFERENCE_SLUINT32 === nothing && _PREFERENCE_SLUINT64 === nothing
     using SuperLU_DIST_jll
+elseif _PREFERENCE_SLUINT64 === nothing
+    libsuperlu_dist_Int32 = _PREFERENCE_SLUINT32
+    dlopen(libsuperlu_dist_Int32, flags; throw_error=true)
+    libsuperlu_dist_Int64 = nothing
 elseif _PREFERENCE_SLUINT32 === nothing
     libsuperlu_dist_Int64 = _PREFERENCE_SLUINT64
     dlopen(libsuperlu_dist_Int64, flags; throw_error=true)
     libsuperlu_dist_Int32 = nothing
-elseif _PREFERENCE_SLUINT32 === nothing
-    libsuperlu_dist_Int32 = _PREFERENCE_SLUINT32
-    dlopen(libsuperlu_dist_Int32, flags; throw_error=true)
-    libsuperlu_dist_Int64 = nothing
 else
     libsuperlu_dist_Int64 = _PREFERENCE_SLUINT64
     dlopen(libsuperlu_dist_Int64, flags; throw_error=true)
