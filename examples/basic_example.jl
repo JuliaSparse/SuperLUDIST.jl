@@ -34,8 +34,8 @@ chunksizes = isroot ? distribute_evenly(size(csr, 1), nprow * npcol) : nothing
 # SuperLUDIST.superlu_set_num_threads(Int64, 1)
 
 # If constructing from existing per-node data the following constructors will help:
-# A = DistributedSuperMatrix(store::CSRStore, firstrow, globalsize::NTuple{2, Int})
 # store = CSRStore(ptrs, indices, values, localsize::NTuple{2, Int})
+# A = DistributedSuperMatrix(store::CSRStore, firstrow, globalsize::NTuple{2, Int})
 # @show iam csr
 A = Communication.scatterstore!(
     DistributedSuperMatrix{Float64, Int64}(grid), csr, chunksizes; root);
