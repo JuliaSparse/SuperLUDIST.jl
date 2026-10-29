@@ -101,13 +101,9 @@ function MatrixMarket.mmread(
   root = 0, partitioner = Communication.distribute_evenly
 ) where {Tv <: Union{Float32, Float64, ComplexF64}, Ti <: Union{Int32, Int64}}
   comm = grid.comm
-  # The rows are distributed over every rank of `comm`, so they must all be in the grid.
-  # Ranks outside the grid see dimensions of 0 or the grid's, so they all throw together.
+  # Check before reading the file, as scatterstore! does.
+  checkgridcomm(grid, comm)
   np = MPI.Comm_size(comm)
-  gridsize(grid) == np || throw(ArgumentError(
-    "mmread distributes the rows over all $np ranks of grid.comm, but the grid has " *
-    "$(gridsize(grid)) ranks. Build the grid on a communicator of its size."
-  ))
   rank = MPI.Comm_rank(comm)
   if rank == root
     x = convert(SparseBase.CSRStore, _mmread_coo(Tv, Ti, filename))
@@ -131,8 +127,9 @@ right-hand sides on every rank.
 """
 function mmread_and_generatesolution(Tv, Ti, nrhs, path, grid::AbstractGrid; root = 0)
   comm = grid.comm
-  iam = grid.iam
-  if iam == root
+  # `root` is a rank of `comm`, which differs from `grid.iam` in batches of grids.
+  rank = MPI.Comm_rank(comm)
+  if rank == root
       A = MatrixMarket.mmread(path)
       coo = coostore(Tv, Ti, A)
       m, n = size(A)
@@ -143,7 +140,7 @@ function mmread_and_generatesolution(Tv, Ti, nrhs, path, grid::AbstractGrid; roo
   m, n = MPI.bcast((m, n), comm; root)
   xtrue = Matrix{Tv}(undef, n, nrhs)
   b = Matrix{Tv}(undef, m, nrhs)
-  if iam == root
+  if rank == root
       GenXtrue_dist!(xtrue, Ti)
       b .= A * xtrue
   end

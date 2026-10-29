@@ -53,6 +53,13 @@ const quiet = (; PrintStat = Common.NO)
         @test relerr(F \ b[:, 1], xtrue[:, 1]) < tolerance(Tv)
         @test F.berr isa Vector{real(Tv)}
         @test_throws DimensionMismatch ldiv!(F, ones(Tv, n - 1))
+        # Strided views are solved in a copy.
+        B = [b b]
+        @test ldiv!(F, view(B, :, 2:3)) isa SubArray
+        @test relerr(B[:, 2:3], [xtrue[:, 2] xtrue[:, 1]]) < tolerance(Tv)
+        # The options of a factorization ask to reuse it, which a new one cannot.
+        A = ReplicatedSuperMatrix(SuperLUDIST.cscstore(Tv, Ti, S), grid)
+        @test_throws ArgumentError pgssvx!(A, copy(b); options = F.options)
 
         # SparseArrays extension
         x, _ = pgssvx!(ReplicatedSuperMatrix(S, grid), copy(b); options = Options{Ti}(; quiet...))
@@ -73,6 +80,39 @@ const quiet = (; PrintStat = Common.NO)
         @test relerr(F \ b[rows, 1:1], xtrue[rows, 1:1]) < tolerance(Tv)
         @test relerr(F \ [b[rows, :] b[rows, :]], [xtrue[rows, :] xtrue[rows, :]]) < tolerance(Tv)
         @test_throws DimensionMismatch ldiv!(F, ones(Tv, length(rows) + 1, 1))
+        B = [b[rows, :] b[rows, :]]
+        ldiv!(F, view(B, :, 2:3))
+        @test relerr(B[:, 2:3], [xtrue[rows, 2] xtrue[rows, 1]]) < tolerance(Tv)
+
+        # The options of a factorization, also set to factorize from scratch, are tied to
+        # its solve data. A GC runs the finalizers of the solve data that was not used.
+        A2 = scatterstore!(DistributedSuperMatrix{Tv, Ti}(grid), csr, chunksizes; root)
+        @test_throws ArgumentError pgssvx!(A2, b[rows, :]; options = F.options)
+        GC.gc()
+        F.options.Fact = Common.DOFACT
+        @test_throws ArgumentError pgssvx!(A2, b[rows, :]; options = F.options)
+        GC.gc()
+        F.options.Fact = Common.FACTORED
+        @test_throws ArgumentError pgssvx!(A2, b[rows, :]; Solve = F.solve)
+        # A solve that shares the factorization's structs, with another number of
+        # right-hand sides, sets up the triangular solve again.
+        x, _ = pgssvx!(
+            F.mat, b[rows, 1:1];
+            options = F.options, Solve = F.solve, perm = F.perm, LU = F.factors
+        )
+        @test relerr(x, xtrue[rows, 1:1]) < tolerance(Tv)
+        @test relerr(F \ b[rows, :], xtrue[rows, :]) < tolerance(Tv)
+
+        # An empty berr is resized.
+        A2 = scatterstore!(DistributedSuperMatrix{Tv, Ti}(grid), csr, chunksizes; root)
+        x, F2 = pgssvx!(A2, b[rows, :]; options = Options{Ti}(; quiet...), berr = real(Tv)[])
+        GC.gc()
+        @test relerr(x, xtrue[rows, :]) < tolerance(Tv)
+        @test length(F2.berr) == 2
+
+        # A wrong right-hand side on one rank throws on all of them.
+        bad = MPI.Comm_rank(comm) == root ? ones(Tv, length(rows) + 1, 1) : b[rows, 1:1]
+        @test_throws (MPI.Comm_rank(comm) == root ? DimensionMismatch : ArgumentError) ldiv!(F2, bad)
 
         # The default right-hand side of lu! has this rank's rows, and a vector may follow.
         # pgssvx scales and permutes A in place, so factorize a fresh copy.
@@ -112,6 +152,16 @@ end
         @test_throws ArgumentError Grid{Ti}(nprocs + 1, 1, comm)
         @test_throws ArgumentError Grid{Ti}(0, 1, comm)
         @test_throws DimensionMismatch Grid{Ti}(nprow, npcol, comm; batch = true, usermap = zeros(Int, nprow + 1, npcol))
+        # usermap names the ranks of a batch.
+        @test_throws ArgumentError Grid{Ti}(1, 1, comm; batch = true, usermap = fill(1, 1, 1))
+        if nprocs == 4
+            # Two batches of 1 × 2 grids.
+            g = Grid{Ti}(1, 2, comm; batch = true, usermap = [1 0])
+            @test g.iam == 1 - rank % 2
+            @test_throws ArgumentError Grid{Ti}(1, 2, comm; batch = true, usermap = [0 0])
+            # 4 ranks are not batches of 3.
+            @test_throws ArgumentError Grid{Ti}(1, 3, comm; batch = true)
+        end
     end
 
     @testset "internal structs" begin
@@ -211,6 +261,13 @@ end
         @test b2 ≈ S * x2
         x, _ = pgssvx!(ReplicatedSuperMatrix(S, grid), copy(b2); options = opts())
         @test relerr(x, x2) < tol
+        if nprocs == 4
+            # In batches of grids, `root` is a rank of the communicator and not of the grid.
+            g = Grid{Ti}(1, 2, comm; batch = true)
+            coo, b2, x2 = SuperLUDIST.mmread_and_generatesolution(Tv, Ti, 2, path, g; root)
+            @test (rank == root) == (coo !== nothing)
+            @test b2 ≈ S * x2
+        end
         if rank == root # these print the error
             SuperLUDIST.inf_norm_error_dist(x, x2, grid)
             SuperLUDIST.inf_norm_error_dist(Ti(n), Ti(2), x, Ti(n), x2, Ti(n), grid)
@@ -263,6 +320,17 @@ grids3d = nprocs == 4 ? [(1, 2, 2), (2, 1, 2), (1, 1, 4)] : [(1, 1, 1)]
     @test length(F.berr) == 3
     @test all(e -> 0 <= e < tolerance(Tv), F.berr)
     @test_throws DimensionMismatch ldiv!(F, ones(Tv, length(rows) + 1, 2))
+    # No right-hand sides.
+    @test size(F \ zeros(Tv, length(rows), 0)) == (length(rows), 0)
+    GC.gc()
+    # A solve that shares the factorization's structs is also blocked by the 2 columns
+    # pgssvx3d set up the redistribution of B for.
+    x, _ = pgssvx!(
+        F.mat, b[rows, 1:1];
+        options = F.options, Solve = F.solve, perm = F.perm, LU = F.factors
+    )
+    GC.gc()
+    @test relerr(x, xtrue[rows, 1:1]) < tolerance(Tv)
     SuperLUDIST.PStatPrint(F) # collective, prints on layer 0
 
     # Refactorize a matrix with the same pattern, with another number of right-hand sides:
@@ -314,8 +382,11 @@ end
 
         # A grid with fewer ranks than the communicator: mmread would hand rows to ranks
         # outside it, and those ranks skip PStatPrint.
+        csr = grid.iam == root ? convert(SparseBase.CSRStore, SuperLUDIST.coostore(Float64, Int64, S)) : nothing
+        chunksizes = grid.iam == root ? distribute_evenly(size(S, 1), nprocs) : nothing
         for g in (SuperLUDIST.Grid3D{Int64}(1, 1, 2, comm), Grid{Int64}(1, 2, comm))
             @test_throws ArgumentError MatrixMarket.mmread(DistributedSuperMatrix{Float64, Int64}, path, g)
+            @test_throws ArgumentError scatterstore!(DistributedSuperMatrix{Float64, Int64}(g), csr, chunksizes; root)
         end
         g = SuperLUDIST.Grid3D{Int64}(1, 1, 2, comm)
         SuperLUDIST.PStatPrint(Options{Int64}(; quiet...), SuperLUDIST.LUStat{Int64}(), g)

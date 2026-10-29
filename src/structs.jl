@@ -42,6 +42,17 @@ function gridmap!(g::Grid{$I}, nprow, npcol, usermap::AbstractMatrix{<:Integer})
     size(usermap) == (nprow, npcol) || throw(DimensionMismatch(
         "usermap has size $(size(usermap)), but the grid is $nprow × $npcol."
     ))
+    # Each batch of `nprow * npcol` consecutive ranks forms a grid, numbered by its ranks
+    # 0, 1, ... in the batch, and SuperLU_DIST calls MPI_Abort for a batch that is short of
+    # ranks or a usermap that names a rank twice or one outside the batch.
+    np = MPI.Comm_size(g.comm)
+    np % (nprow * npcol) == 0 || throw(ArgumentError(
+        "Batches of $nprow × $npcol grids need a multiple of $(nprow * npcol) ranks, " *
+        "but the communicator has $np."
+    ))
+    sort(vec(usermap)) == 0:(nprow * npcol - 1) || throw(ArgumentError(
+        "usermap must name each rank 0:$(nprow * npcol - 1) of a batch once."
+    ))
     myrank = MPI.Comm_rank(g.comm)
     color = myrank ÷ (nprow * npcol)
     subcomm = MPI.Comm_split(g.comm, color, myrank)
@@ -158,6 +169,11 @@ function Base.getproperty(g::Grid3D, s::Symbol)
 end
 gridsize(g::Grid3D) = g.nprow * g.npcol * g.npdep
 Base.propertynames(g::Grid3D) = (:comm, :gridinfo, fieldnames(eltype(getfield(g, :gridinfo)))...)
+
+# Whether this rank is in the grid. The others have no grid communicator.
+ingrid(g::AbstractGrid) = g.iam != -1 && g.iam < gridsize(g)
+# The communicator of the grid's ranks, which SuperLU_DIST's drivers are collective over.
+gridcomm(g::AbstractGrid) = MPI.Comm(getfield(getfield(g, :gridinfo)[], :comm))
 
 # Option functions:
 ###################
@@ -300,6 +316,10 @@ mutable struct SolveData{T, I, S, O, G}
     options::O
     # The `Grid3D` of a 3D solve, whose gathered matrix must be freed with the solve data.
     grid::G
+    # The number of right-hand sides the solve is set up for: the triangular solve's
+    # communication in 2D, and in 3D pgssvx3d's redistribution of B (at least 1), which it
+    # only sets up when it factorizes from scratch.
+    nrhs::Int
 end
 SolveData{T}(options, grid = nothing) where T = SolveData{T, Int}(options, grid)
 
@@ -310,6 +330,7 @@ function Base.getproperty(g::SolveData, s::Symbol)
     s === :options && return Base.getfield(g, s)
     s === :data && return Base.getfield(g, s)
     s === :grid && return Base.getfield(g, s)
+    s === :nrhs && return Base.getfield(g, s)
     return getfield(g.data[], s)
 end
 
@@ -325,10 +346,12 @@ for I ∈ (:Int32, :Int64)
         options::O, grid::Union{Nothing, AbstractGrid{$I}} = nothing
     ) where O <: Options{$I}
         g = grid isa Grid3D ? grid : nothing
-        S = SolveData{$T, $I, $S, O, typeof(g)}(cref($S), options, g)
+        S = SolveData{$T, $I, $S, O, typeof(g)}(cref($S), options, g, 0)
         return finalizer(S) do solve
             MPI.Finalized() && return
-            options.SolveInitialized == Common.YES &&
+            # `options` may say that another solve data was initialized, and `gstrs_comm`
+            # is only allocated by `SolveInit`.
+            options.SolveInitialized == Common.YES && solve.gstrs_comm != C_NULL &&
                 $L.$(prefixname(T, :SolveFinalize))(options, solve)
             # `A3d` is only allocated by the first call to `pgssvx3d`.
             g === nothing || solve.A3d == C_NULL ||
@@ -355,8 +378,7 @@ mutable struct SuperLUFactorization{T, I, A, Opts, Solve, Perm, Factors, Stat, R
     stat::Stat
     # The componentwise backward error of each column of the last solve.
     berr::Vector{R}
-    # The number of right-hand sides of the last call to pgssvx. For a 3D factorization, the
-    # number of the call that factorized from scratch, which later solves are blocked by.
+    # The number of right-hand sides of the last call to pgssvx.
     nrhs::Int
     function SuperLUFactorization{T, I, A, Opts, Solve, Perm, Factors, Stat, R}(
         mat::A, options::Opts, solve::Solve, perm::Perm,

@@ -18,5 +18,7 @@ function LinearAlgebra.lu!(
 end
 
 function LinearAlgebra.ldiv!(A::SuperLUFactorization{Tv, Ti}, B::StridedVecOrMat{Tv}) where {Tv, Ti}
-    return pgssvx!(A, B)[1]
+    B isa VecOrMat && return pgssvx!(A, B)[1]
+    # SuperLU_DIST needs B in contiguous columns, so solve in a copy of a view.
+    return copyto!(B, pgssvx!(A, Array(B))[1])
 end
