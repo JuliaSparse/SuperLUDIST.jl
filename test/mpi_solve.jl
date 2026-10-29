@@ -48,6 +48,11 @@ const quiet = (; PrintStat = Common.NO)
         @test relerr(F \ b[:, 1:1], xtrue[:, 1:1]) < tolerance(Tv)
         GC.gc()
         @test relerr(F \ [b b], [xtrue xtrue]) < tolerance(Tv)
+        # A vector after a matrix with the same number of columns.
+        @test relerr(F \ b[:, 1:1], xtrue[:, 1:1]) < tolerance(Tv)
+        @test relerr(F \ b[:, 1], xtrue[:, 1]) < tolerance(Tv)
+        @test F.berr isa Vector{real(Tv)}
+        @test_throws DimensionMismatch ldiv!(F, ones(Tv, n - 1))
 
         # SparseArrays extension
         x, _ = pgssvx!(ReplicatedSuperMatrix(S, grid), copy(b); options = Options{Ti}(; quiet...))
@@ -67,6 +72,15 @@ const quiet = (; PrintStat = Common.NO)
         # A different number of right hand sides re-initializes the triangular solve.
         @test relerr(F \ b[rows, 1:1], xtrue[rows, 1:1]) < tolerance(Tv)
         @test relerr(F \ [b[rows, :] b[rows, :]], [xtrue[rows, :] xtrue[rows, :]]) < tolerance(Tv)
+        @test_throws DimensionMismatch ldiv!(F, ones(Tv, length(rows) + 1, 1))
+
+        # The default right-hand side of lu! has this rank's rows, and a vector may follow.
+        # pgssvx scales and permutes A in place, so factorize a fresh copy.
+        A = scatterstore!(DistributedSuperMatrix{Tv, Ti}(grid), csr, chunksizes; root)
+        F = lu!(A; options = Options{Ti}(; quiet...))
+        @test relerr(F \ b[rows, 1], xtrue[rows, 1]) < tolerance(Tv)
+        @test relerr(F \ b[rows, 1:1], xtrue[rows, 1:1]) < tolerance(Tv)
+        @test F.berr isa Vector{real(Tv)}
     end
 end
 
@@ -94,6 +108,10 @@ end
         # A grid smaller than the communicator: the other ranks are not part of it.
         g1 = Grid{Ti}(1, 1, comm)
         rank == root && @test g1.iam == 0
+        # Bad shapes are caught before SuperLU_DIST would call MPI_Abort.
+        @test_throws ArgumentError Grid{Ti}(nprocs + 1, 1, comm)
+        @test_throws ArgumentError Grid{Ti}(0, 1, comm)
+        @test_throws DimensionMismatch Grid{Ti}(nprow, npcol, comm; batch = true, usermap = zeros(Int, nprow + 1, npcol))
     end
 
     @testset "internal structs" begin
@@ -238,7 +256,36 @@ grids3d = nprocs == 4 ? [(1, 2, 2), (2, 1, 2), (1, 1, 4)] : [(1, 1, 1)]
     @test ldiv!(F, B) === B
     @test relerr(B, [xtrue[rows, :] xtrue[rows, 1:1]]) < tolerance(Tv)
     @test relerr(F \ b[rows, 1], xtrue[rows, 1]) < tolerance(Tv) # a vector
+    # The backward error of every column of a blocked solve.
+    B = [b[rows, :] b[rows, 1:1]]
+    ldiv!(F, B)
+    @test F.berr isa Vector{real(Tv)}
+    @test length(F.berr) == 3
+    @test all(e -> 0 <= e < tolerance(Tv), F.berr)
+    @test_throws DimensionMismatch ldiv!(F, ones(Tv, length(rows) + 1, 2))
     SuperLUDIST.PStatPrint(F) # collective, prints on layer 0
+
+    # Refactorize a matrix with the same pattern, with another number of right-hand sides:
+    # pgssvx3d still redistributes B for the 2 columns of the first factorization.
+    csr2 = isroot ? convert(SparseBase.CSRStore, SuperLUDIST.coostore(Tv, Ti, 2 * S)) : nothing
+    F.mat = scatterstore!(DistributedSuperMatrix{Tv, Ti}(grid), csr2, chunksizes; root)
+    F.options.Fact = Common.SamePattern
+    x, _ = pgssvx!(F, b[rows, 1:1])
+    GC.gc()
+    @test relerr(x, xtrue[rows, 1:1] / 2) < tolerance(Tv)
+    @test SuperLUDIST.isfactored(F)
+    @test relerr(F \ b[rows, :], xtrue[rows, :] / 2) < tolerance(Tv)
+
+    # The default right-hand side of lu! has this rank's rows, and a vector may follow.
+    A = scatterstore!(DistributedSuperMatrix{Tv, Ti}(grid), csr, chunksizes; root)
+    F = lu!(A; options = Options{Ti}(; quiet...))
+    @test relerr(F \ b[rows, 1], xtrue[rows, 1]) < tolerance(Tv)
+    @test relerr(F \ b[rows, :], xtrue[rows, :]) < tolerance(Tv)
+
+    # The first solve must factorize from scratch.
+    A = scatterstore!(DistributedSuperMatrix{Tv, Ti}(grid), csr, chunksizes; root)
+    opts = Options{Ti}(; quiet..., Fact = Common.FACTORED)
+    @test_throws ArgumentError pgssvx!(A, b[rows, :]; options = opts)
 
     # Factorize without a right hand side, then solve.
     A = scatterstore!(DistributedSuperMatrix{Tv, Ti}(grid), csr, chunksizes; root)
@@ -249,6 +296,8 @@ end
 
 @testset "3D grid checks" begin
     @test_throws ArgumentError SuperLUDIST.Grid3D{Int64}(1, 1, 3, comm)
+    @test_throws ArgumentError SuperLUDIST.Grid3D{Int64}(nprocs, 1, 2, comm)
+    @test_throws ArgumentError SuperLUDIST.Grid3D{Int64}(0, 1, 1, comm)
     if nprocs == 4
         # Matrix Market files can be read straight onto a 3D grid.
         grid = SuperLUDIST.Grid3D{Int64}(1, 2, 2, comm)
@@ -262,6 +311,14 @@ end
         rows = A.first_row:(A.first_row + localsize(A, 1) - 1)
         x, _ = pgssvx!(A, b[rows, 1:1]; options = Options{Int64}(; quiet...))
         @test relerr(vec(x), xtrue[rows]) < tolerance(Float64)
+
+        # A grid with fewer ranks than the communicator: mmread would hand rows to ranks
+        # outside it, and those ranks skip PStatPrint.
+        for g in (SuperLUDIST.Grid3D{Int64}(1, 1, 2, comm), Grid{Int64}(1, 2, comm))
+            @test_throws ArgumentError MatrixMarket.mmread(DistributedSuperMatrix{Float64, Int64}, path, g)
+        end
+        g = SuperLUDIST.Grid3D{Int64}(1, 1, 2, comm)
+        SuperLUDIST.PStatPrint(Options{Int64}(; quiet...), SuperLUDIST.LUStat{Int64}(), g)
         MPI.Barrier(comm)
         grid.iam == root && rm(path)
     end

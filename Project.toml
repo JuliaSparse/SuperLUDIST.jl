@@ -1,7 +1,7 @@
 name = "SuperLUDIST"
 uuid = "4cd002a6-0da4-410d-a012-232df062f478"
 authors = ["Raye Kimmerer <kimmerer@mit.edu>", "Aadesh Deshmukh", "JuliaSparse contributors"]
-version = "1.1.0"
+version = "1.1.1"
 
 [deps]
 CIndices = "5a98b6c4-18fa-405d-92b3-8277d93fed36"

@@ -7,31 +7,44 @@ const DistributedSuperMatrix3D{T, I} =
 
 function pgssvx!(F::SuperLUFactorization{T, I, <:DistributedSuperMatrix3D{T, I}}, b::VecOrMat{T}) where {T, I}
     (; mat, options, solve, perm, factors, stat) = F
-    if options.Fact == Common.FACTORED
-        # pgssvx3d sets up the redistribution of B between the 2D layers when it factorizes,
-        # for the number of right-hand sides of that call (at least 1), and every later solve
-        # must use that many. Solve in blocks of that many columns.
-        k = max(size(F.b, 2), 1)
-        nrhs = size(b, 2)
+    checkrhs(mat, b)
+    nrhs = size(b, 2)
+    if solve.A3d == C_NULL
+        # pgssvx3d sets up the gathered matrix `A3d` when it factorizes from scratch.
+        options.Fact == Common.DOFACT || throw(ArgumentError(
+            "The first 3D solve must factorize from scratch, with options.Fact = DOFACT."
+        ))
+    elseif options.Fact != Common.DOFACT && nrhs > 0
+        # pgssvx3d sets up the redistribution of B between the 2D layers when it factorizes
+        # from scratch, for the number of right-hand sides of that call (at least 1), and
+        # every later call reuses it, also to refactorize with SamePattern. Solve in blocks
+        # of that many columns, zero padding the last one.
+        k = max(F.nrhs, 1)
         if nrhs != k
             B = reshape(b, size(b, 1), nrhs)
             X = zeros(T, size(b, 1), k)
-            length(F.berr) == k || (F.berr = Vector{T}(undef, k))
+            berr = Vector{real(T)}(undef, k)
+            F.berr = Vector{real(T)}(undef, nrhs)
             for j in 1:k:nrhs
                 cols = j:min(j + k - 1, nrhs)
-                fill!(X, zero(T))
                 X[:, 1:length(cols)] .= view(B, :, cols)
-                pgssvx_ABdist!(options, mat, perm, X, factors, solve, F.berr, stat)
+                fill!(view(X, :, (length(cols) + 1):k), zero(T))
+                pgssvx_ABdist!(options, mat, perm, X, factors, solve, berr, stat)
+                # Only the first block refactorizes.
+                factors.factored = true
+                options.Fact = Common.FACTORED
                 B[:, cols] .= view(X, :, 1:length(cols))
+                F.berr[cols] .= view(berr, 1:length(cols))
             end
             return b, F
         end
     end
-    length(F.berr) == size(b, 2) || (F.berr = Vector{T}(undef, size(b, 2)))
+    dofact = options.Fact == Common.DOFACT
+    length(F.berr) == nrhs || (F.berr = Vector{real(T)}(undef, nrhs))
     b, _ = pgssvx_ABdist!(options, mat, perm, b, factors, solve, F.berr, stat)
     factors.factored = true
     F.options.Fact = Common.FACTORED
-    F.b = b
+    dofact && (F.nrhs = nrhs)
     return b, F
 end
 

@@ -141,7 +141,7 @@ function Communication.scatterstore!(
     chunksizes; # dimchunks is an iterable of the number of rows / cols (CSR / CSC)
     # in each rank.
     root::Integer = 0,
-    comm::MPI.Comm = MPI.COMM_WORLD
+    comm::MPI.Comm = rstore.grid.comm
 ) where {Tv, Ti}
     # TODO: some of this should happen automatically.
     # scatterstore! is semantically a resize and overwrite, so changing ptrs
