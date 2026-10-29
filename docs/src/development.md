@@ -9,8 +9,9 @@ julia> using Pkg; Pkg.test("SuperLUDIST")
 The solvers need an MPI job, so `test/runtests.jl` runs `test/mpi_solve.jl` under `mpiexec`
 on 1 rank (a 1×1 grid) and on 4 ranks (a 2×2 grid), with `OMP_NUM_THREADS=1`. It covers
 every element type (`Float32`, `Float64`, `ComplexF64`) and index type (`Int32`, `Int64`),
-replicated and distributed matrices, reusing factorizations with different numbers of
-right-hand sides, the Matrix Market readers and the test problem helpers. The script can
+replicated and distributed matrices, 3D process grids (1×1×1 on 1 rank; 1×2×2, 2×1×2 and
+1×1×4 on 4 ranks), reusing factorizations with different numbers of right-hand sides, the
+Matrix Market readers and the test problem helpers. The script can
 also be run directly:
 
 ```sh

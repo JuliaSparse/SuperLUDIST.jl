@@ -72,7 +72,7 @@ function MatrixMarket.mmread(
 end
 
 """
-    mmread(DistributedSuperMatrix{Tv, Ti}, filename::String, grid::Grid{Ti}; root = 0, partitioner = distribute_evenly)
+    mmread(DistributedSuperMatrix{Tv, Ti}, filename::String, grid::AbstractGrid{Ti}; root = 0, partitioner = distribute_evenly)
 
 Read an `mtx` file on rank `root` and distribute its rows between the ranks in `grid`.
 
@@ -81,7 +81,7 @@ Read an `mtx` file on rank `root` and distribute its rows between the ranks in `
     - `Tv <: Union{Float32, Float64, ComplexF64}`: Non-optional eltype.
     - `Ti <: Union{Int32, Int64}`: Non-optional index type.
   - `filename::String`: `.mtx` file accessible by the `root` process.
-  - `grid::Grid{Ti}`: The process grid on which to distribute the matrix.
+  - `grid::AbstractGrid{Ti}`: The 2D or 3D process grid on which to distribute the matrix.
 
 # Keyword Arguments
   - `root::Int = 0`: The MPI process on which to read the file.
@@ -96,7 +96,7 @@ A = MatrixMarket.mmread(DistributedSuperMatrix{Float64, Int32}, "matrix.mtx", gr
 ```
 """
 function MatrixMarket.mmread(
-  ::Type{<:DistributedSuperMatrix{Tv, Ti}}, filename, grid::Grid{Ti};
+  ::Type{<:DistributedSuperMatrix{Tv, Ti}}, filename, grid::AbstractGrid{Ti};
   root = 0, partitioner = Communication.distribute_evenly
 ) where {Tv <: Union{Float32, Float64, ComplexF64}, Ti <: Union{Int32, Int64}}
   comm = grid.comm
@@ -114,32 +114,30 @@ function MatrixMarket.mmread(
 end
 
 """
-    mmread_and_generatesolution(Tv, Ti, nrhs, path, grid; root = 0)
+    mmread_and_generatesolution(Tv, Ti, nrhs, path, grid::AbstractGrid; root = 0)
 
 Read the Matrix Market file `path` on rank `root`, and generate a test problem for it, as
 SuperLU_DIST's example drivers do. Returns `(coo, b, xtrue)`, where `coo` is the matrix as a
 `SparseBase.CoordinateStore` on `root` (`nothing` elsewhere) and `b = A * xtrue` holds `nrhs`
 right-hand sides on every rank.
 """
-function mmread_and_generatesolution(Tv, Ti, nrhs, path, grid; root = 0)
+function mmread_and_generatesolution(Tv, Ti, nrhs, path, grid::AbstractGrid; root = 0)
   comm = grid.comm
   iam = grid.iam
   if iam == root
       A = MatrixMarket.mmread(path)
-      csc = cscstore(Tv, Ti, A)
       coo = coostore(Tv, Ti, A)
+      m, n = size(A)
   else
-      csc = SparseBase.CSCStore{Tv, CIndex{Ti}}()
       coo = nothing
+      m, n = 0, 0
   end
-  Communication.bcaststore!(csc, root, comm)
-  Acsc = SuperLUDIST.ReplicatedSuperMatrix(csc, grid)
-  m, n, = size(Acsc)
+  m, n = MPI.bcast((m, n), comm; root)
   xtrue = Matrix{Tv}(undef, n, nrhs)
   b = Matrix{Tv}(undef, m, nrhs)
   if iam == root
-      SuperLUDIST.GenXtrue_dist!(xtrue, Ti)
-      SuperLUDIST.FillRHS_dist!(b, Acsc, xtrue)
+      GenXtrue_dist!(xtrue, Ti)
+      b .= A * xtrue
   end
   MPI.Bcast!(b, root, comm)
   MPI.Bcast!(xtrue, root, comm)

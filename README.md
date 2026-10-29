@@ -14,7 +14,9 @@ underlying library.
 
 SuperLUDIST.jl uses SuperLU_DIST 9.3.1 from `SuperLU_DIST_jll`, and supports `Float32`, `Float64`
 and `ComplexF64` matrices with either `Int32` or `Int64` indices. Matrices can be replicated on
-every rank or distributed by rows, and factorizations can be reused for further right-hand sides.
+every rank or distributed by rows, distributed matrices can also use SuperLU_DIST's
+communication-avoiding 3D factorization on a 3D process grid, and factorizations can be reused for
+further right-hand sides.
 
 ## Installation
 
@@ -89,6 +91,13 @@ This launches 4 MPI ranks running `examples/basic_example.jl`, which reads a Mat
 the root rank, distributes it over a 2×2 process grid, then factorizes and solves. `--project`
 activates the environment in the current directory; omit it, or point it elsewhere (e.g.
 `--project=~/MySuperLUProject`), depending on where SuperLUDIST.jl is installed.
+
+For the 3D factorization, `examples/pdrive3d.jl` solves the same kind of problem on a
+`Grid3D`, for example on 8 ranks in 2 layers of 2×2 grids:
+
+```sh
+mpiexecjl -n 8 julia --project examples/pdrive3d.jl 2
+```
 
 See the [documentation](https://juliasparse.github.io/SuperLUDIST.jl/dev/) for more.
 

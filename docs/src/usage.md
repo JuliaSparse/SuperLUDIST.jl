@@ -98,6 +98,52 @@ rows = A.first_row:(A.first_row + SparseBase.Communication.localsize(A, 1) - 1)
 `MatrixMarket.mmread(DistributedSuperMatrix{Tv, Ti}, filename, grid)` reads a file on the root
 rank and distributes its rows the same way.
 
+## 3D process grids
+
+For large problems on many ranks, SuperLU_DIST's communication-avoiding 3D algorithm can be
+much faster than the 2D one. A [`Grid3D`](@ref) arranges `nprow × npcol × npdep` ranks as
+`npdep` layers of `nprow × npcol` 2D grids. SuperLU_DIST partitions the elimination tree between
+the layers, so that each layer factorizes its own subtrees independently, and replicates the
+top of the tree, trading some extra memory for much less communication. See
+[Sao, Li and Vuduc (2019)](https://doi.org/10.1016/j.jpdc.2019.03.004) and the SuperLU_DIST
+documentation for when this pays off.
+
+A [`DistributedSuperMatrix`](@ref) on a `Grid3D` is solved with SuperLU_DIST's `pgssvx3d`
+drivers, with the same functions as on a 2D grid. Its rows must be distributed over *all* the
+ranks of the 3D grid, so `MPI.Comm_size(comm)` should be `nprow * npcol * npdep`:
+
+```julia
+using SuperLUDIST: Grid3D
+nprocs = MPI.Comm_size(MPI.COMM_WORLD)                 # say 8
+grid = Grid3D{Int64}(2, 2, 2, MPI.COMM_WORLD)          # 2 layers of 2 × 2 grids
+grid.zscp.Iam                                          # this rank's layer
+
+csr = grid.iam == 0 ? convert(SparseBase.CSRStore, SuperLUDIST.coostore(Float64, Int64, S)) : nothing
+chunks = grid.iam == 0 ? distribute_evenly(size(S, 1), nprocs) : nothing
+A = scatterstore!(DistributedSuperMatrix{Float64, Int64}(grid), csr, chunks; root = 0)
+rows = A.first_row:(A.first_row + SparseBase.Communication.localsize(A, 1) - 1)
+
+x, F = SuperLUDIST.pgssvx!(A, b[rows, :])               # factorize and solve
+y = F \ b[rows, :]                                      # reuse the factorization
+```
+
+`MatrixMarket.mmread(DistributedSuperMatrix{Tv, Ti}, filename, grid)` also works with a `Grid3D`.
+[`examples/pdrive3d.jl`](https://github.com/JuliaSparse/SuperLUDIST.jl/blob/main/examples/pdrive3d.jl)
+is a complete example, the counterpart of SuperLU_DIST's `EXAMPLE/pddrive3d.c`.
+
+Things to know about the 3D drivers:
+
+- `npdep` must be a power of two.
+- There are no 3D drivers for replicated matrices.
+- `pgssvx3d` sets up how the right-hand sides are moved between the layers when it factorizes,
+  for the number of right-hand sides it is given then (at least one), and every later solve must
+  use the same number. SuperLUDIST.jl therefore solves a different number of right-hand sides
+  in blocks of that size, so `F \ B` works for any `B`. If you will solve many right-hand sides
+  at once, factorize with that many.
+- The parallel symbolic factorization (`ParSymbFact = YES`) and the ParMETIS ordering
+  (`ColPerm = PARMETIS`) are not supported with `npdep > 1`. The defaults use neither.
+- [`PStatPrint`](@ref) prints the statistics of the first layer, as SuperLU_DIST's 3D examples do.
+
 ## Solving and reusing factorizations
 
 [`pgssvx!`](@ref) factorizes and solves in one call, overwriting `b` with the solution, and
