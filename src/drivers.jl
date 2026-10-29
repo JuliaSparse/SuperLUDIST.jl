@@ -15,7 +15,7 @@ function pgssvx!(
     perm = ScalePerm{Tv, Ti}(size(A)...),
     LU = LUFactors{Tv, Ti}(size(A, 2), A.grid),
     stat = LUStat{Ti}(),
-    berr = Vector{Tv}(undef, size(b, 2))
+    berr = Vector{real(Tv)}(undef, size(b, 2))
 ) where {Tv, Ti}
     return pgssvx!(SuperLUFactorization(A, options, nothing, perm, LU, stat, berr, b), b)
 end
@@ -48,7 +48,7 @@ function pgssvx!(
     perm = ScalePerm{Tv, Ti}(size(A)...),
     LU = LUFactors{Tv, Ti}(size(A, 2), A.grid),
     stat = LUStat{Ti}(),
-    berr = Vector{Tv}(undef, size(b, 2))
+    berr = Vector{real(Tv)}(undef, size(b, 2))
 ) where {Tv, Ti}
     return pgssvx!(SuperLUFactorization(A, options, Solve, perm, LU, stat, berr, b), b)
 end
@@ -64,29 +64,46 @@ function pgssvx!(
     pgssvx!(A, b; options, Solve, perm, LU, stat)
 end
 
+# SuperLU_DIST reads and writes as many rows of each column of `b` as this rank holds of
+# the matrix: all of them for a replicated matrix, and this rank's rows for a distributed one.
+function checkrhs(A::ReplicatedSuperMatrix, b)
+    size(b, 1) == size(A, 1) || throw(DimensionMismatch(
+        "b has $(size(b, 1)) rows, but the matrix has $(size(A, 1))."
+    ))
+    return nothing
+end
+function checkrhs(A::DistributedSuperMatrix, b)
+    m_loc = Communication.localsize(A, 1)
+    size(b, 1) == m_loc || throw(DimensionMismatch(
+        "b has $(size(b, 1)) rows, but this rank holds $m_loc rows of the matrix. " *
+        "A distributed b holds this rank's rows of the right-hand side."
+    ))
+    return nothing
+end
+
 function pgssvx!(F::SuperLUFactorization{T, I, <:ReplicatedSuperMatrix{T, I}}, b::VecOrMat{T}) where {T, I}
     (; mat, options, perm, factors, stat) = F
+    checkrhs(mat, b)
     if length(F.berr) != size(b, 2)
-        F.berr = Vector{T}(undef, size(b, 2))
+        F.berr = Vector{real(T)}(undef, size(b, 2))
     end
     b, _ = pgssvx_ABglobal!(options, mat, perm, b, factors, F.berr, stat)
     factors.factored = true
     F.options.Fact = Common.FACTORED
-    F.b = b
+    F.nrhs = size(b, 2)
     return b, F
 end
 function pgssvx!(F::SuperLUFactorization{T, I, <:DistributedSuperMatrix{T, I}}, b::VecOrMat{T}) where {T, I}
     (; mat, options, solve, perm, factors, stat) = F
-    currentnrhs = size(F.b, 2)
-    if currentnrhs != size(b, 2)
-        F.berr = Vector{T}(undef, size(b, 2))
+    checkrhs(mat, b)
+    if F.nrhs != size(b, 2)
+        F.berr = Vector{real(T)}(undef, size(b, 2))
         # The triangular solve communication pattern depends on nrhs.
         if options.SolveInitialized == Common.YES
             pgstrs_prep!(F)
-            m_loc, fst_row = solve_rows(F)
             pgstrs_init!(
-                F.solve, size(F.mat, 2), m_loc, size(b, 2), fst_row, F.perm,
-                F.factors, F.mat.grid
+                F.solve, size(F.mat, 2), Communication.localsize(F.mat, 1), size(b, 2),
+                F.mat.first_row - 1, F.perm, F.factors, F.mat.grid
             )
         end
     end
@@ -94,13 +111,9 @@ function pgssvx!(F::SuperLUFactorization{T, I, <:DistributedSuperMatrix{T, I}}, 
     b, _ = pgssvx_ABdist!(options, mat, perm, b, factors, solve, F.berr, stat)
     factors.factored = true
     F.options.Fact = Common.FACTORED
-    F.b = b
+    F.nrhs = size(b, 2)
     return b, F
 end
-
-# This rank's rows of the matrix that the triangular solve works on (0-based first row).
-solve_rows(F::SuperLUFactorization{<:Any, <:Any, <:DistributedSuperMatrix}) =
-    (Communication.localsize(F.mat, 1), F.mat.first_row - 1)
 
 for T ∈ (Float32, Float64, ComplexF64)
 for I ∈ (Int32, Int64)
@@ -123,7 +136,7 @@ function pgssvx_ABglobal!(
     # - With equilibration, psgssvx_ABglobal broadcasts its `float` scale factors with
     #   `MPI_DOUBLE`, overflowing them on every rank but the root, so turn it off there.
     #   https://github.com/xiaoyeli/superlu_dist/issues/238
-    berr_c = $T === Float32 ? Vector{$T}(undef, nrhs + 1) : berr
+    berr_c = $T === Float32 ? Vector{Float32}(undef, nrhs + 1) : berr
     if $T === Float32 && A.grid.nprow * A.grid.npcol > 1 && options.Equil == Common.YES
         options.Equil = Common.NO
     end
@@ -197,6 +210,7 @@ end
     inf_norm_error_dist(x::Matrix, xtrue::Matrix, grid::AbstractGrid)
 
 Print the relative infinity norm error of each column of the solution `x` against `xtrue`,
-with SuperLU_DIST's `inf_norm_error_dist`. It only uses this rank's data.
+with SuperLU_DIST's `inf_norm_error_dist`. It only uses this rank's data and does no
+communication, so with a distributed `x` each rank prints the error of its own rows.
 """
 inf_norm_error_dist

@@ -5,8 +5,9 @@
 #
 #     mpiexecjl -n 8 julia --project examples/pdrive3d.jl 2
 #
-# The optional argument is npdep, the number of 2D layers (a power of two, default 2 or 1 on
-# a single rank). The rest of the ranks form an nprow × npcol grid in each layer.
+# The optional argument is npdep, the number of 2D layers (a power of two, default 2 on an
+# even number of ranks, otherwise 1). The rest of the ranks form an nprow × npcol grid in
+# each layer.
 using MPI
 using SuperLUDIST
 using SuperLUDIST: Grid3D, DistributedSuperMatrix, Options, pgssvx!
@@ -18,7 +19,7 @@ using LinearAlgebra
 MPI.Init()
 comm = MPI.COMM_WORLD
 nprocs = MPI.Comm_size(comm)
-npdep = isempty(ARGS) ? min(2, nprocs) : parse(Int, ARGS[1])
+npdep = isempty(ARGS) ? (iseven(nprocs) ? 2 : 1) : parse(Int, ARGS[1])
 nprocs % npdep == 0 || error("npdep = $npdep must divide the number of ranks, $nprocs")
 # Make each layer's 2D grid as square as possible.
 nprow = maximum(d for d in 1:isqrt(nprocs ÷ npdep) if (nprocs ÷ npdep) % d == 0)

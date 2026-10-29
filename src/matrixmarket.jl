@@ -75,6 +75,7 @@ end
     mmread(DistributedSuperMatrix{Tv, Ti}, filename::String, grid::AbstractGrid{Ti}; root = 0, partitioner = distribute_evenly)
 
 Read an `mtx` file on rank `root` and distribute its rows between the ranks in `grid`.
+The grid must use all the ranks of `grid.comm`.
 
 # Arguments
   - `arg1<:Type{DistributedSuperMatrix{Tv, Ti}}`
@@ -100,10 +101,17 @@ function MatrixMarket.mmread(
   root = 0, partitioner = Communication.distribute_evenly
 ) where {Tv <: Union{Float32, Float64, ComplexF64}, Ti <: Union{Int32, Int64}}
   comm = grid.comm
+  # The rows are distributed over every rank of `comm`, so they must all be in the grid.
+  # Ranks outside the grid see dimensions of 0 or the grid's, so they all throw together.
+  np = MPI.Comm_size(comm)
+  gridsize(grid) == np || throw(ArgumentError(
+    "mmread distributes the rows over all $np ranks of grid.comm, but the grid has " *
+    "$(gridsize(grid)) ranks. Build the grid on a communicator of its size."
+  ))
   rank = MPI.Comm_rank(comm)
   if rank == root
     x = convert(SparseBase.CSRStore, _mmread_coo(Tv, Ti, filename))
-    chunksizes = partitioner(size(x, 1), MPI.Comm_size(comm))
+    chunksizes = partitioner(size(x, 1), np)
   else
     x = nothing
     chunksizes = nothing

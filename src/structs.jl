@@ -7,6 +7,17 @@ A SuperLU_DIST process grid with index type `Ti`: a 2D [`Grid`](@ref) or a 3D [`
 """
 abstract type AbstractGrid{I} end
 
+# SuperLU_DIST calls MPI_Abort for a grid with more ranks than `comm`, so check it here.
+function checkgridshape(comm, dims::Integer...)
+    shape = join(dims, " × ")
+    all(>(0), dims) || throw(ArgumentError("The dimensions of a $shape grid must be positive."))
+    np = MPI.Comm_size(comm)
+    prod(dims) <= np || throw(ArgumentError(
+        "A $shape grid needs $(prod(dims)) ranks, but the communicator has $np."
+    ))
+    return nothing
+end
+
 """
     Grid{Ti}(nprow, npcol, comm = MPI.COMM_WORLD; batch = false, usermap = nothing)
 
@@ -28,6 +39,9 @@ for I ∈ (:Int32, :Int64)
 L = Symbol(String(:SuperLU_) * String(I))
 @eval begin
 function gridmap!(g::Grid{$I}, nprow, npcol, usermap::AbstractMatrix{<:Integer})
+    size(usermap) == (nprow, npcol) || throw(DimensionMismatch(
+        "usermap has size $(size(usermap)), but the grid is $nprow × $npcol."
+    ))
     myrank = MPI.Comm_rank(g.comm)
     color = myrank ÷ (nprow * npcol)
     subcomm = MPI.Comm_split(g.comm, color, myrank)
@@ -46,6 +60,7 @@ function Grid{$I}(nprow::Integer, npcol::Integer, comm = MPI.COMM_WORLD; batch =
         (throw(ArgumentError("libsuperlu_dist_Int64 is not loaded.")))
 
     !MPI.Initialized() && MPI.Init()
+    checkgridshape(comm, nprow, npcol)
     g = Grid{$I, $L.gridinfo_t}(comm, cref($L.gridinfo_t))
     if !batch
         gridinit!(g, nprow, npcol)
@@ -80,6 +95,9 @@ function Base.getproperty(g::Grid, s::Symbol)
 end
 Base.propertynames(g::Grid) = (:comm, :gridinfo, fieldnames(eltype(getfield(g, :gridinfo)))...)
 
+# The number of ranks in a grid.
+gridsize(g::Grid) = g.nprow * g.npcol
+
 # Grid3D (gridinfo3d_t) functions:
 ##################################
 """
@@ -112,6 +130,7 @@ function Grid3D{$I}(nprow::Integer, npcol::Integer, npdep::Integer, comm = MPI.C
     ispow2(npdep) || throw(ArgumentError("npdep = $npdep must be a power of two."))
 
     !MPI.Initialized() && MPI.Init()
+    checkgridshape(comm, nprow, npcol, npdep)
     g = Grid3D{$I, $L.gridinfo3d_t}(comm, cref($L.gridinfo3d_t))
     $L.superlu_gridinit3d(comm, nprow, npcol, npdep, g)
     # Ranks outside the grid have iam == -1 and no communicators to free.
@@ -137,6 +156,7 @@ function Base.getproperty(g::Grid3D, s::Symbol)
     s === :gridinfo && return getfield(g, s)
     return getfield(getfield(g, :gridinfo)[], s)
 end
+gridsize(g::Grid3D) = g.nprow * g.npcol * g.npdep
 Base.propertynames(g::Grid3D) = (:comm, :gridinfo, fieldnames(eltype(getfield(g, :gridinfo)))...)
 
 # Option functions:
@@ -264,9 +284,10 @@ for I ∈ (:Int32, :Int64)
         function PStatPrint(options, stat::LUStat{$I}, grid)
             $L.PStatPrint(options, stat, grid)
         end
-        # As SuperLU_DIST's 3D examples do, print the statistics of layer 0 only.
+        # As SuperLU_DIST's 3D examples do, print the statistics of layer 0 only. Ranks
+        # outside the grid (iam == -1) have no layer, and their zscp is left zeroed.
         function PStatPrint(options, stat::LUStat{$I}, grid::Grid3D{$I})
-            grid.zscp.Iam == 0 && $L.PStatPrint(options, stat, grid)
+            grid.iam != -1 && grid.zscp.Iam == 0 && $L.PStatPrint(options, stat, grid)
             return nothing
         end
     end # end eval
@@ -325,18 +346,21 @@ The factorization returned by [`pgssvx!`](@ref) and `lu!`. It holds the matrix, 
 and SuperLU_DIST's factors, and solves further right-hand sides with `F \\ b` or
 `ldiv!(F, b)`.
 """
-mutable struct SuperLUFactorization{T, I, A, Opts, Solve, Perm, Factors, Stat, B} <: LinearAlgebra.Factorization{T}
+mutable struct SuperLUFactorization{T, I, A, Opts, Solve, Perm, Factors, Stat, R} <: LinearAlgebra.Factorization{T}
     mat::A
     options::Opts
     solve::Solve
     perm::Perm
     factors::Factors
     stat::Stat
-    berr::Vector{T}
-    b::B
-    function SuperLUFactorization{T, I, A, Opts, Solve, Perm, Factors, Stat, B}(
+    # The componentwise backward error of each column of the last solve.
+    berr::Vector{R}
+    # The number of right-hand sides of the last call to pgssvx. For a 3D factorization, the
+    # number of the call that factorized from scratch, which later solves are blocked by.
+    nrhs::Int
+    function SuperLUFactorization{T, I, A, Opts, Solve, Perm, Factors, Stat, R}(
         mat::A, options::Opts, solve::Solve, perm::Perm,
-        factors::Factors, stat::Stat, berr::Vector{T}, b::B
+        factors::Factors, stat::Stat, berr::Vector{R}, nrhs::Integer
     ) where {
         T<:Union{Float32, Float64, ComplexF64},
         I <: Union{Int32, Int64},
@@ -346,9 +370,10 @@ mutable struct SuperLUFactorization{T, I, A, Opts, Solve, Perm, Factors, Stat, B
         Perm <: ScalePerm{T, I},
         Factors <: LUFactors{T, I},
         Stat <: LUStat{I},
-        B <: StridedVecOrMat{T}
+        R <: Union{Float32, Float64}
     }
-        return new(mat, options, solve, perm, factors, stat, berr, b)
+        R === real(T) || throw(ArgumentError("berr must be a Vector{$(real(T))}"))
+        return new(mat, options, solve, perm, factors, stat, berr, nrhs)
     end
 end
 """
@@ -360,10 +385,13 @@ isfactored(F::SuperLUFactorization) = F.options.Fact == Common.FACTORED
 
 function SuperLUFactorization(
     A::AbstractSuperMatrix{Tv, Ti}, options::Opts,
-    solve::Solve, perm::Perm, factors::Factors, stat::Stat, berr::Vector{Tv}, b::B
-) where {Tv, Ti, Opts, Solve, Perm, Factors, Stat, B}
-    return SuperLUFactorization{Tv, Ti, typeof(A), Opts, Solve, Perm, Factors, Stat, B}(
-        A, options, solve, perm, factors, stat, berr, b
+    solve::Solve, perm::Perm, factors::Factors, stat::Stat, berr::AbstractVector,
+    b::AbstractVecOrMat
+) where {Tv, Ti, Opts, Solve, Perm, Factors, Stat}
+    # SuperLU_DIST writes real backward errors, also for complex matrices.
+    berr = berr isa Vector{real(Tv)} ? berr : Vector{real(Tv)}(undef, length(berr))
+    return SuperLUFactorization{Tv, Ti, typeof(A), Opts, Solve, Perm, Factors, Stat, real(Tv)}(
+        A, options, solve, perm, factors, stat, berr, size(b, 2)
     )
 end
 

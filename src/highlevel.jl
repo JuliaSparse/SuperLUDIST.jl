@@ -4,11 +4,14 @@
 Factorize `A` with SuperLU_DIST, and return a factorization object `F` that solves with
 `F \\ b` or `ldiv!(F, b)`. A distributed `b` holds this rank's rows of the right hand side.
 
+On a [`Grid3D`](@ref), later solves run in blocks of as many columns as `b_local` has, so
+pass a `b_local` with the number of right-hand sides you will usually solve with.
+
 The keyword arguments are passed on to [`pgssvx!`](@ref), for example `options`.
 """
 function LinearAlgebra.lu!(
     A::AbstractSuperMatrix{Tv, Ti},
-    b_local::VecOrMat{Tv} = ones(Tv, Communication.localsize(A, 2), 1);
+    b_local::VecOrMat{Tv} = ones(Tv, Communication.localsize(A, 1), 1);
     kwargs...
 ) where {Tv, Ti}
     return pgssvx!(A, b_local; kwargs...)[2] # F, drop b_local.
