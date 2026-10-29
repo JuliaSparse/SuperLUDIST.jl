@@ -1,40 +1,69 @@
-
-using SparseBase: CoordinateStore
 """
-    mmread(ReplicatedSuperMatrix{Tv, Ti}, filename::String)
+    cscstore(Tv, Ti, A)
 
-Read an `mtx` file into a compressed sparse column format and
-broadcast it to all ranks in `comm`.
+Copy the sparse matrix `A` (anything with `SparseMatrixCSC`'s `colptr`, `rowval` and `nzval`
+fields, such as the result of `MatrixMarket.mmread`) into a `SparseBase.CSCStore` with the
+0-based `CIndex{Ti}` indices that SuperLU_DIST expects. The values are always copied,
+since SuperLU_DIST may scale and permute the matrix in place.
+"""
+function cscstore(::Type{Tv}, ::Type{Ti}, A) where {Tv, Ti}
+    return SparseBase.CSCStore(
+        CIndex{Ti}.(A.colptr), CIndex{Ti}.(A.rowval), Vector{Tv}(A.nzval), size(A)
+    )
+end
 
-To read an `mtx` file locally use `mmread(SparseBase.CSCStore...)`.
+"""
+    coostore(Tv, Ti, A)
+
+Like [`cscstore`](@ref), but copy `A` into a `SparseBase.CoordinateStore`.
+"""
+function coostore(::Type{Tv}, ::Type{Ti}, A) where {Tv, Ti}
+    cols = Vector{CIndex{Ti}}(undef, length(A.rowval))
+    for j in 1:size(A, 2), k in A.colptr[j]:(A.colptr[j + 1] - 1)
+        cols[k] = j
+    end
+    return SparseBase.CoordinateStore(
+        (CIndex{Ti}.(A.rowval), cols), Vector{Tv}(A.nzval), size(A)
+    )
+end
+
+# MatrixMarket.mmread returns symmetric matrices in full form.
+_mmread_csc(::Type{Tv}, ::Type{Ti}, filename) where {Tv, Ti} =
+    cscstore(Tv, Ti, MatrixMarket.mmread(filename))
+_mmread_coo(::Type{Tv}, ::Type{Ti}, filename) where {Tv, Ti} =
+    coostore(Tv, Ti, MatrixMarket.mmread(filename))
+
+"""
+    mmread(ReplicatedSuperMatrix{Tv, Ti}, filename::String, grid::Grid{Ti}; root = 0)
+
+Read an `mtx` file on rank `root` into a compressed sparse column format and
+broadcast it to all ranks in `grid`.
 
 # Arguments
   - `arg1<:Type{ReplicatedSuperMatrix{Tv, Ti}}`
     - `Tv <: Union{Float32, Float64, ComplexF64}`: Non-optional eltype.
     - `Ti <: Union{Int32, Int64}`: Non-optional index type.
   - `filename::String`: `.mtx` file accessible by the `root` process.
+  - `grid::Grid{Ti}`: The process grid on which to replicate the matrix.
 
 # Keyword Arguments
-  - `desymmetrize::Bool = true`: If the matrix file is represented
-in symmetric form, represent in the full form.
   - `root::Int = 0`: The MPI process on which to read the file.
-  - `comm::MPI.Comm = MPI.COMM_WORLD`: The MPI communicator on which to distribute
-the matrix.
 
 # Example
 ```julia
 using MPI, SuperLUDIST, MatrixMarket
-A = MatrixMarket.mmread(ReplicatedSuperMatrix{Float64, Int32}, )
+grid = SuperLUDIST.Grid{Int32}(1, 1)
+A = MatrixMarket.mmread(ReplicatedSuperMatrix{Float64, Int32}, "matrix.mtx", grid)
 ```
 """
 function MatrixMarket.mmread(
-    ::Type{<:ReplicatedSuperMatrix{Tv, Ti}}, filename, grid::Grid{Ti}; 
-    desymmetrize = true, root = 0
+    ::Type{<:ReplicatedSuperMatrix{Tv, Ti}}, filename, grid::Grid{Ti};
+    root = 0
 ) where {Tv <: Union{Float32, Float64, ComplexF64}, Ti <: Union{Int32, Int64}}
     comm = grid.comm
     rank = MPI.Comm_rank(comm)
     if rank == root
-        x = convert(SparseBase.CSCStore, mmread(CoordinateStore{Tv, CIndex{Ti}}, filename; desymmetrize))
+        x = _mmread_csc(Tv, Ti, filename)
     else
         x = SparseBase.CSCStore(CIndex{Ti}[], CIndex{Ti}[], Tv[], (0, 0))
     end
@@ -43,59 +72,54 @@ function MatrixMarket.mmread(
 end
 
 """
-    mmread(DistributedSuperMatrix{Tv, Ti}, filename::String, partitioner = distribute_evenly)
+    mmread(DistributedSuperMatrix{Tv, Ti}, filename::String, grid::Grid{Ti}; root = 0, partitioner = distribute_evenly)
 
-Read an `mtx` file into a compressed sparse column format and
-broadcast it to all ranks in `comm`.
-
-To read an `mtx` file locally use `mmread(SparseBase.CSCStore...)`.
+Read an `mtx` file on rank `root` and distribute its rows between the ranks in `grid`.
 
 # Arguments
-  - `arg1<:Type{ReplicatedSuperMatrix{Tv, Ti}}`
+  - `arg1<:Type{DistributedSuperMatrix{Tv, Ti}}`
     - `Tv <: Union{Float32, Float64, ComplexF64}`: Non-optional eltype.
     - `Ti <: Union{Int32, Int64}`: Non-optional index type.
   - `filename::String`: `.mtx` file accessible by the `root` process.
+  - `grid::Grid{Ti}`: The process grid on which to distribute the matrix.
 
 # Keyword Arguments
-  - `desymmetrize::Bool = true`: If the matrix file is represented
-in symmetric form, represent in the full form.
   - `root::Int = 0`: The MPI process on which to read the file.
-  - `comm::MPI.Comm = MPI.COMM_WORLD`: The MPI communicator on which to distribute
-the matrix.
+  - `partitioner = SparseBase.Communication.distribute_evenly`: Computes the number of rows
+on each rank from the number of rows and ranks.
 
 # Example
 ```julia
 using MPI, SuperLUDIST, MatrixMarket
-A = MatrixMarket.mmread(ReplicatedSuperMatrix{Float64, Int32}, )
+grid = SuperLUDIST.Grid{Int32}(2, 2)
+A = MatrixMarket.mmread(DistributedSuperMatrix{Float64, Int32}, "matrix.mtx", grid)
 ```
 """
 function MatrixMarket.mmread(
-  ::Type{<:DistributedSuperMatrix{Tv, Ti}}, filename, grid::Grid{Ti}; 
-  desymmetrize = true, root = 0, partitioner = Communication.distribute_evenly
+  ::Type{<:DistributedSuperMatrix{Tv, Ti}}, filename, grid::Grid{Ti};
+  root = 0, partitioner = Communication.distribute_evenly
 ) where {Tv <: Union{Float32, Float64, ComplexF64}, Ti <: Union{Int32, Int64}}
   comm = grid.comm
   rank = MPI.Comm_rank(comm)
   if rank == root
-    x = convert(SparseBase.CSRStore, mmread(CoordinateStore{Tv, CIndex{Ti}}, filename; desymmetrize))
+    x = convert(SparseBase.CSRStore, _mmread_coo(Tv, Ti, filename))
+    chunksizes = partitioner(size(x, 1), MPI.Comm_size(comm))
   else
     x = nothing
+    chunksizes = nothing
   end
-  out = SparseBase.CSRStore(CIndex{Ti}[], CIndex{Ti}[], Tv[], (0, 0))
-
-  part = Communication.ContinuousPartitioning(partitioner(nrows, MPI.Comm_size(comm)), ncols)
-  rowsizes = Communication.partition_sizes(part)[1]
-  out, globalnrows, startingrow = Communication.scatterstore!(out, x, rowsizes; root, comm)
-
-  out = DistributedSuperMatrix(out, startingrow, (globalnrows, size(out, 2)), grid)
+  return Communication.scatterstore!(
+    DistributedSuperMatrix{Tv, Ti}(grid), x, chunksizes; root, comm
+  )
 end
 
 function mmread_and_generatesolution(Tv, Ti, nrhs, path, grid; root = 0)
   comm = grid.comm
   iam = grid.iam
   if iam == root
-      coo = MatrixMarket.mmread(SparseBase.CoordinateStore{Tv, CIndex{Ti}},
-          path)
-      csc = convert(SparseBase.CSCStore, coo)
+      A = MatrixMarket.mmread(path)
+      csc = cscstore(Tv, Ti, A)
+      coo = coostore(Tv, Ti, A)
   else
       csc = SparseBase.CSCStore{Tv, CIndex{Ti}}()
       coo = nothing

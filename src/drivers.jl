@@ -2,16 +2,16 @@
     $(TYPEDSIGNATURES)
 
 Solve the replicated sparse linear system `Ax = b`, overwriting `b`
-with the solution. 
+with the solution.
 
 Returns `b` and the factor object which may be used
-to solve with different `b` or reuse parts of the factorization different
-values values for A.
+to solve with different `b` or reuse parts of the factorization with different
+values for `A`.
 """
 function pgssvx!(
     A::ReplicatedSuperMatrix{Tv, Ti},
     b::VecOrMat{Tv};
-    options = Options(),
+    options = Options{Ti}(),
     perm = ScalePerm{Tv, Ti}(size(A)...),
     LU = LUFactors{Tv, Ti}(size(A, 2), A.grid),
     stat = LUStat{Ti}(),
@@ -21,28 +21,29 @@ function pgssvx!(
 end
 function pgssvx!(
     A::ReplicatedSuperMatrix{Tv, Ti};
-    options = Options(),
+    options = Options{Ti}(),
     perm = ScalePerm{Tv, Ti}(size(A)...),
     LU = LUFactors{Tv, Ti}(size(A, 2), A.grid),
     stat = LUStat{Ti}()
 ) where {Tv, Ti}
-    return pgssvx!(SuperLUFactorization(A, options, nothing, perm, LU, stat, berr, b), b)
+    b = Matrix{Tv}(undef, size(A, 1), 0)
+    return pgssvx!(A, b; options, perm, LU, stat)
 end
 
 """
     $(TYPEDSIGNATURES)
 
 Solve the distributed sparse linear system `Ax = b`, overwriting `b`
-with the solution. 
+with the solution.
 
 Returns `b` and the factor object which may be used
-to solve with different `b` or reuse parts of the factorization different
-values values for A.
+to solve with different `b` or reuse parts of the factorization with different
+values for `A`.
 """
 function pgssvx!(
     A::DistributedSuperMatrix{Tv, Ti},
     b::VecOrMat{Tv};
-    options = Options(),
+    options = Options{Ti}(),
     Solve = SolveData{Tv, Ti}(options),
     perm = ScalePerm{Tv, Ti}(size(A)...),
     LU = LUFactors{Tv, Ti}(size(A, 2), A.grid),
@@ -53,7 +54,7 @@ function pgssvx!(
 end
 function pgssvx!(
     A::DistributedSuperMatrix{Tv, Ti};
-    options = Options(),
+    options = Options{Ti}(),
     Solve = SolveData{Tv, Ti}(options),
     perm = ScalePerm{Tv, Ti}(size(A)...),
     LU = LUFactors{Tv, Ti}(size(A, 2), A.grid),
@@ -64,26 +65,35 @@ function pgssvx!(
 end
 
 function pgssvx!(F::SuperLUFactorization{T, I, <:ReplicatedSuperMatrix{T, I}}, b::VecOrMat{T}) where {T, I}
-    (; mat, options, perm, factors, stat, berr) = F
-    b, _ = pgssvx_ABglobal!(options, mat, perm, b, factors, berr, stat)
+    (; mat, options, perm, factors, stat) = F
+    if length(F.berr) != size(b, 2)
+        F.berr = Vector{T}(undef, size(b, 2))
+    end
+    b, _ = pgssvx_ABglobal!(options, mat, perm, b, factors, F.berr, stat)
+    factors.factored = true
     F.options.Fact = Common.FACTORED
     F.b = b
     return b, F
 end
 function pgssvx!(F::SuperLUFactorization{T, I, <:DistributedSuperMatrix{T, I}}, b::VecOrMat{T}) where {T, I}
-    (; mat, options, solve, perm, factors, stat, berr) = F
+    (; mat, options, solve, perm, factors, stat) = F
     currentnrhs = size(F.b, 2)
     if currentnrhs != size(b, 2)
-        F = pgstrs_prep!(F)
-        pgstrs_init!(
-            F.solve, 
-            reverse(Communication.localsize(F.mat))...,
-            size(b, 2), F.mat.first_row - 1, F.perm,
-            F.factors, F.mat.grid
-        )
+        F.berr = Vector{T}(undef, size(b, 2))
+        # The triangular solve communication pattern depends on nrhs.
+        if options.SolveInitialized == Common.YES
+            pgstrs_prep!(F)
+            pgstrs_init!(
+                F.solve,
+                reverse(Communication.localsize(F.mat))...,
+                size(b, 2), F.mat.first_row - 1, F.perm,
+                F.factors, F.mat.grid
+            )
+        end
     end
 
-    b, _ = pgssvx_ABdist!(options, mat, perm, b, factors, solve, berr, stat)
+    b, _ = pgssvx_ABdist!(options, mat, perm, b, factors, solve, F.berr, stat)
+    factors.factored = true
     F.options.Fact = Common.FACTORED
     F.b = b
     return b, F
@@ -101,13 +111,27 @@ function pgssvx_ABglobal!(
     LU::LUFactors{$T, $I},
     berr, stat::LUStat{$I}
 )
+    nrhs = size(b, 2)
+    # Work around two bugs in SuperLU_DIST's single precision replicated driver:
+    # - psgsrfs_ABXglobal (iterative refinement) stores each `berr[j]` with an
+    #   `MPI_Allreduce(..., MPI_DOUBLE, ...)` into the `float *berr`, writing 4 bytes past
+    #   the end of the array. Give it room for that, and a scratch buffer to write into.
+    #   https://github.com/xiaoyeli/superlu_dist/issues/237
+    # - With equilibration, psgssvx_ABglobal broadcasts its `float` scale factors with
+    #   `MPI_DOUBLE`, overflowing them on every rank but the root, so turn it off there.
+    #   https://github.com/xiaoyeli/superlu_dist/issues/238
+    berr_c = $T === Float32 ? Vector{$T}(undef, nrhs + 1) : berr
+    if $T === Float32 && A.grid.nprow * A.grid.npcol > 1 && options.Equil == Common.YES
+        options.Equil = Common.NO
+    end
     info = Ref{Int32}()
     $L.$(Symbol(:p, prefixsymbol(T), :gssvx_ABglobal))(
-        options, A, perm, b, size(b, 1), size(b, 2),
-        A.grid, LU, berr, stat, info
+        options, A, perm, b, max(1, size(b, 1)), nrhs,
+        A.grid, LU, berr_c, stat, info
     )
-    # TODO: error handle
-    info[] == 0 || throw(ArgumentError("Something wrong :)"))
+    $T === Float32 && copyto!(berr, 1, berr_c, 1, nrhs)
+    info[] == 0 ||
+        error("Error INFO = $(info[]) from p$(prefixsymbol($T))gssvx_ABglobal")
     return b, perm, LU, stat
 end
 function pgssvx_ABdist!(
@@ -121,11 +145,11 @@ function pgssvx_ABdist!(
 )
     info = Ref{Int32}()
     $L.$(Symbol(:p, prefixsymbol(T), :gssvx))(
-    options, A, perm, b, size(b, 1), size(b, 2),
+    options, A, perm, b, max(1, size(b, 1)), size(b, 2),
     A.grid, LU, Solve, berr, stat, info
     )
     info[] == 0 ||
-        error("Error INFO = $(info[]) from pgssvx")
+        error("Error INFO = $(info[]) from p$(prefixsymbol($T))gssvx")
     return b, perm, LU, stat
 end
 function inf_norm_error_dist(x::Array{$T}, xtrue::Array{$T}, grid::Grid{$I})
@@ -153,14 +177,12 @@ end
 function pgstrs_prep!(
     F::SuperLUFactorization{$T, $I}
 )
-    if size(F.b, 2) != 0
-        gstrs = unsafe_load(F.solve.gstrs_comm)
-        $L.superlu_free_dist(gstrs.B_to_X_SendCnt)
-        $L.superlu_free_dist(gstrs.X_to_B_SendCnt)
-        $L.superlu_free_dist(gstrs.ptr_to_ibuf)
-    else # there has been no gstrs_comm malloc'd, so do that.
-
-    end
+    # Free the buffers allocated by `pgstrs_init`, as `pxgstrs_finalize` does, but keep
+    # `gstrs_comm` itself for the next `pgstrs_init`.
+    gstrs = unsafe_load(F.solve.gstrs_comm)
+    $L.superlu_free_dist(gstrs.B_to_X_SendCnt)
+    $L.superlu_free_dist(gstrs.X_to_B_SendCnt)
+    $L.superlu_free_dist(gstrs.ptr_to_ibuf)
     return F
 end
 

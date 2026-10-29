@@ -10,9 +10,9 @@ Each local matrix stores a subset of rows specified by `A.globalrows`
 $(FIELDS)
 """
 mutable struct DistributedSuperMatrix{T, I, S, F, J, G} <: AbstractSuperMatrix{T, I, S}
-    """Internal: Reference to `Common.SuperMatrix{I}`"""
+    """Internal: Reference to the C `SuperMatrix`"""
     supermatrix::Base.RefValue{S} # the supermatrix
-    """Internal: Reference to storage format `Common.NRFormat_loc{I}` held by supermatrix"""
+    """Internal: Reference to the C storage format `NRformat_loc` held by supermatrix"""
     format::Base.RefValue{F} # the internal storage
     """Julia-side storage, of type `SparseBase.CSRStore. Keeps memory alive.`"""
     store::J #keepalive for format
@@ -54,7 +54,8 @@ Construct a DistributedSuperMatrix from a finished `SparseBase.CSRStore`.
 function DistributedSuperMatrix(
     A::SparseBase.CSRStore{<:Any, CIndex{Ti}}, firstrow, globalsize, grid::Grid{Ti}
 ) where {Ti}
-    fmtref = Ref(Common.NRformat_loc{Ti}(
+    L = libmodule(Ti)
+    fmtref = Ref(L.NRformat_loc(
         nstored(A),
         A.vdim,
         firstrow - 1, # start of row range.
@@ -62,7 +63,7 @@ function DistributedSuperMatrix(
         Base.unsafe_convert(Ptr{Ti}, A.ptr),
         Base.unsafe_convert(Ptr{Ti}, A.idx)
     ))
-    superref = Ref(Common.SuperMatrix{Ti}(
+    superref = Ref(L.SuperMatrix(
         Common.SLU_NR_loc,
         toslutype(storedeltype(A)),
         Common.SLU_GE,
@@ -124,7 +125,7 @@ Valid element types are `{Float32, Float64, ComplexF64}`.
 """
 function DistributedSuperMatrix((rows, cols)::NTuple{2, <:AbstractVector}, v, firstrow, localsize, globalsize, grid::Grid{Ti}) where {Ti}
     return DistributedSuperMatrix(
-        SparseBase.CSRStore(ptr, idx, v, localsize),
+        SparseBase.CoordinateStore((rows, cols), v, localsize),
         firstrow,
         globalsize,
         grid
@@ -150,7 +151,8 @@ function Communication.scatterstore!(
     rstore.store = A
     rstore.globalsize = (globalrows, size(A, 2))
     rstore.first_row = firstrow
-    rstore.format = Ref(Common.NRformat_loc{Ti}(
+    L = libmodule(Ti)
+    rstore.format = Ref(L.NRformat_loc(
         SparseBase.nstored(A),
         A.vdim,
         firstrow - 1, # start of row range.
@@ -158,7 +160,7 @@ function Communication.scatterstore!(
         Base.unsafe_convert(Ptr{Ti}, A.ptr),
         Base.unsafe_convert(Ptr{Ti}, A.idx)
     ))
-    rstore.supermatrix = Ref(Common.SuperMatrix{Ti}(
+    rstore.supermatrix = Ref(L.SuperMatrix(
         Common.SLU_NR_loc,
         toslutype(storedeltype(A)),
         Common.SLU_GE,

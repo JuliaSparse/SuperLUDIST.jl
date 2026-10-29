@@ -1,27 +1,31 @@
 # Grid (gridinfo_t) functions:
 ##############################
-# const Grid{I} = SuperLUDIST_Common.gridinfo_t{I}
-# const Grid3D{I} = SuperLUDIST_Common.gridinfo3d_t{I}
-struct Grid{I}
-    comm::MPI.Comm
-    gridinfo::SuperLUDIST_Common.gridinfo_t{I}
-end
-struct Grid3D{I}
-    comm::MPI.Comm
-    gridinfo::SuperLUDIST_Common.gridinfo3d_t{I}
-end
+"""
+    Grid{Ti}(nprow, npcol, comm = MPI.COMM_WORLD; batch = false, usermap = nothing)
 
+A 2D `nprow × npcol` process grid for SuperLU_DIST with index type `Ti ∈ (Int32, Int64)`,
+built from the first `nprow * npcol` ranks of `comm`. MPI is initialized if necessary.
 
+With `batch = true` the ranks are mapped onto the grid by `usermap`, a `nprow × npcol`
+matrix of ranks (default: row-major order).
+
+Fields of the underlying `gridinfo_t`, such as `iam`, `nprow` and `npcol`, are available as
+properties.
+"""
+struct Grid{I, G}
+    comm::MPI.Comm
+    gridinfo::Base.RefValue{G}
+end
 
 for I ∈ (:Int32, :Int64)
 L = Symbol(String(:SuperLU_) * String(I))
-libname = Symbol(:libsuperlu_dist_, I)
 @eval begin
-function gridmap!(g::Grid{$I}, nprow, npcol, usermap::Matrix{Int32})
+function gridmap!(g::Grid{$I}, nprow, npcol, usermap::AbstractMatrix{<:Integer})
     myrank = MPI.Comm_rank(g.comm)
     color = myrank ÷ (nprow * npcol)
     subcomm = MPI.Comm_split(g.comm, color, myrank)
-    $L.superlu_gridmap(subcomm, nprow, npcl, usermap, size(usermap, 1), g)
+    usermap = convert(Matrix{Cint}, usermap)
+    $L.superlu_gridmap(subcomm, nprow, npcol, usermap, size(usermap, 1), g)
     return g
 end
 function gridinit!(g::Grid{$I}, nprow, npcol)
@@ -29,21 +33,13 @@ function gridinit!(g::Grid{$I}, nprow, npcol)
     return g
 end
 function Grid{$I}(nprow::Integer, npcol::Integer, comm = MPI.COMM_WORLD; batch = false, usermap = nothing)
-    $I == Int32 && libsuperlu_dist_Int32 === nothing && 
+    $I == Int32 && libsuperlu_dist_Int32 === nothing &&
         (throw(ArgumentError("libsuperlu_dist_Int32 is not loaded.")))
-    $I == Int64 && libsuperlu_dist_Int64 === nothing && 
+    $I == Int64 && libsuperlu_dist_Int64 === nothing &&
         (throw(ArgumentError("libsuperlu_dist_Int64 is not loaded.")))
 
     !MPI.Initialized() && MPI.Init()
-    g = Grid{$I}(
-        comm,
-        SuperLUDIST_Common.gridinfo_t{$I}(
-            Base.unsafe_convert(MPI.MPI_Comm, comm), 
-            superlu_scope_t(comm), 
-            superlu_scope_t(comm), 
-            convert(Cint, MPI.Comm_rank(comm)), nprow, npcol
-        )
-    )
+    g = Grid{$I, $L.gridinfo_t}(comm, cref($L.gridinfo_t))
     if !batch
         gridinit!(g, nprow, npcol)
     else
@@ -51,129 +47,126 @@ function Grid{$I}(nprow::Integer, npcol::Integer, comm = MPI.COMM_WORLD; batch =
     end
     if g.iam == -1 || g.iam >= nprow * npcol
         $L.superlu_gridexit(g)
-        return g
     else
         finalizer(g.gridinfo) do G
             !MPI.Finalized() && $L.superlu_gridexit(G)
         end
-        return g
     end
+    return g
 end
-# Base.unsafe_convert(T::Type{Ptr{SuperLUDIST_Common.gridinfo_t{$I}}}, g::Grid{$I}) = 
-    # Base.unsafe_convert(T, g.grid)
-Base.unsafe_convert(::Type{Ptr{SuperLUDIST_Common.gridinfo_t{$I}}}, O::Grid{$I}) = 
-    Ptr{gridinfo_t{$I}}(pointer_from_objref(O.gridinfo))
-Base.unsafe_convert(
-    ::Type{Ptr{SuperLUDIST_Common.gridinfo_t{$I}}}, 
-    O::SuperLUDIST_Common.gridinfo_t{$I}
-) = Ptr{gridinfo_t{$I}}(pointer_from_objref(O))
-
 end # end eval
 end # end for
 
-function gridmap!(r, comm, nprow, npcol)
-    usermap = LinearIndices((nprow, npcol))' .- 1
-    return gridmap!(r, comm, nprow, npcol, usermap)
-end
+Base.unsafe_convert(::Type{Ptr{G}}, g::Grid{<:Any, G}) where G =
+    Base.unsafe_convert(Ptr{G}, g.gridinfo)
 
-function SuperLUDIST_Common.superlu_scope_t(
-    comm; Np = MPI.Comm_size(comm), Iam = MPI.Comm_rank(comm)
-)
-    return SuperLUDIST_Common.superlu_scope_t(
-        Base.unsafe_convert(MPI.MPI_Comm, comm), Np, Iam
-    )
+function gridmap!(g::Grid, nprow, npcol)
+    usermap = permutedims(LinearIndices((npcol, nprow))) .- 1
+    return gridmap!(g, nprow, npcol, usermap)
 end
 
 function Base.getproperty(g::Grid, s::Symbol)
     # Julia level functions expect a Comm, not an MPI_Comm / Int32.
     s === :comm && return getfield(g, s)
     s === :gridinfo && return getfield(g, s)
-    return getfield(g.gridinfo, s)
+    return getfield(getfield(g, :gridinfo)[], s)
 end
+Base.propertynames(g::Grid) = (:comm, :gridinfo, fieldnames(eltype(getfield(g, :gridinfo)))...)
 
 # Option functions:
 ###################
-const Options = Common.superlu_dist_options_t
-Base.unsafe_convert(::Type{Ptr{superlu_dist_options_t}}, O::superlu_dist_options_t) = 
-    Ptr{superlu_dist_options_t}(pointer_from_objref(O))
+"""
+    Options{Ti}(; kwargs...)
+
+Solver options (`superlu_dist_options_t`) for SuperLU_DIST with index type `Ti`.
+They start from SuperLU_DIST's defaults (`set_default_options_dist`), and any field may be
+set with a keyword argument or as a property afterwards, for example
+`Options{Int64}(; ColPerm = SuperLUDIST.Common.MMD_AT_PLUS_A, PrintStat = SuperLUDIST.Common.NO)`.
+"""
+struct Options{I, O}
+    options::Base.RefValue{O}
+end
+Options(; kwargs...) = Options{Int}(; kwargs...)
+
+for I ∈ (:Int32, :Int64)
+    L = Symbol(String(:SuperLU_) * String(I))
+    @eval function Options{$I}(; kwargs...)
+        r = cref($L.superlu_dist_options_t)
+        $L.set_default_options_dist(r)
+        for (k, v) in kwargs
+            setfield_ref!(r, k, v)
+        end
+        return Options{$I, $L.superlu_dist_options_t}(r)
+    end
+end
+Base.getproperty(o::Options, s::Symbol) =
+    s === :options ? getfield(o, s) : getfield(getfield(o, :options)[], s)
+Base.setproperty!(o::Options, s::Symbol, v) = setfield_ref!(getfield(o, :options), s, v)
+Base.propertynames(o::Options) = fieldnames(eltype(getfield(o, :options)))
+Base.unsafe_convert(::Type{Ptr{O}}, o::Options{<:Any, O}) where O =
+    Base.unsafe_convert(Ptr{O}, getfield(o, :options))
 
 # ScalePerm (ScalePermstruct_t) functions:
 ##########################################
 struct ScalePerm{T, I, S}
-    scaleperm::S
+    scaleperm::Base.RefValue{S}
 end
 ScalePerm{T}(m, n) where T = ScalePerm{T, Int}(m, n)
-ScalePerm{T, I}(m, n) where {T, Ti, I<:CIndex{Ti}} = 
+ScalePerm{T, I}(m, n) where {T, Ti, I<:CIndex{Ti}} =
     ScalePerm{T, Ti}(m, n)
 
 function Base.getproperty(g::ScalePerm, s::Symbol)
     s === :scaleperm && return Base.getfield(g, s)
-    return getproperty(g.scaleperm, s)
+    return getfield(g.scaleperm[], s)
 end
 for I ∈ (:Int32, :Int64)
     L = Symbol(String(:SuperLU_) * String(I))
-    libname = Symbol(:libsuperlu_dist_, I)
     for T ∈ (Float32, Float64, ComplexF64)
+    S = :($L.$(prefixname(T, :ScalePermstruct_t)))
     @eval begin
-    
     function ScalePerm{$T, $I}(m, n)
-        r = Common.$(prefixname(T, :ScalePermstruct_t)){$I}(
-            Common.NOEQUIL,
-            Ptr{Cvoid}(), Ptr{Cvoid}(),
-            Ptr{$I}(Libc.malloc(sizeof($I) * m)),
-            Ptr{$I}(Libc.malloc(sizeof($I) * n))
-        )
-        
-        return ScalePerm{$T, $I, typeof(r)}(finalizer(r) do x
-            if !MPI.Finalized()
-                Libc.free(x.perm_r)
-                Libc.free(x.perm_c)
-                (x.DiagScale == Common.ROW || x.DiagScale == Common.BOTH) && Libc.free(x.R)
-                (x.DiagScale == Common.COL || x.DiagScale == Common.BOTH) && Libc.free(x.C)
-            end
-        end)
+        r = ScalePermstructInit(cref($S), m, n)
+        return ScalePerm{$T, $I, $S}(r)
     end
-    Base.unsafe_convert(T::Type{Ptr{$(prefixname(T, :ScalePermstruct_t)){$I}}}, S::ScalePerm{$T, $I}) = 
+    Base.unsafe_convert(T::Type{Ptr{$S}}, S::ScalePerm{$T, $I}) =
         Base.unsafe_convert(T, S.scaleperm)
-    Base.unsafe_convert(T::Type{Ptr{$(prefixname(T, :ScalePermstruct_t)){$I}}}, S::$(prefixname(T, :ScalePermstruct_t)){$I}) = 
-    Ptr{$(prefixname(T, :ScalePermstruct_t)){$I}}(pointer_from_objref(S))
 end # end eval
 end # end for
 end # end for
 
 # LUFactors (LUstruct_t) functions:
 ###################################
-struct LUFactors{T, I, S, G}
-    LU::S
+mutable struct LUFactors{T, I, S, G}
+    LU::Base.RefValue{S}
     grid::G
     n::I
+    # `Destroy_LU` may only be called once the factors have been computed.
+    factored::Bool
 end
 LUFactors{T}(n, grid) where T = LUFactors{T, Int}(n, grid)
 LUFactors{T, I}(n, grid) where {T, Ti, I<:CIndex{Ti}} = LUFactors{T, Ti}(n, grid)
 
 function Base.getproperty(g::LUFactors, s::Symbol)
-    s === :LU && return Base.getfield(g, s)
-    s === :grid && return Base.getfield(g, s)
-    s === :n && return Base.getfield(g, s)
-    return getproperty(g.LU, s)
+    s ∈ fieldnames(LUFactors) && return Base.getfield(g, s)
+    return getfield(g.LU[], s)
 end
 
 for I ∈ (:Int32, :Int64)
     L = Symbol(String(:SuperLU_) * String(I))
-    libname = Symbol(:libsuperlu_dist_, I)
     for T ∈ (Float32, Float64, ComplexF64)
+    S = :($L.$(prefixname(T, :LUstruct_t)))
     @eval begin
     function LUFactors{$T, $I}(n, grid::G) where G
-        r = Common.$(prefixname(T, :LUstruct_t)){$I}(Ptr{Cvoid}(), Ptr{Cvoid}(), Ptr{Cvoid}(), '\0')
-        LUstructInit(r, n, grid)
-        return LUFactors{$T, $I, eltype(r), G}(r, grid, n)
+        r = LUstructInit(cref($S), n)
+        LU = LUFactors{$T, $I, $S, G}(r, grid, n, false)
+        return finalizer(LU) do x
+            MPI.Finalized() && return
+            x.factored && Destroy_LU(x.LU, x.n, x.grid)
+            LUstructFree(x.LU)
+        end
     end
-    Base.unsafe_convert(T::Type{Ptr{$(prefixname(T, :LUstruct_t)){$I}}}, S::LUFactors{$T, $I}) = 
+    Base.unsafe_convert(T::Type{Ptr{$S}}, S::LUFactors{$T, $I}) =
         Base.unsafe_convert(T, S.LU)
-    Base.unsafe_convert(
-        ::Type{Ptr{$(prefixname(T, :LUstruct_t)){$I}}}, 
-        L::$(prefixname(T, :LUstruct_t)){$I}
-    ) = Ptr{$(prefixname(T, :LUstruct_t)){$I}}(pointer_from_objref(L))
     end # end eval
     end # end for
 end # end for
@@ -181,37 +174,26 @@ end # end for
 # LUStat (SuperLUStat_t) functions:
 ###################################
 struct LUStat{I, S}
-    stat::S
+    stat::Base.RefValue{S}
 end
 LUStat() = LUStat{Int}()
 LUStat{I}() where {Ti, I<:CIndex{Ti}} = LUStat{Ti}()
 
 for I ∈ (:Int32, :Int64)
     L = Symbol(String(:SuperLU_) * String(I))
-    libname = Symbol(:libsuperlu_dist_, I)
     @eval begin
-        function PStatInit(r::SuperLUStat_t{$I})
+        function PStatInit(r::Base.RefValue{$L.SuperLUStat_t})
             $L.PStatInit(r)
             return finalizer(r) do x
                 !MPI.Finalized() && $L.PStatFree(x)
             end
         end
         function LUStat{$I}()
-            r = SuperLUStat_t{$I}(
-                Ptr{Cvoid}(),
-                Ptr{Cvoid}(),
-                Ptr{Cvoid}(),
-                0, 0, 0, 0., 0., 0., 0, 0
-            )
-            PStatInit(r)
-            return LUStat{$I, typeof(r)}(r)
+            r = PStatInit(cref($L.SuperLUStat_t))
+            return LUStat{$I, $L.SuperLUStat_t}(r)
         end
-        Base.unsafe_convert(T::Type{Ptr{Common.SuperLUStat_t{$I}}}, S::LUStat{$I}) = 
+        Base.unsafe_convert(T::Type{Ptr{$L.SuperLUStat_t}}, S::LUStat{$I}) =
             Base.unsafe_convert(T, S.stat)
-        Base.unsafe_convert(
-            ::Type{Ptr{Common.SuperLUStat_t{$I}}}, 
-            S::Common.SuperLUStat_t{$I}
-        ) = Ptr{Common.SuperLUStat_t{$I}}(pointer_from_objref(S))
 
         function PStatPrint(options, stat::LUStat{$I}, grid)
             $L.PStatPrint(options, stat, grid)
@@ -221,47 +203,31 @@ end # end for
 
 # SolveData (SOLVEstruct_t) functions:
 ######################################
-mutable struct SolveData{T, I, S}
-    data::S
-    options::Options
+mutable struct SolveData{T, I, S, O}
+    data::Base.RefValue{S}
+    options::O
 end
 SolveData{T}(options) where T = SolveData{T, Int}(options)
 
-SolveData{T, I}(options) where {T, Ti, I<:CIndex{Ti}} = 
+SolveData{T, I}(options) where {T, Ti, I<:CIndex{Ti}} =
     SolveData{T, Ti}(options)
 
 function Base.getproperty(g::SolveData, s::Symbol)
     s === :options && return Base.getfield(g, s)
     s === :data && return Base.getfield(g, s)
-    return getproperty(g.data, s)
+    return getfield(g.data[], s)
 end
 
 for I ∈ (:Int32, :Int64)
     L = Symbol(String(:SuperLU_) * String(I))
-    libname = Symbol(:libsuperlu_dist_, I)
     for T ∈ (Float32, Float64, ComplexF64)
+    S = :($L.$(prefixname(T, :SOLVEstruct_t)))
     @eval begin
-    Base.unsafe_convert(T::Type{Ptr{$L.$(prefixname(T, :SOLVEstruct_t)){$I}}}, S::SolveData{$T, $I}) = 
+    Base.unsafe_convert(T::Type{Ptr{$S}}, S::SolveData{$T, $I}) =
         Base.unsafe_convert(T, S.data)
-    Base.unsafe_convert(
-        T::Type{Ptr{$L.$(prefixname(T, :SOLVEstruct_t)){$I}}}, 
-        S::$L.$(prefixname(T, :SOLVEstruct_t)){$I}
-    ) = Ptr{$L.$(prefixname(T, :SOLVEstruct_t)){$I}}(pointer_from_objref(S))
-        
-    function SolveData{$T, $I}(options)
-        r = $L.$(prefixname(T, :SOLVEstruct_t)){$I}(
-            Ptr{Cvoid}(),
-            Ptr{Cvoid}(),
-            0,
-            Ptr{Cvoid}(),
-            Ptr{Cvoid}(),
-            Ptr{Cvoid}(),
-            Ptr{Cvoid}(),
-            Ptr{Cvoid}(),
-            Ptr{Cvoid}(),
-            Ptr{Cvoid}()
-        )
-        S = SolveData{$T, $I, eltype(r)}(r, options)
+
+    function SolveData{$T, $I}(options::O) where O <: Options{$I}
+        S = SolveData{$T, $I, $S, O}(cref($S), options)
         return finalizer(S) do solve
             !MPI.Finalized() && options.SolveInitialized == Common.YES &&
             $L.$(prefixname(T, :SolveFinalize))(options, solve)
@@ -271,22 +237,23 @@ for I ∈ (:Int32, :Int64)
 end # end for
 end # end for
 
-mutable struct SuperLUFactorization{T, I, A, Solve, Perm, Factors, Stat, B} <: LinearAlgebra.Factorization{T}
+mutable struct SuperLUFactorization{T, I, A, Opts, Solve, Perm, Factors, Stat, B} <: LinearAlgebra.Factorization{T}
     mat::A
-    options::Options
+    options::Opts
     solve::Solve
     perm::Perm
     factors::Factors
     stat::Stat
     berr::Vector{T}
     b::B
-    function SuperLUFactorization{T, I, A, Solve, Perm, Factors, Stat, B}(
-        mat::A, options::Options, solve::Solve, perm::Perm,
+    function SuperLUFactorization{T, I, A, Opts, Solve, Perm, Factors, Stat, B}(
+        mat::A, options::Opts, solve::Solve, perm::Perm,
         factors::Factors, stat::Stat, berr::Vector{T}, b::B
     ) where {
-        T<:Union{Float32, Float64, ComplexF64}, 
-        I <: Union{Int32, Int64}, 
+        T<:Union{Float32, Float64, ComplexF64},
+        I <: Union{Int32, Int64},
         A <: AbstractSuperMatrix{T, I},
+        Opts <: Options{I},
         Solve <: Union{SolveData{T, I}, Nothing},
         Perm <: ScalePerm{T, I},
         Factors <: LUFactors{T, I},
@@ -299,10 +266,10 @@ end
 isfactored(F::SuperLUFactorization) = F.options.Fact == Common.FACTORED
 
 function SuperLUFactorization(
-    A::AbstractSuperMatrix{Tv, Ti}, options, 
+    A::AbstractSuperMatrix{Tv, Ti}, options::Opts,
     solve::Solve, perm::Perm, factors::Factors, stat::Stat, berr::Vector{Tv}, b::B
-) where {Tv, Ti, Solve, Perm, Factors, Stat, B}
-    return SuperLUFactorization{Tv, Ti, typeof(A), Solve, Perm, Factors, Stat, B}(
+) where {Tv, Ti, Opts, Solve, Perm, Factors, Stat, B}
+    return SuperLUFactorization{Tv, Ti, typeof(A), Opts, Solve, Perm, Factors, Stat, B}(
         A, options, solve, perm, factors, stat, berr, b
     )
 end
@@ -315,18 +282,20 @@ for I ∈ (:Int32, :Int64)
     L = Symbol(String(:SuperLU_) * String(I))
     libname = Symbol(:libsuperlu_dist_, I)
     @eval begin
-        superlu_set_num_threads(::Type{$I}, n) = 
-            ccall(
-                (:omp_set_num_threads_, $libname), Cvoid, (Ref{Int32},), Int32(n)
-            )
-        # SuperMatrix functions:
-        ########################
-        Base.unsafe_convert(T::Type{Ptr{SuperMatrix{$I}}}, A::AbstractSuperMatrix{<:Any, $I}) = 
-            Base.unsafe_convert(T, A.supermatrix)
+        """
+            superlu_set_num_threads(Ti, n)
+
+        Set the number of OpenMP threads used by the SuperLU_DIST library with index type `Ti`
+        on this rank.
+        """
+        function superlu_set_num_threads(::Type{$I}, n)
+            omp_set_num_threads = dlsym(dlopen($libname), :omp_set_num_threads)
+            ccall(omp_set_num_threads, Cvoid, (Cint,), n)
+        end
     end
     for T ∈ (Float32, Float64, ComplexF64)
         @eval begin
-        function inf_norm_error_dist(n, nrhs, b, ldb, xtrue::AbstractVector{$T}, ldx, grid::Grid{$I})
+        function inf_norm_error_dist(n, nrhs, b, ldb, xtrue::AbstractVecOrMat{$T}, ldx, grid::Grid{$I})
             return $L.$(prefixname(T, :inf_norm_error_dist))(n, nrhs, b, ldb, xtrue, ldx, grid)
         end
     end

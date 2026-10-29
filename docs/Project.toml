@@ -1,3 +1,9 @@
 [deps]
 Documenter = "e30172f5-a6a5-5a46-863b-614d45cd2de4"
 SuperLUDIST = "4cd002a6-0da4-410d-a012-232df062f478"
+
+[compat]
+Documenter = "1"
+
+[sources]
+SuperLUDIST = {path = ".."}

@@ -3,10 +3,10 @@ for I ∈ (:Int32, :Int64)
 L = Symbol(String(:SuperLU_) * String(I))
 @eval begin
     function _create_csrlocal_matrix(
-        a::Base.RefValue{$L.SuperMatrix}, m, n, nnz_local, m_local, first_row, 
-        nzval::AbstractVector{$T}, 
-        colindices::AbstractVector{CIndex{$I}}, 
-        rowptrs::AbstractVector{CIndex{$I}}, 
+        a::Base.RefValue{$L.SuperMatrix}, m, n, nnz_local, m_local, first_row,
+        nzval::AbstractVector{$T},
+        colindices::AbstractVector{CIndex{$I}},
+        rowptrs::AbstractVector{CIndex{$I}},
         mtype = Common.SLU_GE
     )
         $L.$(prefixname(T, :Create_CompRowLoc_Matrix_dist))(
@@ -18,7 +18,7 @@ L = Symbol(String(:SuperLU_) * String(I))
     end
 
     function _create_cscglobal_matrix(
-        a::Base.RefValue{SuperMatrix{$I}}, m, n, nnz, 
+        a::Base.RefValue{$L.SuperMatrix}, m, n, nnz,
         nzval::AbstractVector{$T},
         rowindices::AbstractVector{$I},
         colptrs::AbstractVector{$I},
@@ -53,27 +53,24 @@ L = Symbol(String(:SuperLU_) * String(I))
         $L.$(prefixname(T, :FillRHS_dist))(trans, nrhs, xtrue, ldx, A, b, ldb)
     end
 
-    function ScalePermstructFree(r::Base.RefValue{$(prefixname(T, :ScalePermstruct_t)){$I}})
+    function ScalePermstructFree(r::Base.RefValue{$L.$(prefixname(T, :ScalePermstruct_t))})
         $L.$(prefixname(T, :ScalePermstructFree))(r)
     end
-    function ScalePermstructInit(r::Base.RefValue{$(prefixname(T, :ScalePermstruct_t)){$I}}, m, n)
+    function ScalePermstructInit(r::Base.RefValue{$L.$(prefixname(T, :ScalePermstruct_t))}, m, n)
         $L.$(prefixname(T, :ScalePermstructInit))(m, n, r)
         return finalizer(r) do x
             !MPI.Finalized() && ScalePermstructFree(x)
         end
     end
-    function LUstructFree(r::$(prefixname(T, :LUstruct_t)){$I})
+    function LUstructFree(r::Base.RefValue{$L.$(prefixname(T, :LUstruct_t))})
         $L.$(prefixname(T, :LUstructFree))(r)
     end
-    function Destroy_LU(r::$(prefixname(T, :LUstruct_t)){$I}, n, grid)
-        $L.$(prefixname(T, :Destroy_LU))(n, grid, r) # why do I have to grid.grid here?!
+    function Destroy_LU(r::Base.RefValue{$L.$(prefixname(T, :LUstruct_t))}, n, grid)
+        $L.$(prefixname(T, :Destroy_LU))(n, grid, r)
     end
-    function LUstructInit(r::$(prefixname(T, :LUstruct_t)){$I}, n, grid)
+    function LUstructInit(r::Base.RefValue{$L.$(prefixname(T, :LUstruct_t))}, n)
         $L.$(prefixname(T, :LUstructInit))(n, r)
-        return finalizer(r) do x
-            !MPI.Finalized() && Destroy_LU(x, n, grid)
-            !MPI.Finalized() && LUstructFree(x)
-        end
+        return r
     end
 end
 end

@@ -49,9 +49,8 @@ xtrue_local = xtrue[A.first_row : A.first_row + localsize(A, 1) - 1, :] # shrink
 b1 = rand(localsize(A, 1), 0)
 _, F = pgssvx!(A, b1);
 b_local, F = pgssvx!(F, b_local);
-if !(iam == root) || (nprow * npcol == 1)
-    SuperLUDIST.inf_norm_error_dist(b_local, xtrue_local, grid)
-end
+iam == root && SuperLUDIST.inf_norm_error_dist(b_local, xtrue_local, grid)
+# PStatPrint is collective, so it must be called on every rank.
 SuperLUDIST.PStatPrint(F)
 
 # @show iam b_local xtrue_local

@@ -34,9 +34,8 @@ MPI.Bcast!(xtrue, root, comm)
 
 b, F = pgssvx!(A, b)
 
-if !(iam == root) || (nprow * npcol == 1)
-    SuperLUDIST.inf_norm_error_dist(b, xtrue, grid)
-end
+iam == root && SuperLUDIST.inf_norm_error_dist(b, xtrue, grid)
+# PStatPrint is collective, so it must be called on every rank.
 SuperLUDIST.PStatPrint(F)
 
 MPI.Finalize()

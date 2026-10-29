@@ -1,0 +1,29 @@
+[general]
+# `library_name`, `module_name`, `output_file_path`, `prologue_file_path` and the
+# ignore/exclusive lists are filled in per index width by `generate.jl`.
+library_name = "libsuperlu_dist_Int64"
+
+use_julia_native_enum_type = true
+use_deterministic_symbol = true
+auto_mutability = false
+extract_c_comment_style = "raw"
+
+output_ignorelist = [
+    "FC_GLOBAL",
+    "FC_GLOBAL_",
+    # MPI datatype handles are runtime values in MPI.jl, not compile-time constants.
+    "mpi_int_t",
+    "SuperLU_MPI_COMPLEX",
+    "SuperLU_MPI_DOUBLE_COMPLEX",
+    # GPU kernel tuning macros that depend on the GPU-only BLK_M/BLK_N.
+    "THR_M",
+    "THR_N",
+]
+
+[codegen]
+use_ccall_macro = true
+
+[codegen.macro]
+macro_mode = "basic"
+
+functionlike_macro_includelist = []

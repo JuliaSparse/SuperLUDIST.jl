@@ -1,65 +1,119 @@
 # SuperLUDIST.jl
 
-SuperLUDIST.jl is Julia wrapper around the [superlu_dist](https://github.com/xiaoyeli/superlu_dist) distributed sparse factorization library. superlu_dist contains a set of subroutines to solve a sparse linear system A*X=B.
+[![Stable](https://img.shields.io/badge/docs-stable-blue.svg)](https://juliasparse.github.io/SuperLUDIST.jl/stable/)
+[![Dev](https://img.shields.io/badge/docs-dev-blue.svg)](https://juliasparse.github.io/SuperLUDIST.jl/dev/)
+[![CI](https://github.com/JuliaSparse/SuperLUDIST.jl/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/JuliaSparse/SuperLUDIST.jl/actions/workflows/ci.yml?query=branch%3Amain)
+[![Coverage](https://codecov.io/gh/JuliaSparse/SuperLUDIST.jl/branch/main/graph/badge.svg)](https://codecov.io/gh/JuliaSparse/SuperLUDIST.jl)
+[![Aqua QA](https://raw.githubusercontent.com/JuliaTesting/Aqua.jl/master/badge.svg)](https://github.com/JuliaTesting/Aqua.jl)
 
-SuperLUDIST is a parallel extension to the serial SuperLU library. It is targeted for the distributed memory parallel machines. SuperLUDIST is implemented in ANSI C, with OpenMP for on-node parallelism and MPI for off-node communications. We are actively developing GPU acceleration capabilities.
+SuperLUDIST.jl is a Julia interface to [SuperLU_DIST](https://github.com/xiaoyeli/superlu_dist),
+the distributed-memory sparse direct solver from Lawrence Berkeley National Laboratory.
+SuperLU_DIST solves sparse linear systems `A*X = B` with an LU factorization, using MPI between
+ranks and OpenMP within each rank. See the
+[SuperLU_DIST documentation](https://portal.nersc.gov/project/sparse/superlu/) for details of the
+underlying library.
 
-[![Stable](https://img.shields.io/badge/docs-stable-blue.svg)](https://aa25desh.github.io/SuperLUDIST.jl/stable/)
-[![Dev](https://img.shields.io/badge/docs-dev-blue.svg)](https://aa25desh.github.io/SuperLUDIST.jl/dev/)
-[![Build Status](https://github.com/aa25desh/SuperLUDIST.jl/actions/workflows/CI.yml/badge.svg?branch=main)](https://github.com/aa25desh/SuperLUDIST.jl/actions/workflows/CI.yml?query=branch%3Amain)
-[![Coverage](https://codecov.io/gh/aa25desh/SuperLUDIST.jl/branch/main/graph/badge.svg)](https://codecov.io/gh/aa25desh/SuperLUDIST.jl)
-
+SuperLUDIST.jl uses SuperLU_DIST 9.3.1 from `SuperLU_DIST_jll`, and supports `Float32`, `Float64`
+and `ComplexF64` matrices with either `Int32` or `Int64` indices. Matrices can be replicated on
+every rank or distributed by rows, and factorizations can be reused for further right-hand sides.
 
 ## Installation
-`SuperLUDIST.jl` is available in the General registry through Julia's package manager. 
-Enter the Pkg REPL mode by typing `]` in the Julia REPL and then run:
-```julia
-pkg> add SuperLUDIST
-```
 
-or equivalently via the `Pkg.jl` API:
-```julia
-julia> import Pkg; Pkg.add("SuperLUDIST")
-```
-
-Proper use of `SuperLUDIST.jl` will typically also require `MPI.jl`, `SparseBase.jl` and possibly `MatrixMarket.jl`. These can be installed from the Pkg REPL mode:
-```julia
-pkg> add MPI SparseBase MatrixMarket
-```
-
-or equivalently:
-```julia
-julia> Pkg.add("MPI", "SparseBase", "MatrixMarket")
-```
-
-The binaries provided with Julia may not work correctly on your machine (this is currently affecting at least NERSC Perlmutter). 
-If this is the case you may provide your own library with:
+SuperLUDIST.jl is in the General registry. Press `]` in the Julia REPL to enter Pkg mode, then run:
 
 ```julia
-SuperLUDIST.set_libraries!(; libsuperlu_dist_Int32 = <PATH TO 32 BIT LIBRARY>, libsuperlu_dist_Int64 = <PATH TO 64 BIT LIBRARY>)
-``````
-
-These libraries should be built with the proper integer size (32 bit or 64 bit), 
-and should be linked against the MPI used by MPI.jl (on HPC clusters this should be your system MPI).
-
-You may provide one or the other, or both, but if the 32 or 64 bit integer libraries are unavailable 32 bit or 64 bit matrices will be unavailable respectively.
-
-## Usage
-Examples for running in replicated and distributed mode are provided in the examples directory. To run these examples
-follow the instructions provided [here](https://juliaparallel.org/MPI.jl/latest/configuration/) to set up your MPI correctly. In particular `mpiexecjl` should be in your path (it is typically found in `~/.julia/bin`)
-
-Then you can invoke a driver example:
-```
-mpiexecjl -n <nprocs> julia --project examples/basic_example.jl
+pkg> add SuperLUDIST MPI SparseArrays
 ```
 
-This command does a couple things. The first part launches MPI with `<nprocs>` ranks. The second part `julia --project` activates the current folder. If your installation is in the global environment you may omit `--project`, or provide a path to the environment you would like to use: `--project=~/MySuperLUProject`. Finally `examples/pdrive.jl` is the Julia script to be executed under MPI. 
+or, equivalently:
 
-Driver routine examples are found in the `examples` folder of this repository. The examples currently cover basic usage of `pgssvx` and `pgssvx_ABglobal` driver routines. These routines load matrix market files and generate right hand sides, which is not a typical use-case. Instead users will often build a submatrix on each rank, and construct a `DistributedSuperMatrix`.
+```julia
+julia> import Pkg; Pkg.add(["SuperLUDIST", "MPI", "SparseArrays"])
+```
 
-## Known Issues
-- CUDA support is currently disabled.
-- OpenMP will often oversubscribe single node setups. In this case you should use `SuperLUDIST.superlu_set_num_threads(Int32, <num>)` or `SuperLUDIST.superlu_set_num_threads(Int64, <num>)` to the number of OpenMP threads desired on each rank.
+To launch MPI programs, install `mpiexecjl` (into `~/.julia/bin`, which should be on your `PATH`):
+
+```julia
+julia> using MPI; MPI.install_mpiexecjl()
+```
+
+On HPC clusters you will usually want your system MPI, see the
+[MPI.jl configuration docs](https://juliaparallel.org/MPI.jl/stable/configuration/). If the
+`SuperLU_DIST_jll` binaries don't work on your machine (this has been the case on NERSC
+Perlmutter), you can use your own SuperLU_DIST 9.3.x libraries, built with 32-bit and 64-bit
+indices and linked against the MPI used by MPI.jl:
+
+```julia
+SuperLUDIST.set_libraries!(;
+    libsuperlu_dist_Int32 = "/path/to/libsuperlu_dist_Int32.so",
+    libsuperlu_dist_Int64 = "/path/to/libsuperlu_dist_Int64.so",
+)
+```
+
+Either library may be omitted, in which case matrices with that index type are unavailable.
+Restart Julia for the change to take effect.
+
+## Quick start
+
+```julia
+# solve.jl
+using MPI, SuperLUDIST, SparseArrays, LinearAlgebra
+using SuperLUDIST: Grid, pgssvx!
+
+MPI.Init()
+grid = Grid{Int32}(1, MPI.Comm_size(MPI.COMM_WORLD))   # a 1 × nranks process grid
+
+n = 100
+S = spdiagm(-1 => fill(-1.0, n - 1), 0 => fill(4.0, n), 1 => fill(-1.0, n - 1))
+b = S * ones(n)
+
+A = ReplicatedSuperMatrix(S, grid)    # every rank holds the same matrix
+x, F = pgssvx!(A, copy(b))            # factorize and solve
+y = F \ (2b)                          # reuse the factorization
+
+MPI.Finalize()
+```
+
+```sh
+mpiexecjl -n 4 julia --project solve.jl
+```
+
+For large problems, use a `DistributedSuperMatrix`, where each rank holds only a block of rows of
+the matrix and right-hand side. The [`examples`](examples) directory has complete scripts for both
+kinds of matrices, for example:
+
+```sh
+mpiexecjl -n 4 julia --project examples/basic_example.jl
+```
+
+This launches 4 MPI ranks running `examples/basic_example.jl`, which reads a Matrix Market file on
+the root rank, distributes it over a 2×2 process grid, then factorizes and solves. `--project`
+activates the environment in the current directory; omit it, or point it elsewhere (e.g.
+`--project=~/MySuperLUProject`), depending on where SuperLUDIST.jl is installed.
+
+See the [documentation](https://juliasparse.github.io/SuperLUDIST.jl/dev/) for more.
+
+## Known issues
+
+- GPU acceleration is not supported.
+- OpenMP will often oversubscribe single-node setups. Set `OMP_NUM_THREADS`, or call
+  `SuperLUDIST.superlu_set_num_threads(Int64, n)` (or `Int32`), to choose the number of threads
+  per rank.
+- Because of a bug in SuperLU_DIST ([xiaoyeli/superlu_dist#238](https://github.com/xiaoyeli/superlu_dist/issues/238)),
+  `Float32` solves of a `ReplicatedSuperMatrix` on more than one rank are done without
+  equilibration (`Equil = NO`). Use a `DistributedSuperMatrix` if you need it.
+
+## Development
+
+The low-level bindings in `lib/` are generated from the `SuperLU_DIST_jll` headers with
+Clang.jl. See [`gen/README.md`](gen/README.md) for how to regenerate and check them.
 
 ## About the project
-This is summer a project at [Lawrence Berkeley National Lab](https://www.lbl.gov) with scalable solvers group Led by [Dr. Xiaoye Sherry Li](https://crd.lbl.gov/divisions/amcr/applied-mathematics-dept/scalable-solvers/members/staff-members/xiaoye-li/).
+
+SuperLUDIST.jl began as a summer project at [Lawrence Berkeley National Lab](https://www.lbl.gov)
+with the [Scalable Solvers Group](https://crd.lbl.gov/departments/applied-mathematics/scalable-solvers/)
+led by Dr. Xiaoye Sherry Li,
+by Aadesh Deshmukh and Raye Kimmerer. It is now maintained by
+[JuliaSparse](https://github.com/JuliaSparse).
+
+SuperLU_DIST is distributed under a BSD license, see [LICENSE](LICENSE).
