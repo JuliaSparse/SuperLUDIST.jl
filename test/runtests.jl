@@ -1,13 +1,8 @@
 using SuperLUDIST
 using MPI
 using Test
-using Aqua
 
 @testset "SuperLUDIST.jl" begin
-    @testset "Aqua" begin
-        Aqua.test_all(SuperLUDIST)
-    end
-
     @testset "Options" begin
         for Ti in (Int32, Int64)
             o = SuperLUDIST.Options{Ti}(; PrintStat = SuperLUDIST.Common.NO)

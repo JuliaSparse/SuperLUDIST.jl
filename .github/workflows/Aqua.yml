@@ -1,0 +1,33 @@
+name: Aqua
+on:
+  pull_request:
+  push:
+    branches:
+      - main
+    tags: ['*']
+  workflow_dispatch:
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ startsWith(github.ref, 'refs/pull/') }}
+permissions:
+  actions: write  # julia-actions/cache prunes old caches
+  contents: read
+jobs:
+  aqua:
+    name: Aqua.jl
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: julia-actions/setup-julia@v3
+        with:
+          version: '1'
+      - uses: julia-actions/cache@v3
+      - name: Run Aqua
+        shell: julia --color=yes {0}
+        run: |
+          using Pkg
+          Pkg.activate(; temp = true)
+          Pkg.develop(path = ".")
+          Pkg.add("Aqua")
+          using Aqua, SuperLUDIST
+          Aqua.test_all(SuperLUDIST)
