@@ -123,8 +123,8 @@ coverage.
 
 SuperLUDIST.jl began as a summer project at [Lawrence Berkeley National Lab](https://www.lbl.gov)
 with the [Scalable Solvers Group](https://crd.lbl.gov/departments/applied-mathematics/scalable-solvers/)
-led by Dr. Xiaoye Sherry Li,
-by Aadesh Deshmukh and Raye Kimmerer. It is now maintained by
+led by Dr. Xiaoye Sherry Li (@xiaoyeli),
+by Aadesh Deshmukh (@aa25desh) and Raye Kimmerer (@rayegun). It is now maintained by
 [JuliaSparse](https://github.com/JuliaSparse).
 
 SuperLU_DIST is distributed under a BSD license, see [LICENSE](LICENSE).
