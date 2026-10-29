@@ -1,4 +1,5 @@
 [deps]
+Documenter = "e30172f5-a6a5-5a46-863b-614d45cd2de4"
 LinearAlgebra = "37e2e46d-f89d-539d-b4ee-838fcccc9c8e"
 MPI = "da04e1cc-30fd-572f-bb4f-1f8673147195"
 MatrixMarket = "4d4711f2-db25-561a-b6b3-d35e7d4047d3"
@@ -8,6 +9,7 @@ SuperLUDIST = "4cd002a6-0da4-410d-a012-232df062f478"
 Test = "8dfed614-e22c-5e08-85e1-65c5234f0b40"
 
 [compat]
+Documenter = "1"
 LinearAlgebra = "<0.0.1, 1"
 MPI = "0.20.29"
 MatrixMarket = "0.5.2"

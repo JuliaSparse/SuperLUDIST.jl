@@ -100,4 +100,5 @@ include("drivers.jl")
 include("drivers3d.jl")
 include("matrixmarket.jl")
 include("highlevel.jl")
+include("show.jl")
 end

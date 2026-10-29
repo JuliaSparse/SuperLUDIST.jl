@@ -1,5 +1,6 @@
 using SuperLUDIST
 using MPI
+using Documenter
 using Test
 
 @testset "SuperLUDIST.jl" begin
@@ -36,5 +37,17 @@ using Test
         script = joinpath(@__DIR__, "mpi_solve.jl")
         cmd = `$(MPI.mpiexec()) -n $nprocs $(Base.julia_cmd()) --startup-file=no --project=$(Base.active_project()) $script`
         @test success(pipeline(addenv(cmd, "OMP_NUM_THREADS" => "1"); stdout, stderr))
+    end
+
+    # The README's examples, on a single rank. Last, since they finalize MPI. Its code blocks
+    # are `julia` blocks so that GitHub highlights them, and those with an `# output`
+    # section are doctests.
+    @testset "README doctests" begin
+        readme = read(joinpath(pkgdir(SuperLUDIST), "README.md"), String)
+        blocks = r"```julia\n((?:(?!```)[\s\S])*?\n# output\n)"
+        @test occursin(blocks, readme)
+        dir = mktempdir()
+        write(joinpath(dir, "index.md"), replace(readme, blocks => s"```jldoctest readme\n\1"))
+        doctest(dir, [SuperLUDIST]; testset = "README")
     end
 end

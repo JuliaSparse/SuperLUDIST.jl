@@ -56,10 +56,11 @@ Restart Julia for the change to take effect.
 
 ## Quick start
 
+Save this as `solve.jl`:
+
 ```julia
-# solve.jl
 using MPI, SuperLUDIST, SparseArrays, LinearAlgebra
-using SuperLUDIST: Grid, pgssvx!
+using SuperLUDIST: Grid, Options, pgssvx!
 
 MPI.Init()
 grid = Grid{Int32}(1, MPI.Comm_size(MPI.COMM_WORLD))   # a 1 × nranks process grid
@@ -69,11 +70,24 @@ S = spdiagm(-1 => fill(-1.0, n - 1), 0 => fill(4.0, n), 1 => fill(-1.0, n - 1))
 b = S * ones(n)
 
 A = ReplicatedSuperMatrix(S, grid)    # every rank holds the same matrix
-x, F = pgssvx!(A, copy(b))            # factorize and solve
+options = Options{Int32}(; PrintStat = SuperLUDIST.Common.NO)
+x, F = pgssvx!(A, copy(b); options)   # factorize and solve
 y = F \ (2b)                          # reuse the factorization
 
+if MPI.Comm_rank(MPI.COMM_WORLD) == 0
+    println(F)
+    println(x ≈ ones(n) && y ≈ 2ones(n))
+end
 MPI.Finalize()
+
+# output
+
+SuperLUFactorization{Float64, Int32}(100×100 ReplicatedSuperMatrix{Float64, Int32})
+true
 ```
+
+The output is from a single rank. The tests run the README's code blocks that have an
+`# output` section as doctests. Run it on 4 ranks with:
 
 ```sh
 mpiexecjl -n 4 julia --project solve.jl
