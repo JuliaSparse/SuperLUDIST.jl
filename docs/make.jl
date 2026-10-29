@@ -30,5 +30,5 @@ makedocs(;
 deploydocs(;
     repo="github.com/JuliaSparse/SuperLUDIST.jl",
     devbranch="main",
-    push_preview=true,
+    push_preview=false,
 )

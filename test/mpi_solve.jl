@@ -38,21 +38,20 @@ const quiet = (; PrintStat = Common.NO)
     @testset "replicated" begin
         A = ReplicatedSuperMatrix(SuperLUDIST.cscstore(Tv, Ti, S), grid)
         @test size(A) == size(S)
-        if Tv === Float32 && nprocs > 1
-            # psgssvx_ABglobal is broken upstream on more than one rank.
-            @test_throws ArgumentError pgssvx!(A, copy(b); options = Options{Ti}(; quiet...))
-        else
-            x, F = pgssvx!(A, copy(b); options = Options{Ti}(; quiet...))
-            @test relerr(x, xtrue) < tolerance(Tv)
-            @test SuperLUDIST.isfactored(F)
-            # Reuse the factorization, with a different number of right hand sides.
-            @test relerr(F \ b[:, 1:1], xtrue[:, 1:1]) < tolerance(Tv)
-            @test relerr(F \ [b b], [xtrue xtrue]) < tolerance(Tv)
+        x, F = pgssvx!(A, copy(b); options = Options{Ti}(; quiet...))
+        # A GC right after a solve catches writes past the end of Julia-owned buffers.
+        GC.gc()
+        @test relerr(x, xtrue) < tolerance(Tv)
+        @test SuperLUDIST.isfactored(F)
+        # Reuse the factorization, with a different number of right hand sides.
+        @test relerr(F \ b[:, 1:1], xtrue[:, 1:1]) < tolerance(Tv)
+        GC.gc()
+        @test relerr(F \ [b b], [xtrue xtrue]) < tolerance(Tv)
 
-            # SparseArrays extension
-            x, _ = pgssvx!(ReplicatedSuperMatrix(S, grid), copy(b); options = Options{Ti}(; quiet...))
-            @test relerr(x, xtrue) < tolerance(Tv)
-        end
+        # SparseArrays extension
+        x, _ = pgssvx!(ReplicatedSuperMatrix(S, grid), copy(b); options = Options{Ti}(; quiet...))
+        GC.gc()
+        @test relerr(x, xtrue) < tolerance(Tv)
     end
 
     @testset "distributed" begin

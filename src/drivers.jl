@@ -111,17 +111,17 @@ function pgssvx_ABglobal!(
     LU::LUFactors{$T, $I},
     berr, stat::LUStat{$I}
 )
-    # psgssvx_ABglobal corrupts the heap on more than one rank (seen with SuperLU_DIST
-    # 9.2.1 and 9.3.1 from plain C as well), so refuse instead of crashing.
-    $T === Float32 && A.grid.nprow * A.grid.npcol > 1 && throw(ArgumentError(
-        "Float32 ReplicatedSuperMatrix solves are broken in SuperLU_DIST on more than one " *
-        "rank. Use a DistributedSuperMatrix, or Float64, instead."
-    ))
+    nrhs = size(b, 2)
+    # psgsrfs_ABXglobal (iterative refinement) stores each `berr[j]` with an
+    # `MPI_Allreduce(..., MPI_DOUBLE, ...)` into the `float *berr`, writing 4 bytes past
+    # the end of the array. Give it room for that, and a scratch buffer to write into.
+    berr_c = $T === Float32 ? Vector{$T}(undef, nrhs + 1) : berr
     info = Ref{Int32}()
     $L.$(Symbol(:p, prefixsymbol(T), :gssvx_ABglobal))(
-        options, A, perm, b, max(1, size(b, 1)), size(b, 2),
-        A.grid, LU, berr, stat, info
+        options, A, perm, b, max(1, size(b, 1)), nrhs,
+        A.grid, LU, berr_c, stat, info
     )
+    $T === Float32 && copyto!(berr, 1, berr_c, 1, nrhs)
     info[] == 0 ||
         error("Error INFO = $(info[]) from p$(prefixsymbol($T))gssvx_ABglobal")
     return b, perm, LU, stat

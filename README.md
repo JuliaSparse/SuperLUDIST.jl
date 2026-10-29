@@ -99,9 +99,6 @@ See the [documentation](https://juliasparse.github.io/SuperLUDIST.jl/dev/) for m
 - OpenMP will often oversubscribe single-node setups. Set `OMP_NUM_THREADS`, or call
   `SuperLUDIST.superlu_set_num_threads(Int64, n)` (or `Int32`), to choose the number of threads
   per rank.
-- `Float32` solves of a `ReplicatedSuperMatrix` crash inside SuperLU_DIST (`psgssvx_ABglobal`)
-  on more than one rank, so SuperLUDIST.jl throws an `ArgumentError` for them instead. Use a
-  `DistributedSuperMatrix` for single precision on several ranks.
 
 ## Development
 

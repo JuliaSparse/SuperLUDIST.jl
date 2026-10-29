@@ -40,11 +40,6 @@ using MatrixMarket
 A = MatrixMarket.mmread(ReplicatedSuperMatrix{Float64, Int64}, "matrix.mtx", grid)
 ```
 
-!!! warning
-    Replicated `Float32` solves crash inside SuperLU_DIST (in `psgssvx_ABglobal`) on more than
-    one rank, so SuperLUDIST.jl throws an `ArgumentError` for them instead. Use a
-    [`DistributedSuperMatrix`](@ref) for single precision on several ranks.
-
 ## Distributed matrices
 
 A [`DistributedSuperMatrix`](@ref) holds a contiguous block of rows on each rank, in compressed
