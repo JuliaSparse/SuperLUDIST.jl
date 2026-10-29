@@ -8,6 +8,7 @@ SuperLUDIST = "4cd002a6-0da4-410d-a012-232df062f478"
 Test = "8dfed614-e22c-5e08-85e1-65c5234f0b40"
 
 [compat]
+LinearAlgebra = "<0.0.1, 1"
 MPI = "0.20.29"
 MatrixMarket = "0.5.2"
 SparseBase = "0.4.0"
