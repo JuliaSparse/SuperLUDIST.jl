@@ -13,10 +13,14 @@ MatrixMarket = "4d4711f2-db25-561a-b6b3-d35e7d4047d3"
 OpenBLAS32_jll = "656ef2d0-ae68-5445-9ca0-591084a874a2"
 Preferences = "21216c6a-2e73-6563-6e65-726566657250"
 SparseBase = "8047a082-0763-4c4f-a23b-a4a948721f1d"
+SuperLU_DIST_CUDA_jll = "32712609-44d4-5b88-8647-7f032361c66d"
 SuperLU_DIST_jll = "9a1356b0-3c82-5da3-b77c-7c198e8bd7ab"
 
 [weakdeps]
 SparseArrays = "2f01184e-e22b-5df5-ae63-d93ebab69eaf"
+
+[sources]
+SuperLU_DIST_CUDA_jll = {rev = "6fc7ad88b594ca9011556a056b326d7f23878f69", url = "https://github.com/JuliaBinaryWrappers/SuperLU_DIST_CUDA_jll.jl"}
 
 [extensions]
 SparseArraysExt = "SparseArrays"
@@ -32,5 +36,6 @@ OpenBLAS32_jll = "0.3"
 Preferences = "1"
 SparseArrays = "1"
 SparseBase = "0.4"
+SuperLU_DIST_CUDA_jll = "9.3.1"
 SuperLU_DIST_jll = "9.3.1"
 julia = "1.11"

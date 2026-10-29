@@ -1,8 +1,8 @@
 # Generating the bindings
 
 The files in `lib/` are generated with [Clang.jl](https://github.com/JuliaInterop/Clang.jl)
-from the headers shipped with `SuperLU_DIST_jll`. Do not edit them by hand: put any
-customization in `generator.toml`, `prologue.jl` or `generate.jl`.
+from the headers shipped with `SuperLU_DIST_jll` and `SuperLU_DIST_CUDA_jll`. Do not edit them
+by hand: put any customization in `generator.toml`, `prologue.jl` or `generate.jl`.
 
 ```sh
 julia --project=gen -e 'using Pkg; Pkg.instantiate()'
@@ -20,5 +20,13 @@ installs a self-contained copy of its headers under `include/superlu_dist_Int32`
 - `lib/common.jl`: the module `SuperLUDIST_Common` with the enums, which are identical
   for both widths (the generator checks this).
 
-When updating to a new SuperLU_DIST version, bump `SuperLU_DIST_jll` here and in the
-top-level `Project.toml`, then run both scripts above along with the test suite.
+The CUDA build (`SuperLU_DIST_CUDA_jll`, built with `HAVE_CUDA`) adds device pointers to
+several structs, such as `dScalePermstruct_t`, `dSOLVEstruct_t` and `SuperLUStat_t`, so it gets its
+own `lib/libsuperlu_dist_cuda32.jl` and `lib/libsuperlu_dist_cuda64.jl`, with the same module names.
+`src/SuperLUDIST.jl` includes the pair for the library it loads. Its headers include GPU headers
+from the CUDA SDK, which `cuda_stubs/` stands in for, since the structs we wrap only use an opaque
+event handle from them. See `builds.jl`.
+
+When updating to a new SuperLU_DIST version, bump `SuperLU_DIST_jll` and
+`SuperLU_DIST_CUDA_jll` here and in the top-level `Project.toml`, then run both scripts
+above along with the test suite.

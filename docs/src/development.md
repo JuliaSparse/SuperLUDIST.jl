@@ -50,8 +50,10 @@ julia> covered, total = get_summary(cov)
 
 ## Regenerating the bindings
 
-The low-level bindings in `lib/` are generated from the `SuperLU_DIST_jll` headers with
-Clang.jl, and are not edited by hand:
+The low-level bindings in `lib/` are generated from the `SuperLU_DIST_jll` and
+`SuperLU_DIST_CUDA_jll` headers with Clang.jl, and are not edited by hand. The CUDA build adds
+device pointers to several structs, so it has its own `lib/libsuperlu_dist_cuda32.jl` and
+`lib/libsuperlu_dist_cuda64.jl`; see `gen/README.md`. To regenerate and check them:
 
 ```sh
 julia --project=gen -e 'using Pkg; Pkg.instantiate()'

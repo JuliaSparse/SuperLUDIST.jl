@@ -9,6 +9,8 @@ using OpenBLAS32_jll
 using LinearAlgebra
 
 function __init__()
+    _check_libraries()
+    _configure_gpu()
     # SuperLU_DIST_jll calls BLAS through libblastrampoline with the LP64 (32-bit
     # integer) interface. Julia only loads ILP64 BLAS by default, so forward an LP64
     # OpenBLAS unless the user has already provided one.
@@ -19,8 +21,14 @@ function __init__()
 end
 
 include("../lib/common.jl")
-include("../lib/libsuperlu_dist32.jl")
-include("../lib/libsuperlu_dist64.jl")
+# The CUDA build has its own bindings, since it adds device pointers to several structs.
+if HAVE_CUDA
+    include("../lib/libsuperlu_dist_cuda32.jl")
+    include("../lib/libsuperlu_dist_cuda64.jl")
+else
+    include("../lib/libsuperlu_dist32.jl")
+    include("../lib/libsuperlu_dist64.jl")
+end
 using .SuperLUDIST_Common
 using .SuperLU_Int32
 using .SuperLU_Int64

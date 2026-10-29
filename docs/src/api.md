@@ -29,6 +29,8 @@ Grid
 Grid3D
 AbstractGrid
 Options
+set_gpu!
+HAVE_CUDA
 set_libraries!
 superlu_set_num_threads
 ```
@@ -52,6 +54,7 @@ Modules = [SuperLUDIST]
 Filter = t -> !(t in (SuperLUDIST.ReplicatedSuperMatrix, SuperLUDIST.DistributedSuperMatrix,
                       SuperLUDIST.pgssvx!, SuperLUDIST.Grid, SuperLUDIST.Grid3D,
                       SuperLUDIST.AbstractGrid, SuperLUDIST.Options,
+                      SuperLUDIST.set_gpu!, SuperLUDIST.HAVE_CUDA,
                       SuperLUDIST.set_libraries!, SuperLUDIST.superlu_set_num_threads,
                       SuperLUDIST.cscstore, SuperLUDIST.coostore,
                       SuperLUDIST.SuperLUFactorization, SuperLUDIST.isfactored,

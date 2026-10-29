@@ -33,6 +33,11 @@ using Test
         @test_throws ArgumentError SuperLUDIST.set_libraries!(; libsuperlu_dist_Int32 = missing_lib)
     end
 
+    @testset "set_gpu!" begin
+        @test SuperLUDIST.HAVE_CUDA isa Bool
+        @test_throws ArgumentError SuperLUDIST.set_gpu!(:rocm)
+    end
+
     # The solvers need an MPI job, so run them under mpiexec on a 1×1 and a 2×2 grid.
     # SuperLU_DIST prints as it solves, so show a job's output only if it fails.
     @testset "MPI solves on $nprocs rank(s)" for nprocs in (1, 4)
