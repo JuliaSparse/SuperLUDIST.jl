@@ -19,6 +19,13 @@ as it runs, run the script directly:
 mpiexecjl -n 4 julia --project=test test/mpi_solve.jl
 ```
 
+CI tests only the CPU build. To test the CUDA build on a machine with an NVIDIA GPU, run the
+tests in an environment that has `SuperLU_DIST_CUDA_jll`, since `Pkg.test` doesn't add weak
+dependencies. For example, make a copy of `test/Project.toml` with the `[sources]` path pointing
+at your checkout, add `SuperLU_DIST_CUDA_jll` and `MPIPreferences` to it, set it up as in
+[GPUs](@ref) (`set_gpu!(:cuda)`, then MPItrampoline), and run
+`julia --project=path/to/copy test/runtests.jl`.
+
 The tests call `GC.gc()` after the replicated solves, which catches writes past the end of
 Julia-owned buffers. This is how
 [xiaoyeli/superlu_dist#237](https://github.com/xiaoyeli/superlu_dist/issues/237) was found.

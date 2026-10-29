@@ -36,6 +36,10 @@ using Test
     @testset "set_gpu!" begin
         @test SuperLUDIST.HAVE_CUDA isa Bool
         @test_throws ArgumentError SuperLUDIST.set_gpu!(:rocm)
+        # Only the error path: without SuperLU_DIST_CUDA_jll, :cuda is refused.
+        if Base.locate_package(SuperLUDIST._CUDA_JLL) === nothing
+            @test_throws ArgumentError SuperLUDIST.set_gpu!(:cuda)
+        end
     end
 
     # The solvers need an MPI job, so run them under mpiexec on a 1×1 and a 2×2 grid.

@@ -9,7 +9,7 @@ using OpenBLAS32_jll
 using LinearAlgebra
 
 function __init__()
-    _check_libraries()
+    _load_libraries()
     _configure_gpu()
     # SuperLU_DIST_jll calls BLAS through libblastrampoline with the LP64 (32-bit
     # integer) interface. Julia only loads ILP64 BLAS by default, so forward an LP64

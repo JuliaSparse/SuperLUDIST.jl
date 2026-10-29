@@ -3,12 +3,13 @@ using Preferences
 
 const _PREFERENCE_SLUINT32 = @load_preference("libsuperlu_dist_Int32", nothing)
 const _PREFERENCE_SLUINT64 = @load_preference("libsuperlu_dist_Int64", nothing)
-const _PREFERENCE_GPU = @load_preference("gpu", "auto")
+const _PREFERENCE_GPU = @load_preference("gpu", "none")
 
-_PREFERENCE_GPU in ("auto", "cuda", "none") ||
+_PREFERENCE_GPU in ("cuda", "none") ||
     error("SuperLUDIST: invalid `gpu` preference $(repr(_PREFERENCE_GPU)), see `SuperLUDIST.set_gpu!`.")
 
 const flags = RTLD_DEEPBIND | RTLD_LAZY
+const _CUDA_JLL = Base.PkgId(Base.UUID("32712609-44d4-5b88-8647-7f032361c66d"), "SuperLU_DIST_CUDA_jll")
 const CUSTOM_LIBRARIES = _PREFERENCE_SLUINT32 !== nothing || _PREFERENCE_SLUINT64 !== nothing
 if CUSTOM_LIBRARIES
     const libsuperlu_dist_Int32 = _PREFERENCE_SLUINT32
@@ -18,24 +19,15 @@ if CUSTOM_LIBRARIES
         lib === nothing && return false
         dlsym(dlopen(lib, flags; throw_error=true), :nv_init_wrapper; throw_error=false) !== nothing
     end
-elseif _PREFERENCE_GPU != "none"
-    # The CUDA build is only available on x86_64 Linux with an NVIDIA GPU and MPI.jl set
-    # up with MPItrampoline. Its artifacts, and those of CUDA_Runtime_jll, are lazy, so
-    # nothing is downloaded where it is unavailable.
-    using SuperLU_DIST_CUDA_jll: SuperLU_DIST_CUDA_jll
-    if SuperLU_DIST_CUDA_jll.is_available()
-        using SuperLU_DIST_CUDA_jll: libsuperlu_dist_Int32, libsuperlu_dist_Int64
-        const HAVE_CUDA = true
-    elseif _PREFERENCE_GPU == "cuda"
-        error("""
-            SuperLUDIST: the `gpu` preference is "cuda", but SuperLU_DIST_CUDA_jll is not available.
-            It needs x86_64 Linux, an NVIDIA GPU and driver, and MPI.jl configured with
-            MPItrampoline (`MPIPreferences.use_jll_binary("MPItrampoline_jll")`).
-            Call `SuperLUDIST.set_gpu!(:auto)` to fall back to the CPU build.""")
-    else
-        using SuperLU_DIST_jll
-        const HAVE_CUDA = false
-    end
+elseif _PREFERENCE_GPU == "cuda"
+    # SuperLU_DIST_CUDA_jll is a weak dependency, which users add themselves, so that its
+    # artifacts and the CUDA runtime (about 2.5 GB) are only downloaded by those who want
+    # them. A package can't load a weak dependency while it is precompiled, so the CUDA
+    # bindings are chosen from the preference alone, and `__init__` loads the jll and sets
+    # the library paths.
+    global libsuperlu_dist_Int32::Union{Nothing, String} = nothing
+    global libsuperlu_dist_Int64::Union{Nothing, String} = nothing
+    const HAVE_CUDA = true
 else
     using SuperLU_DIST_jll
     const HAVE_CUDA = false
@@ -44,9 +36,10 @@ end
 @doc """
     HAVE_CUDA
 
-Whether SuperLUDIST is using a CUDA build of SuperLU_DIST. With it, factorizations and
-solves are offloaded to the GPU unless `options.superlu_acc_offload` is set to 0. See
-[`set_gpu!`](@ref).
+Whether SuperLUDIST is set up for a CUDA build of SuperLU_DIST. With it, factorizations
+and solves are offloaded to the GPU unless `options.superlu_acc_offload` is set to 0. If
+the CUDA build can't be used where SuperLUDIST is loaded, an error is logged and the
+libraries are not set. See [`set_gpu!`](@ref).
 """ HAVE_CUDA
 
 function _configure_gpu()
@@ -60,16 +53,58 @@ function _configure_gpu()
     end
 end
 
-function _check_libraries()
-    # The library is chosen when SuperLUDIST is precompiled. If the CUDA build was chosen
-    # but is not available now, for example when the package was precompiled on a node
-    # with a GPU and is loaded on one without, the bindings would be wrong.
-    if HAVE_CUDA && !CUSTOM_LIBRARIES && !SuperLU_DIST_CUDA_jll.is_available()
-        error("""
-            SuperLUDIST was precompiled for the CUDA build of SuperLU_DIST, which is not
-            available here. Precompile SuperLUDIST on a node like this one, or call
-            `SuperLUDIST.set_gpu!(:none)` and restart Julia to use the CPU build.""")
+function _load_libraries()
+    (HAVE_CUDA && !CUSTOM_LIBRARIES) || return
+    # Packages that depend on SuperLUDIST load it while they are precompiled, when the jll
+    # can't be loaded either. Nothing can be called then.
+    ccall(:jl_generating_output, Cint, ()) == 1 && return
+    # Report problems rather than throw, so that SuperLUDIST still loads and
+    # `set_gpu!(:none)` can be called. Calls into SuperLU_DIST then fail, since the
+    # libraries are not set.
+    if Base.locate_package(_CUDA_JLL) === nothing
+        @error """
+            SuperLUDIST is set up to use the CUDA build of SuperLU_DIST, but
+            SuperLU_DIST_CUDA_jll is not installed. Add it to your environment
+            (`import Pkg; Pkg.add("SuperLU_DIST_CUDA_jll")`), or call
+            `SuperLUDIST.set_gpu!(:none)` and restart Julia to use the CPU build."""
+        return
     end
+    jll = Base.require(_CUDA_JLL)
+    # The jll was loaded after this function was compiled, so call into it with
+    # `invokelatest`.
+    if !Base.invokelatest(jll.is_available)
+        @error """
+            SuperLUDIST is set up to use the CUDA build of SuperLU_DIST, which is not
+            available here. It needs x86_64 Linux, an NVIDIA GPU and driver, and MPI.jl
+            configured with MPItrampoline (`MPIPreferences.use_jll_binary("MPItrampoline_jll")`).
+            Call `SuperLUDIST.set_gpu!(:none)` and restart Julia to use the CPU build."""
+        return
+    end
+    # The jll is available wherever the NVIDIA driver library is installed, even without
+    # a GPU, and SuperLU_DIST aborts on its first GPU call if there is none.
+    if !_have_gpu()
+        @error """
+            SuperLUDIST is set up to use the CUDA build of SuperLU_DIST, but no NVIDIA GPU
+            was found. Call `SuperLUDIST.set_gpu!(:none)` and restart Julia to use the CPU
+            build."""
+        return
+    end
+    # `setglobal!` rather than `global`, which would declare these names in the CPU build
+    # too, hiding the ones from SuperLU_DIST_jll.
+    for name in (:libsuperlu_dist_Int32, :libsuperlu_dist_Int64)
+        setglobal!(@__MODULE__, name, Base.invokelatest(getglobal, jll, name))
+    end
+    return
+end
+
+# Whether the CUDA driver finds a GPU. SuperLU_DIST_CUDA_jll has loaded libcuda by now.
+function _have_gpu()
+    lib = dlopen("libcuda.so.1"; throw_error=false)
+    lib === nothing && return false
+    ccall(dlsym(lib, :cuInit), Cint, (Cuint,), 0) == 0 || return false
+    count = Ref{Cint}(0)
+    ccall(dlsym(lib, :cuDeviceGetCount), Cint, (Ptr{Cint},), count) == 0 || return false
+    return count[] > 0
 end
 
 """
@@ -77,11 +112,11 @@ end
 
 Choose which build of SuperLU_DIST to use:
 
-- `:auto` (the default) uses the CUDA build from `SuperLU_DIST_CUDA_jll` where it is
-  available, which needs x86_64 Linux, an NVIDIA GPU and MPI.jl configured with
-  MPItrampoline, and the CPU build from `SuperLU_DIST_jll` everywhere else.
-- `:cuda` requires the CUDA build, and loading SuperLUDIST fails where it is unavailable.
-- `:none` always uses the CPU build.
+- `:none` (the default) uses the CPU build from `SuperLU_DIST_jll`.
+- `:cuda` uses the CUDA build from `SuperLU_DIST_CUDA_jll`. That package is not
+  installed with SuperLUDIST, so add it to your environment first. The CUDA build needs
+  x86_64 Linux, an NVIDIA GPU and driver, and MPI.jl configured with MPItrampoline, and
+  SuperLUDIST reports an error when it is loaded where it can't be used.
 
 Libraries set with [`set_libraries!`](@ref) take precedence. [`HAVE_CUDA`](@ref) tells
 which build is in use.
@@ -89,11 +124,14 @@ which build is in use.
 The choice is stored with Preferences.jl and takes effect after restarting Julia.
 """
 function set_gpu!(gpu::Symbol)
-    gpu in (:auto, :cuda, :none) || throw(ArgumentError("gpu must be :auto, :cuda or :none, got :$gpu"))
-    if gpu === :auto
-        @delete_preferences!("gpu")
+    gpu in (:cuda, :none) || throw(ArgumentError("gpu must be :cuda or :none, got :$gpu"))
+    if gpu === :cuda
+        Base.locate_package(_CUDA_JLL) === nothing && throw(ArgumentError("""
+            SuperLU_DIST_CUDA_jll is not installed. Add it to your environment first with
+            `import Pkg; Pkg.add("SuperLU_DIST_CUDA_jll")`."""))
+        @set_preferences!("gpu" => "cuda")
     else
-        @set_preferences!("gpu" => String(gpu))
+        @delete_preferences!("gpu")
     end
     @info "Please restart Julia and reload SuperLUDIST.jl for the library changes to take effect."
 end

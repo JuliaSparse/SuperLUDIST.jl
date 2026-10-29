@@ -13,8 +13,8 @@ pkg> add MPI SparseArrays MatrixMarket
 ```
 
 The default installation uses SuperLU_DIST 9.3.1 from `SuperLU_DIST_jll`, which is available on
-Linux, macOS, FreeBSD and Windows, or its CUDA build from `SuperLU_DIST_CUDA_jll` on Linux machines
-with NVIDIA GPUs (see [GPUs](@ref)).
+Linux, macOS, FreeBSD and Windows. A CUDA build for Linux machines with NVIDIA GPUs can be added
+separately (see [GPUs](@ref)).
 
 ## MPI
 
@@ -33,29 +33,35 @@ SuperLUDIST.jl.
 
 ## GPUs
 
-SuperLUDIST.jl uses the CUDA build of SuperLU_DIST from `SuperLU_DIST_CUDA_jll` wherever it is
-available, which needs:
+The CUDA build of SuperLU_DIST is in a separate package, `SuperLU_DIST_CUDA_jll`, which is not
+installed with SuperLUDIST.jl, since it brings in the CUDA runtime (about 2.5 GB on disk). It
+needs:
 
 - x86_64 Linux with an NVIDIA GPU and driver, for CUDA 12 or later, and
-- MPI.jl configured with MPItrampoline, which can forward to MPICH or to your system MPI:
+- MPI.jl configured with MPItrampoline, which can forward to MPICH or to your system MPI.
+
+To use it, add it to your environment, tell SuperLUDIST.jl to use it, and then switch MPI.jl
+to MPItrampoline, in that order, restarting Julia after each step:
 
 ```julia
+pkg> add SuperLU_DIST_CUDA_jll MPIPreferences
+
+julia> using SuperLUDIST; SuperLUDIST.set_gpu!(:cuda)
+
 julia> using MPIPreferences; MPIPreferences.use_jll_binary("MPItrampoline_jll")
 ```
 
-Everywhere else it uses the CPU build from `SuperLU_DIST_jll`. `SuperLUDIST.HAVE_CUDA` tells which
-build is in use. The CUDA libraries are only downloaded where the CUDA build is used: about 25 MB
-for SuperLU_DIST, and about 1 GB for the CUDA runtime from `CUDA_Runtime_jll`, which is shared with
-CUDA.jl. To choose explicitly:
+After that, `SuperLUDIST.HAVE_CUDA` is `true`. (Switching MPI first also works, but then run
+`Pkg.instantiate()` before loading SuperLUDIST.jl, to download the CPU build for MPItrampoline.)
+`SuperLUDIST.set_gpu!(:none)` goes back to the CPU build; if MPI.jl still uses MPItrampoline,
+run `Pkg.instantiate()` after it, for the same reason. The setting is stored with
+Preferences.jl, takes effect after restarting Julia, and is read when SuperLUDIST.jl is
+precompiled.
 
-```julia
-SuperLUDIST.set_gpu!(:none)   # always use the CPU build
-SuperLUDIST.set_gpu!(:cuda)   # require the CUDA build
-SuperLUDIST.set_gpu!(:auto)   # the default
-```
-
-The setting is stored with Preferences.jl and takes effect after restarting Julia. The build is
-chosen when SuperLUDIST.jl is precompiled, so on a cluster precompile it on a node with a GPU.
+Installing `SuperLU_DIST_CUDA_jll` downloads the CUDA runtime on machines with an NVIDIA driver,
+and only `CUDA_Driver_jll` (about 450 MB on disk) on machines without one. If SuperLUDIST.jl is
+set up for the CUDA build where it can't be used, for example on a cluster node without a GPU,
+it reports an error when loaded that says what to do, and calls into SuperLU_DIST fail.
 
 With the CUDA build, both the 2D and the 3D drivers factorize and solve on the GPU. Set
 `superlu_acc_offload = 0` in the [`Options`](@ref) to keep a factorization on the CPU. Some

@@ -12,8 +12,8 @@ ranks and OpenMP within each rank. See the
 [SuperLU_DIST documentation](https://portal.nersc.gov/project/sparse/superlu/) for details of the
 underlying library.
 
-SuperLUDIST.jl uses SuperLU_DIST 9.3.1 from `SuperLU_DIST_jll`, or its CUDA build from
-`SuperLU_DIST_CUDA_jll` on Linux machines with NVIDIA GPUs (see [GPUs (CUDA)](#gpus-cuda)), and
+SuperLUDIST.jl uses SuperLU_DIST 9.3.1 from `SuperLU_DIST_jll`, or its optional CUDA build from
+`SuperLU_DIST_CUDA_jll` for Linux machines with NVIDIA GPUs (see [GPUs (CUDA)](#gpus-cuda)), and
 supports `Float32`, `Float64` and `ComplexF64` matrices with either `Int32` or `Int64` indices.
 Matrices can be replicated on every rank or distributed by rows, distributed matrices can also use
 SuperLU_DIST's communication-avoiding 3D factorization on a 3D process grid, and factorizations can
@@ -118,20 +118,21 @@ See the [documentation](https://juliasparse.github.io/SuperLUDIST.jl/dev/) for m
 
 ## GPUs (CUDA)
 
-On x86_64 Linux with an NVIDIA GPU, SuperLUDIST.jl uses the CUDA build of SuperLU_DIST from
-`SuperLU_DIST_CUDA_jll`, and both the 2D and the 3D drivers factorize and solve on the GPU. The
-CUDA build needs MPI.jl to use MPItrampoline, so set that up once in your project, then restart
-Julia:
+On x86_64 Linux with an NVIDIA GPU, SuperLUDIST.jl can use the CUDA build of SuperLU_DIST, and
+both the 2D and the 3D drivers then factorize and solve on the GPU. The CUDA build is in a
+separate package, `SuperLU_DIST_CUDA_jll`, which is not installed with SuperLUDIST.jl since it
+brings in the CUDA runtime (about 2.5 GB on disk). It needs MPI.jl to use MPItrampoline. Set
+this up once in your project:
 
 ```sh
-julia --project -e 'import Pkg; Pkg.add(["SuperLUDIST", "MPI", "MPIPreferences", "SparseArrays", "SparseBase"])'
+julia --project -e 'import Pkg; Pkg.add(["SuperLUDIST", "SuperLU_DIST_CUDA_jll", "MPI", "MPIPreferences", "SparseArrays", "SparseBase"])'
+julia --project -e 'using SuperLUDIST; SuperLUDIST.set_gpu!(:cuda)'
 julia --project -e 'using MPIPreferences; MPIPreferences.use_jll_binary("MPItrampoline_jll")'
 julia --project -e 'using SuperLUDIST; println(SuperLUDIST.HAVE_CUDA)'   # true
 ```
 
-The first load downloads the CUDA build (about 25 MB) and the CUDA runtime (about 1 GB, shared
-with CUDA.jl). Nothing is downloaded on machines that don't use the CUDA build; they use the CPU
-build from `SuperLU_DIST_jll` instead, so the same code runs everywhere.
+Without `SuperLU_DIST_CUDA_jll`, SuperLUDIST.jl uses the CPU build from `SuperLU_DIST_jll`, and
+the same code runs on the CPU.
 
 Save this as `gpu_solve.jl`. It solves a 3D Laplacian on a 3D process grid with one rank per
 2D layer:
@@ -178,10 +179,12 @@ SUPERLU_BIND_MPI_GPU=1 OMP_NUM_THREADS=1 mpiexecjl --project -n 2 julia gpu_solv
 `SUPERLU_BIND_MPI_GPU=1` spreads the ranks of a node over its GPUs; without it every rank uses
 the first GPU. A few more things to know:
 
-- The build is chosen when SuperLUDIST.jl is precompiled, so on a cluster precompile it on a
-  node with a GPU. `SuperLUDIST.set_gpu!(:none)` always uses the CPU build, `set_gpu!(:cuda)`
-  requires the CUDA build, and `set_gpu!(:auto)` restores the default; restart Julia after
-  changing it.
+- Call `set_gpu!(:cuda)` before switching MPI.jl to MPItrampoline, as above, or run
+  `Pkg.instantiate()` after switching. `SuperLUDIST.set_gpu!(:none)` goes back to the CPU
+  build (run `Pkg.instantiate()` after it if MPI.jl still uses MPItrampoline); restart Julia
+  after changing it. If SuperLUDIST.jl is set up for the CUDA build where it
+  can't be used, such as a node without a GPU, it reports an error when loaded that says what
+  to do, and calls into SuperLU_DIST fail.
 - With several ranks, SuperLU_DIST's newer GPU 3D factorization needs a CUDA-aware MPI. Unless
   MPI.jl reports one (`MPI.has_cuda()`, or `JULIA_MPI_HAS_CUDA=true`), SuperLUDIST.jl selects
   the earlier GPU 3D factorization by setting `GPU3DVERSION=0`, which works with any MPI. Set
@@ -193,7 +196,8 @@ documentation for all the settings.
 
 ## Known issues
 
-- GPU acceleration is CUDA only, on x86_64 Linux, and needs MPI.jl to use MPItrampoline.
+- GPU acceleration is CUDA only, on x86_64 Linux, needs MPI.jl to use MPItrampoline, and needs
+  `SuperLU_DIST_CUDA_jll` to be added separately.
 - OpenMP will often oversubscribe single-node setups. Set `OMP_NUM_THREADS`, or call
   `SuperLUDIST.superlu_set_num_threads(Int64, n)` (or `Int32`), to choose the number of threads
   per rank.
