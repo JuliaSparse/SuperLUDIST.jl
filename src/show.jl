@@ -10,7 +10,9 @@ end
 Base.show(io::IO, g::AbstractGrid) = showgrid(io, g)
 function Base.show(io::IO, ::MIME"text/plain", g::AbstractGrid)
     showgrid(io, g)
-    print(io, g.iam == -1 ? " (this rank is not in the grid)" : " (this rank is $(g.iam))")
+    # As the Grid constructor does, count ranks numbered past the grid's size as outside it.
+    ingrid = g.iam != -1 && g.iam < gridsize(g)
+    print(io, ingrid ? " (this rank is $(g.iam))" : " (this rank is not in the grid)")
 end
 
 function showtype(io::IO, A::AbstractSuperMatrix{T, I}) where {T, I}
