@@ -11,8 +11,9 @@ on 1 rank (a 1×1 grid) and on 4 ranks (a 2×2 grid), with `OMP_NUM_THREADS=1`. 
 every element type (`Float32`, `Float64`, `ComplexF64`) and index type (`Int32`, `Int64`),
 replicated and distributed matrices, 3D process grids (1×1×1 on 1 rank; 1×2×2, 2×1×2 and
 1×1×4 on 4 ranks), reusing factorizations with different numbers of right-hand sides, the
-Matrix Market readers and the test problem helpers. The script can
-also be run directly:
+Matrix Market readers and the test problem helpers. SuperLU_DIST prints as it solves, so
+`runtests.jl` keeps each job's output in a file and prints it only if the job fails. To see it
+as it runs, run the script directly:
 
 ```sh
 mpiexecjl -n 4 julia --project=test test/mpi_solve.jl
@@ -23,6 +24,11 @@ Julia-owned buffers. This is how
 [xiaoyeli/superlu_dist#237](https://github.com/xiaoyeli/superlu_dist/issues/237) was found.
 When debugging memory problems, also run them with forced garbage collection and with glibc's
 `MALLOC_CHECK_=3`.
+
+`runtests.jl` also runs the README's Quick start as a doctest on one rank. The README uses
+`julia` code fences so that GitHub highlights them, and the test turns the blocks that have an
+`# output` section into `jldoctest` blocks. Documenter's `Info` logs are hidden, and doctest
+failures are still reported as errors.
 
 [Aqua.jl](https://github.com/JuliaTesting/Aqua.jl) checks (method ambiguities, stale
 dependencies, compat bounds, piracy, …) run in their own CI workflow, `.github/workflows/Aqua.yml`.

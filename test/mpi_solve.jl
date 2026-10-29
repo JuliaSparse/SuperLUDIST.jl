@@ -204,6 +204,14 @@ end
         @test relerr(B, xtrue) < tol
         SuperLUDIST.PStatPrint(F) # collective
 
+        # Display: a SuperMatrix has no getindex, so the generic array printing fails (#23).
+        @test sprint(show, MIME"text/plain"(), A) ==
+            "$n×$n ReplicatedSuperMatrix{$Tv, $Ti} with $(nnz(S)) stored entries on a $nprow×$npcol Grid{$Ti}"
+        @test sprint(show, F) == "SuperLUFactorization{$Tv, $Ti}($n×$n ReplicatedSuperMatrix{$Tv, $Ti})"
+        @test endswith(sprint(show, MIME"text/plain"(), F), "on a $nprow×$npcol Grid{$Ti}, factored")
+        @test occursin("SuperLUFactorization", sprint(show, MIME"text/plain"(), (b, F)))
+        @test sprint(show, MIME"text/plain"(), grid) == "$nprow×$npcol Grid{$Ti} (this rank is $rank)"
+
         # SuperLU_DIST's test problem generators.
         x0 = SuperLUDIST.GenXtrue_dist!(Matrix{Tv}(undef, n, 2), Ti)
         b0 = SuperLUDIST.FillRHS_dist!(similar(x0), ReplicatedSuperMatrix(S, grid), x0)
@@ -230,6 +238,10 @@ end
         # Factorize without a right hand side, then solve.
         _, F = pgssvx!(A; options = opts())
         @test relerr(F \ b[rows, :], xtrue[rows, :]) < tol
+        @test sprint(show, MIME"text/plain"(), A) ==
+            "$n×$n DistributedSuperMatrix{$Tv, $Ti} with rows $(first(rows)):$(last(rows)) " *
+            "($(nnz(Sl)) stored entries) on this rank of a $nprow×$npcol Grid{$Ti}"
+        @test sprint(show, F) == "SuperLUFactorization{$Tv, $Ti}($n×$n DistributedSuperMatrix{$Tv, $Ti})"
         # The same, with 0-based `CIndex` indices.
         CIndex = SuperLUDIST.CIndex
         A = DistributedSuperMatrix(
@@ -291,6 +303,7 @@ grids3d = nprocs == 4 ? [(1, 2, 2), (2, 1, 2), (1, 1, 4)] : [(1, 1, 1)]
     @test grid.iam == MPI.Comm_rank(comm)
     @test 0 <= grid.zscp.Iam < dims[3]
     @test :npdep in propertynames(grid)
+    @test sprint(show, grid) == "$(join(dims, "×")) Grid3D{$Ti}"
     S = testmatrix(Tv, 12)
     n = size(S, 1)
     xtrue = Tv[mod1(i, 7) + mod1(j, 3) for i in 1:n, j in 1:2]

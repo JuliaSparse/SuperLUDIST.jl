@@ -56,10 +56,11 @@ Restart Julia for the change to take effect.
 
 ## Quick start
 
+Save this as `solve.jl`:
+
 ```julia
-# solve.jl
 using MPI, SuperLUDIST, SparseArrays, LinearAlgebra
-using SuperLUDIST: Grid, pgssvx!
+using SuperLUDIST: Grid, Options, pgssvx!
 
 MPI.Init()
 grid = Grid{Int32}(1, MPI.Comm_size(MPI.COMM_WORLD))   # a 1 × nranks process grid
@@ -69,11 +70,24 @@ S = spdiagm(-1 => fill(-1.0, n - 1), 0 => fill(4.0, n), 1 => fill(-1.0, n - 1))
 b = S * ones(n)
 
 A = ReplicatedSuperMatrix(S, grid)    # every rank holds the same matrix
-x, F = pgssvx!(A, copy(b))            # factorize and solve
+options = Options{Int32}(; PrintStat = SuperLUDIST.Common.NO)
+x, F = pgssvx!(A, copy(b); options)   # factorize and solve
 y = F \ (2b)                          # reuse the factorization
 
+if MPI.Comm_rank(MPI.COMM_WORLD) == 0
+    println(F)
+    println(x ≈ ones(n) && y ≈ 2ones(n))
+end
 MPI.Finalize()
+
+# output
+
+SuperLUFactorization{Float64, Int32}(100×100 ReplicatedSuperMatrix{Float64, Int32})
+true
 ```
+
+The output is from a single rank. The tests run the README's code blocks that have an
+`# output` section as doctests. Run it on 4 ranks with:
 
 ```sh
 mpiexecjl -n 4 julia --project solve.jl
@@ -110,10 +124,14 @@ See the [documentation](https://juliasparse.github.io/SuperLUDIST.jl/dev/) for m
 - Because of a bug in SuperLU_DIST ([xiaoyeli/superlu_dist#238](https://github.com/xiaoyeli/superlu_dist/issues/238)),
   `Float32` solves of a `ReplicatedSuperMatrix` on more than one rank are done without
   equilibration (`Equil = NO`). Use a `DistributedSuperMatrix` if you need it.
+- Some output ignores `PrintStat = NO`. The 3D drivers print each iterative refinement step on
+  rank 0 (set `IterRefine = NOREFINE` to turn that off), and reading or scattering a
+  `DistributedSuperMatrix` prints its row partition (`part = ...`, from SparseBase).
 
 ## Development
 
-Run the tests with `Pkg.test("SuperLUDIST")`. They launch MPI jobs on 1 and 4 ranks. The
+Run the tests with `Pkg.test("SuperLUDIST")`. They launch MPI jobs on 1 and 4 ranks, and show a
+job's output only if it fails. The
 low-level bindings in `lib/` are generated from the `SuperLU_DIST_jll` headers with Clang.jl;
 see [`gen/README.md`](gen/README.md) for how to regenerate and check them, and the
 [Development](https://juliasparse.github.io/SuperLUDIST.jl/dev/development/) docs for testing and
