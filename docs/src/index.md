@@ -9,8 +9,9 @@ the distributed-memory sparse direct solver from Lawrence Berkeley National Labo
 sparse linear systems ``Ax = b`` with an LU factorization, using MPI between ranks and OpenMP
 within each rank.
 
-SuperLUDIST.jl uses SuperLU_DIST 9.3.1 from `SuperLU_DIST_jll`, or your own build of it, and
-supports:
+SuperLUDIST.jl uses SuperLU_DIST 9.3.1 from `SuperLU_DIST_jll`, its optional CUDA build from
+`SuperLU_DIST_CUDA_jll` for Linux machines with NVIDIA GPUs (see [GPUs](@ref)), or your own build
+of it, and supports:
 
 - element types `Float32`, `Float64` and `ComplexF64`,
 - index types `Int32` and `Int64`, through two separate builds of SuperLU_DIST,

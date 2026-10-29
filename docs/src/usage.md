@@ -106,7 +106,8 @@ much faster than the 2D one. A [`Grid3D`](@ref) arranges `nprow × npcol × npde
 the layers, so that each layer factorizes its own subtrees independently, and replicates the
 top of the tree, trading some extra memory for much less communication. See
 [Sao, Li and Vuduc (2019)](https://doi.org/10.1016/j.jpdc.2019.03.004) and the SuperLU_DIST
-documentation for when this pays off.
+documentation for when this pays off. With the CUDA build (see [GPUs](@ref)), each layer
+factorizes on a GPU; set `SUPERLU_BIND_MPI_GPU=1` to give the ranks of a node different GPUs.
 
 A [`DistributedSuperMatrix`](@ref) on a `Grid3D` is solved with SuperLU_DIST's `pgssvx3d`
 drivers, with the same functions as on a 2D grid. Its rows must be distributed over *all* the
