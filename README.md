@@ -124,10 +124,14 @@ See the [documentation](https://juliasparse.github.io/SuperLUDIST.jl/dev/) for m
 - Because of a bug in SuperLU_DIST ([xiaoyeli/superlu_dist#238](https://github.com/xiaoyeli/superlu_dist/issues/238)),
   `Float32` solves of a `ReplicatedSuperMatrix` on more than one rank are done without
   equilibration (`Equil = NO`). Use a `DistributedSuperMatrix` if you need it.
+- Some output ignores `PrintStat = NO`. The 3D drivers print each iterative refinement step on
+  rank 0 (set `IterRefine = NOREFINE` to turn that off), and reading or scattering a
+  `DistributedSuperMatrix` prints its row partition (`part = ...`, from SparseBase).
 
 ## Development
 
-Run the tests with `Pkg.test("SuperLUDIST")`. They launch MPI jobs on 1 and 4 ranks. The
+Run the tests with `Pkg.test("SuperLUDIST")`. They launch MPI jobs on 1 and 4 ranks, and show a
+job's output only if it fails. The
 low-level bindings in `lib/` are generated from the `SuperLU_DIST_jll` headers with Clang.jl;
 see [`gen/README.md`](gen/README.md) for how to regenerate and check them, and the
 [Development](https://juliasparse.github.io/SuperLUDIST.jl/dev/development/) docs for testing and

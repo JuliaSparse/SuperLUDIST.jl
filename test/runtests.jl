@@ -1,6 +1,7 @@
 using SuperLUDIST
 using MPI
 using Documenter
+using Logging
 using Test
 
 @testset "SuperLUDIST.jl" begin
@@ -33,21 +34,31 @@ using Test
     end
 
     # The solvers need an MPI job, so run them under mpiexec on a 1×1 and a 2×2 grid.
+    # SuperLU_DIST prints as it solves, so show a job's output only if it fails.
     @testset "MPI solves on $nprocs rank(s)" for nprocs in (1, 4)
         script = joinpath(@__DIR__, "mpi_solve.jl")
         cmd = `$(MPI.mpiexec()) -n $nprocs $(Base.julia_cmd()) --startup-file=no --project=$(Base.active_project()) $script`
-        @test success(pipeline(addenv(cmd, "OMP_NUM_THREADS" => "1"); stdout, stderr))
+        log = tempname()
+        ok = open(log, "w") do io
+            success(pipeline(addenv(cmd, "OMP_NUM_THREADS" => "1"); stdout = io, stderr = io))
+        end
+        ok || print(read(log, String))
+        @test ok
     end
 
     # The README's examples, on a single rank. Last, since they finalize MPI. Its code blocks
     # are `julia` blocks so that GitHub highlights them, and those with an `# output`
     # section are doctests.
     @testset "README doctests" begin
-        readme = read(joinpath(pkgdir(SuperLUDIST), "README.md"), String)
+        # Git may check the README out with CRLF line endings, as on Windows.
+        readme = replace(read(joinpath(pkgdir(SuperLUDIST), "README.md"), String), "\r\n" => "\n")
         blocks = r"```julia\n((?:(?!```)[\s\S])*?\n# output\n)"
         @test occursin(blocks, readme)
         dir = mktempdir()
         write(joinpath(dir, "index.md"), replace(readme, blocks => s"```jldoctest readme\n\1"))
-        doctest(dir, [SuperLUDIST]; testset = "README")
+        # Documenter logs its build steps at Info level, and doctest failures as errors.
+        with_logger(ConsoleLogger(stderr, Logging.Error)) do
+            doctest(dir, [SuperLUDIST]; testset = "README")
+        end
     end
 end

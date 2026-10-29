@@ -188,6 +188,14 @@ The enum values (`Common.YES`, `Common.NO`, `Common.METIS_AT_PLUS_A`, …) are i
 `SuperLUDIST.Common`. With `PrintStat = YES` (the default), statistics are printed after each solve,
 and `SuperLUDIST.PStatPrint(F)` prints them again. `PStatPrint` is collective.
 
+Some output can't be turned off with `PrintStat`:
+
+- The 3D drivers print a line for each step of iterative refinement on rank 0, such as
+  `( 0) .. Step 0: berr[j] = 1.1e-16`. Set `IterRefine = Common.NOREFINE` to silence it, at
+  the cost of the refinement.
+- `MatrixMarket.mmread` and `scatterstore!` of a `DistributedSuperMatrix` print
+  the row partition (`part = ...`) on the root rank, from SparseBase.
+
 ## Test problems
 
 [`mmread_and_generatesolution`](@ref) reads a Matrix Market file and generates a known solution
