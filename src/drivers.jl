@@ -189,3 +189,11 @@ end
 end
 end
 end
+
+"""
+    inf_norm_error_dist(x::Matrix, xtrue::Matrix, grid::Grid)
+
+Print the relative infinity norm error of each column of the solution `x` against `xtrue`,
+with SuperLU_DIST's `inf_norm_error_dist`. It only uses this rank's data.
+"""
+inf_norm_error_dist

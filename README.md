@@ -1,6 +1,5 @@
 # SuperLUDIST.jl
 
-[![Stable](https://img.shields.io/badge/docs-stable-blue.svg)](https://juliasparse.github.io/SuperLUDIST.jl/stable/)
 [![Dev](https://img.shields.io/badge/docs-dev-blue.svg)](https://juliasparse.github.io/SuperLUDIST.jl/dev/)
 [![CI](https://github.com/JuliaSparse/SuperLUDIST.jl/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/JuliaSparse/SuperLUDIST.jl/actions/workflows/ci.yml?query=branch%3Amain)
 [![Coverage](https://codecov.io/gh/JuliaSparse/SuperLUDIST.jl/branch/main/graph/badge.svg)](https://codecov.io/gh/JuliaSparse/SuperLUDIST.jl)
@@ -105,8 +104,11 @@ See the [documentation](https://juliasparse.github.io/SuperLUDIST.jl/dev/) for m
 
 ## Development
 
-The low-level bindings in `lib/` are generated from the `SuperLU_DIST_jll` headers with
-Clang.jl. See [`gen/README.md`](gen/README.md) for how to regenerate and check them.
+Run the tests with `Pkg.test("SuperLUDIST")`. They launch MPI jobs on 1 and 4 ranks. The
+low-level bindings in `lib/` are generated from the `SuperLU_DIST_jll` headers with Clang.jl;
+see [`gen/README.md`](gen/README.md) for how to regenerate and check them, and the
+[Development](https://juliasparse.github.io/SuperLUDIST.jl/dev/development/) docs for testing and
+coverage.
 
 ## About the project
 

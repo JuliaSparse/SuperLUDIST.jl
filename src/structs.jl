@@ -237,6 +237,13 @@ for I ∈ (:Int32, :Int64)
 end # end for
 end # end for
 
+"""
+    SuperLUFactorization
+
+The factorization returned by [`pgssvx!`](@ref) and `lu!`. It holds the matrix, the options
+and SuperLU_DIST's factors, and solves further right-hand sides with `F \\ b` or
+`ldiv!(F, b)`.
+"""
 mutable struct SuperLUFactorization{T, I, A, Opts, Solve, Perm, Factors, Stat, B} <: LinearAlgebra.Factorization{T}
     mat::A
     options::Opts
@@ -263,6 +270,11 @@ mutable struct SuperLUFactorization{T, I, A, Opts, Solve, Perm, Factors, Stat, B
         return new(mat, options, solve, perm, factors, stat, berr, b)
     end
 end
+"""
+    isfactored(F::SuperLUFactorization)
+
+Whether `F` holds a computed factorization, so that further solves reuse it.
+"""
 isfactored(F::SuperLUFactorization) = F.options.Fact == Common.FACTORED
 
 function SuperLUFactorization(
@@ -274,8 +286,28 @@ function SuperLUFactorization(
     )
 end
 
+"""
+    PStatPrint(F::SuperLUFactorization)
+
+Print SuperLU_DIST's statistics (timings, flops and memory) for the factorization `F`. This
+is collective: every rank in the grid must call it.
+"""
 function PStatPrint(F::SuperLUFactorization)
     PStatPrint(F.options, F.stat, F.mat.grid)
+end
+
+# `omp_set_num_threads` of the OpenMP runtime that `lib` is linked against.
+function omp_set_num_threads_ptr(lib)
+    f = dlsym(dlopen(lib), :omp_set_num_threads; throw_error = false)
+    f === nothing || return f
+    # On Windows a library's handle only finds its own symbols, so look in the OpenMP
+    # runtime (libgomp or libomp) that it loaded.
+    for l in dllist()
+        occursin(r"^lib(g|i5)?omp"i, basename(l)) || continue
+        f = dlsym(dlopen(l), :omp_set_num_threads; throw_error = false)
+        f === nothing || return f
+    end
+    error("Could not find omp_set_num_threads in $lib or a loaded OpenMP library.")
 end
 
 for I ∈ (:Int32, :Int64)
@@ -289,8 +321,7 @@ for I ∈ (:Int32, :Int64)
         on this rank.
         """
         function superlu_set_num_threads(::Type{$I}, n)
-            omp_set_num_threads = dlsym(dlopen($libname), :omp_set_num_threads)
-            ccall(omp_set_num_threads, Cvoid, (Cint,), n)
+            ccall(omp_set_num_threads_ptr($libname), Cvoid, (Cint,), n)
         end
     end
     for T ∈ (Float32, Float64, ComplexF64)
