@@ -132,8 +132,22 @@ function DistributedSuperMatrix((rows, cols)::NTuple{2, <:AbstractVector}, v, fi
     )
 end
 
+# The rows are distributed over every rank of `comm`, so they must all be in the grid.
+# Ranks outside the grid see dimensions of 0 or the grid's, so they all throw together.
+function checkgridcomm(grid::AbstractGrid, comm::MPI.Comm)
+    np = MPI.Comm_size(comm)
+    gridsize(grid) == np || throw(ArgumentError(
+        "The rows are distributed over all $np ranks of the communicator, but the grid " *
+        "has $(gridsize(grid)) ranks. Build the grid on a communicator of its size."
+    ))
+    return nothing
+end
+
 """
     $(TYPEDSIGNATURES)
+
+Distribute the rows of `sstore`, given on rank `root`, over the ranks of `comm`, which must
+be the ranks of the grid of `rstore`, with `chunksizes[i]` rows on rank `i - 1`.
 """
 function Communication.scatterstore!(
     rstore::DistributedSuperMatrix{Tv, Ti},
@@ -143,6 +157,7 @@ function Communication.scatterstore!(
     root::Integer = 0,
     comm::MPI.Comm = rstore.grid.comm
 ) where {Tv, Ti}
+    checkgridcomm(rstore.grid, comm)
     # TODO: some of this should happen automatically.
     # scatterstore! is semantically a resize and overwrite, so changing ptrs
     # shouldn't be necessary.
