@@ -19,6 +19,7 @@ makedocs(;
         "Installation" => "installation.md",
         "Usage" => "usage.md",
         "API" => "api.md",
+        "Development" => "development.md",
     ],
     checkdocs=:exports,
     # The Clang.jl-generated bindings carry the C header comments as docstrings.

@@ -21,6 +21,14 @@ grid = Grid{Int64}(2, 2, MPI.COMM_WORLD)
 grid.iam # this rank's number within the grid
 ```
 
+By default the ranks are laid out on the grid in row-major order. With `batch = true` the grid
+is built with `superlu_gridmap` instead, from a `usermap` matrix of ranks (row-major by
+default), for example to give each of several grids its own subset of ranks:
+
+```julia
+grid = Grid{Int64}(2, 2, MPI.COMM_WORLD; batch = true, usermap = [0 1; 2 3])
+```
+
 ## Replicated matrices
 
 A [`ReplicatedSuperMatrix`](@ref) holds the whole matrix in compressed sparse column form on
@@ -31,6 +39,15 @@ way to get started, but it needs the whole matrix and right-hand side on every r
 using SparseArrays
 A = ReplicatedSuperMatrix(S, grid)                # S::SparseMatrixCSC, the same on every rank
 x, F = SuperLUDIST.pgssvx!(A, copy(b))            # b holds every row
+```
+
+A `ReplicatedSuperMatrix` can also be built from any `SparseBase` store, with 1-based indices
+or 0-based `CIndex` ones, for example from coordinate (COO) form:
+
+```julia
+using SparseBase
+I, J, V = findnz(S)
+A = ReplicatedSuperMatrix(SparseBase.CoordinateStore((Int64.(I), Int64.(J)), V, size(S)), grid)
 ```
 
 To read a Matrix Market file on one rank and broadcast it:
@@ -57,6 +74,14 @@ If each rank builds its own rows, wrap them directly (CSR arrays with 1-based in
 
 ```julia
 A = DistributedSuperMatrix(rowptr, colidx, nzval, firstrow, localsize, globalsize, grid)
+```
+
+Here `firstrow` is the global number of this rank's first row, `localsize` the size of the
+local block (`(number of local rows, number of columns)`) and `globalsize` the size of the
+whole matrix. The same block can be given in coordinate form, with local row numbers:
+
+```julia
+A = DistributedSuperMatrix((rows, cols), nzval, firstrow, localsize, globalsize, grid)
 ```
 
 Or scatter a matrix assembled on one rank:
@@ -92,6 +117,13 @@ x = F \ b
 ldiv!(F, B)   # in place
 ```
 
+To factorize without a right-hand side, call `pgssvx!` without `b`:
+
+```julia
+_, F = SuperLUDIST.pgssvx!(A)
+SuperLUDIST.isfactored(F) # true
+```
+
 Note that SuperLU_DIST may scale and permute the values of `A` in place.
 
 ## Options
@@ -109,6 +141,17 @@ x, F = SuperLUDIST.pgssvx!(A, b; options = opts)
 The enum values (`Common.YES`, `Common.NO`, `Common.METIS_AT_PLUS_A`, …) are in
 `SuperLUDIST.Common`. With `PrintStat = YES` (the default), statistics are printed after each solve,
 and `SuperLUDIST.PStatPrint(F)` prints them again. `PStatPrint` is collective.
+
+## Test problems
+
+[`mmread_and_generatesolution`](@ref) reads a Matrix Market file and generates a known solution
+and matching right-hand sides, as SuperLU_DIST's own example drivers do, and
+[`inf_norm_error_dist`](@ref) prints the error of a computed solution. [`GenXtrue_dist!`](@ref)
+and [`FillRHS_dist!`](@ref) are the underlying pieces.
+
+```julia
+coo, b, xtrue = SuperLUDIST.mmread_and_generatesolution(Float64, Int64, 1, "matrix.mtx", grid)
+```
 
 ## Examples
 

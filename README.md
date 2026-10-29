@@ -104,8 +104,11 @@ See the [documentation](https://juliasparse.github.io/SuperLUDIST.jl/dev/) for m
 
 ## Development
 
-The low-level bindings in `lib/` are generated from the `SuperLU_DIST_jll` headers with
-Clang.jl. See [`gen/README.md`](gen/README.md) for how to regenerate and check them.
+Run the tests with `Pkg.test("SuperLUDIST")`. They launch MPI jobs on 1 and 4 ranks. The
+low-level bindings in `lib/` are generated from the `SuperLU_DIST_jll` headers with Clang.jl;
+see [`gen/README.md`](gen/README.md) for how to regenerate and check them, and the
+[Development](https://juliasparse.github.io/SuperLUDIST.jl/dev/development/) docs for testing and
+coverage.
 
 ## About the project
 
