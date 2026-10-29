@@ -78,7 +78,8 @@ Set field `name` of the immutable struct held in `r` to `v`.
 """
 function setfield_ref!(r::Base.RefValue{T}, name::Symbol, v) where T
     x = r[]
-    i = Base.fieldindex(T, name)
+    i = Base.fieldindex(T, name, false)
+    i == 0 && throw(ArgumentError("$(nameof(T)) has no field $name"))
     r[] = T(ntuple(j -> j == i ? convert(fieldtype(T, j), v) : getfield(x, j), Val(fieldcount(T)))...)
     return v
 end

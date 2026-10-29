@@ -18,6 +18,8 @@ coostore
 ```@docs
 pgssvx!
 LinearAlgebra.lu!(::SuperLUDIST.AbstractSuperMatrix)
+SuperLUFactorization
+isfactored
 ```
 
 ## Configuration
@@ -29,6 +31,16 @@ set_libraries!
 superlu_set_num_threads
 ```
 
+## Test problems and diagnostics
+
+```@docs
+mmread_and_generatesolution
+GenXtrue_dist!
+FillRHS_dist!
+inf_norm_error_dist
+PStatPrint
+```
+
 ## Everything else
 
 This includes the constructors and the Matrix Market readers.
@@ -38,5 +50,9 @@ Modules = [SuperLUDIST]
 Filter = t -> !(t in (SuperLUDIST.ReplicatedSuperMatrix, SuperLUDIST.DistributedSuperMatrix,
                       SuperLUDIST.pgssvx!, SuperLUDIST.Grid, SuperLUDIST.Options,
                       SuperLUDIST.set_libraries!, SuperLUDIST.superlu_set_num_threads,
-                      SuperLUDIST.cscstore, SuperLUDIST.coostore))
+                      SuperLUDIST.cscstore, SuperLUDIST.coostore,
+                      SuperLUDIST.SuperLUFactorization, SuperLUDIST.isfactored,
+                      SuperLUDIST.mmread_and_generatesolution, SuperLUDIST.GenXtrue_dist!,
+                      SuperLUDIST.FillRHS_dist!, SuperLUDIST.inf_norm_error_dist,
+                      SuperLUDIST.PStatPrint))
 ```

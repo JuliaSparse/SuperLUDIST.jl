@@ -237,6 +237,13 @@ for I ∈ (:Int32, :Int64)
 end # end for
 end # end for
 
+"""
+    SuperLUFactorization
+
+The factorization returned by [`pgssvx!`](@ref) and `lu!`. It holds the matrix, the options
+and SuperLU_DIST's factors, and solves further right-hand sides with `F \\ b` or
+`ldiv!(F, b)`.
+"""
 mutable struct SuperLUFactorization{T, I, A, Opts, Solve, Perm, Factors, Stat, B} <: LinearAlgebra.Factorization{T}
     mat::A
     options::Opts
@@ -263,6 +270,11 @@ mutable struct SuperLUFactorization{T, I, A, Opts, Solve, Perm, Factors, Stat, B
         return new(mat, options, solve, perm, factors, stat, berr, b)
     end
 end
+"""
+    isfactored(F::SuperLUFactorization)
+
+Whether `F` holds a computed factorization, so that further solves reuse it.
+"""
 isfactored(F::SuperLUFactorization) = F.options.Fact == Common.FACTORED
 
 function SuperLUFactorization(
@@ -274,6 +286,12 @@ function SuperLUFactorization(
     )
 end
 
+"""
+    PStatPrint(F::SuperLUFactorization)
+
+Print SuperLU_DIST's statistics (timings, flops and memory) for the factorization `F`. This
+is collective: every rank in the grid must call it.
+"""
 function PStatPrint(F::SuperLUFactorization)
     PStatPrint(F.options, F.stat, F.mat.grid)
 end
