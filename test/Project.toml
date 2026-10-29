@@ -1,5 +1,4 @@
 [deps]
-CIndices = "5a98b6c4-18fa-405d-92b3-8277d93fed36"
 LinearAlgebra = "37e2e46d-f89d-539d-b4ee-838fcccc9c8e"
 MPI = "da04e1cc-30fd-572f-bb4f-1f8673147195"
 MatrixMarket = "4d4711f2-db25-561a-b6b3-d35e7d4047d3"
@@ -10,7 +9,10 @@ Test = "8dfed614-e22c-5e08-85e1-65c5234f0b40"
 
 [compat]
 LinearAlgebra = "<0.0.1, 1"
-Test = "1"
+MPI = "0.20.29"
+MatrixMarket = "0.5.2"
+SparseBase = "0.4.0"
+Test = "<0.0.1, 1"
 
 [sources]
 SuperLUDIST = {path = ".."}

@@ -4,6 +4,7 @@ using SuperLUDIST: Grid, Options, pgssvx!, Common
 using MPI
 using SparseArrays
 using SparseBase
+using MatrixMarket
 using SparseBase.Communication: distribute_evenly, localsize, scatterstore!
 using LinearAlgebra
 using Test
@@ -66,6 +67,136 @@ const quiet = (; PrintStat = Common.NO)
         # A different number of right hand sides re-initializes the triangular solve.
         @test relerr(F \ b[rows, 1:1], xtrue[rows, 1:1]) < tolerance(Tv)
         @test relerr(F \ [b[rows, :] b[rows, :]], [xtrue[rows, :] xtrue[rows, :]]) < tolerance(Tv)
+    end
+end
+
+@testset "API, $Ti" for Ti in (Int32, Int64)
+    Tv = Float64
+    rank = MPI.Comm_rank(comm)
+    grid = Grid{Ti}(nprow, npcol, comm)
+    S = testmatrix(Tv, 12)
+    n = size(S, 1)
+    xtrue = Tv[mod1(i, 7) + mod1(j, 3) for i in 1:n, j in 1:2]
+    b = S * xtrue
+    tol = tolerance(Tv)
+    opts() = Options{Ti}(; quiet...)
+    # This rank's block of rows, as `distribute_evenly` splits them.
+    counts = distribute_evenly(n, nprow * npcol)
+    rows = (sum(counts[1:rank]) + 1):sum(counts[1:(rank + 1)])
+
+    @testset "grid" begin
+        @test (grid.nprow, grid.npcol) == (nprow, npcol)
+        @test grid.iam == rank
+        @test :iam in propertynames(grid)
+        g = Grid{Ti}(nprow, npcol, comm; batch = true)
+        @test (g.nprow, g.npcol) == (nprow, npcol)
+        @test 0 <= g.iam < nprow * npcol
+        # A grid smaller than the communicator: the other ranks are not part of it.
+        g1 = Grid{Ti}(1, 1, comm)
+        rank == root && @test g1.iam == 0
+    end
+
+    @testset "internal structs" begin
+        CIndex = SuperLUDIST.CIndex
+        @test SuperLUDIST.ScalePerm{Tv, CIndex{Ti}}(n, n) isa SuperLUDIST.ScalePerm{Tv, Ti}
+        @test SuperLUDIST.LUFactors{Tv, CIndex{Ti}}(n, grid) isa SuperLUDIST.LUFactors{Tv, Ti}
+        @test SuperLUDIST.LUStat{CIndex{Ti}}() isa SuperLUDIST.LUStat{Ti}
+        @test SuperLUDIST.SolveData{Tv, CIndex{Ti}}(Options{Ti}()) isa SuperLUDIST.SolveData{Tv, Ti}
+        if Ti === Int
+            # The index type defaults to Int.
+            @test SuperLUDIST.ScalePerm{Tv}(n, n) isa SuperLUDIST.ScalePerm{Tv, Int}
+            @test SuperLUDIST.LUFactors{Tv}(n, grid) isa SuperLUDIST.LUFactors{Tv, Int}
+            @test SuperLUDIST.LUStat() isa SuperLUDIST.LUStat{Int}
+            @test SuperLUDIST.SolveData{Tv}(Options()) isa SuperLUDIST.SolveData{Tv, Int}
+        end
+    end
+
+    @testset "replicated matrices" begin
+        A = ReplicatedSuperMatrix(SuperLUDIST.cscstore(Tv, Ti, S), grid)
+        @test A.nrow == n # forwarded to the C SuperMatrix
+        @test SparseBase.Communication.localpart(A) === A.store
+        @test size(ReplicatedSuperMatrix{Tv, Ti}(grid)) == (0, 0)
+        # From a 1-based coordinate store.
+        I_, J_, V = findnz(S)
+        coo = SparseBase.CoordinateStore((Ti.(I_), Ti.(J_)), V, size(S))
+        x, _ = pgssvx!(ReplicatedSuperMatrix(coo, grid), copy(b); options = opts())
+        @test relerr(x, xtrue) < tol
+        # From a coordinate store with 0-based `CIndex` indices.
+        CIndex = SuperLUDIST.CIndex
+        coo = SparseBase.CoordinateStore((CIndex{Ti}.(I_), CIndex{Ti}.(J_)), V, size(S))
+        x, _ = pgssvx!(ReplicatedSuperMatrix(coo, grid), copy(b); options = opts())
+        @test relerr(x, xtrue) < tol
+
+        # Factorize without a right hand side, then solve.
+        _, F = pgssvx!(ReplicatedSuperMatrix(S, grid); options = opts())
+        @test SuperLUDIST.isfactored(F)
+        @test relerr(F \ b, xtrue) < tol
+        B = copy(b)
+        @test ldiv!(F, B) === B
+        @test relerr(B, xtrue) < tol
+        SuperLUDIST.PStatPrint(F) # collective
+    end
+
+    @testset "distributed matrices" begin
+        Sl = S[rows, :]
+        # From this rank's rows in CSR form (1-based).
+        T = sparse(transpose(Sl))
+        A = DistributedSuperMatrix(
+            Ti.(T.colptr), Ti.(T.rowval), T.nzval, first(rows), size(Sl), size(S), grid
+        )
+        @test size(A) == size(S)
+        @test A.first_row == first(rows)
+        x, _ = pgssvx!(A, b[rows, :]; options = opts())
+        @test relerr(x, xtrue[rows, :]) < tol
+
+        # From this rank's rows in coordinate form (1-based, local row numbers).
+        I_, J_, V = findnz(Sl)
+        A = DistributedSuperMatrix((Ti.(I_), Ti.(J_)), V, first(rows), size(Sl), size(S), grid)
+        # Factorize without a right hand side, then solve.
+        _, F = pgssvx!(A; options = opts())
+        @test relerr(F \ b[rows, :], xtrue[rows, :]) < tol
+        # The same, with 0-based `CIndex` indices.
+        CIndex = SuperLUDIST.CIndex
+        A = DistributedSuperMatrix(
+            (CIndex{Ti}.(I_), CIndex{Ti}.(J_)), V, first(rows), size(Sl), size(S), grid
+        )
+        x, _ = pgssvx!(A, b[rows, :]; options = opts())
+        @test relerr(x, xtrue[rows, :]) < tol
+    end
+
+    @testset "Matrix Market" begin
+        path = MPI.bcast(rank == root ? tempname() * ".mtx" : nothing, comm; root)
+        rank == root && MatrixMarket.mmwrite(path, S)
+        MPI.Barrier(comm)
+
+        A = MatrixMarket.mmread(ReplicatedSuperMatrix{Tv, Ti}, path, grid)
+        @test size(A) == size(S)
+        x, _ = pgssvx!(A, copy(b); options = opts())
+        @test relerr(x, xtrue) < tol
+
+        A = MatrixMarket.mmread(DistributedSuperMatrix{Tv, Ti}, path, grid)
+        @test size(A) == size(S)
+        @test A.first_row == first(rows)
+        F = lu!(A, b[rows, :]; options = opts())
+        @test relerr(F \ b[rows, :], xtrue[rows, :]) < tol
+
+        coo, b2, x2 = SuperLUDIST.mmread_and_generatesolution(Tv, Ti, 2, path, grid; root)
+        @test (rank == root) == (coo !== nothing)
+        @test size(b2) == size(x2) == (n, 2)
+        @test b2 ≈ S * x2
+        x, _ = pgssvx!(ReplicatedSuperMatrix(S, grid), copy(b2); options = opts())
+        @test relerr(x, x2) < tol
+        if rank == root # these print the error
+            SuperLUDIST.inf_norm_error_dist(x, x2, grid)
+            SuperLUDIST.inf_norm_error_dist(Ti(n), Ti(2), x, Ti(n), x2, Ti(n), grid)
+        end
+
+        MPI.Barrier(comm)
+        rank == root && rm(path)
+    end
+
+    @testset "threads" begin
+        @test SuperLUDIST.superlu_set_num_threads(Ti, 1) === nothing
     end
 end
 end

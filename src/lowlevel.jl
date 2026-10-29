@@ -2,49 +2,6 @@ for T ∈ (Float32, Float64, ComplexF64)
 for I ∈ (:Int32, :Int64)
 L = Symbol(String(:SuperLU_) * String(I))
 @eval begin
-    function _create_csrlocal_matrix(
-        a::Base.RefValue{$L.SuperMatrix}, m, n, nnz_local, m_local, first_row,
-        nzval::AbstractVector{$T},
-        colindices::AbstractVector{CIndex{$I}},
-        rowptrs::AbstractVector{CIndex{$I}},
-        mtype = Common.SLU_GE
-    )
-        $L.$(prefixname(T, :Create_CompRowLoc_Matrix_dist))(
-            a, m, n, nnz_local, m_local, first_row,
-            nzval, colindices, rowptrs, Common.SLU_NR_loc,
-            toslutype($T), mtype
-        )
-        return a
-    end
-
-    function _create_cscglobal_matrix(
-        a::Base.RefValue{$L.SuperMatrix}, m, n, nnz,
-        nzval::AbstractVector{$T},
-        rowindices::AbstractVector{$I},
-        colptrs::AbstractVector{$I},
-        mtype = Common.SLU_GE
-    )
-        $L.$(prefixname(T, :Create_CompCol_Matrix_dist))(
-            a, m, n, nnz, nzval, rowindices, colptrs,
-            Common.SLU_NC, toslutype($T), mtype
-        )
-        return a
-    end
-
-    function readhb_dist(iam, fpp, m, n, nnz, aref::Base.RefValue{Ptr{$T}}, asubref::Base.RefValue{Ptr{$I}}, xaref::Base.RefValue{Ptr{$I}})
-        $L.$(prefixname(T, :readhb_dist))(
-            iam, fpp, m, n, nnz, aref, asubref, xaref
-        )
-    end
-    function readtriple_dist(iam, fpp, m, n, nnz, aref::Base.RefValue{Ptr{$T}}, asubref::Base.RefValue{Ptr{$I}}, xaref::Base.RefValue{Ptr{$I}})
-        $L.$(prefixname(T, :readtriple_dist))(
-            iam, fpp, m, n, nnz, aref, asubref, xaref
-        )
-    end
-    function allocateA_dist(n, nnz, aref::Base.RefValue{Ptr{$T}}, asubref::Base.RefValue{Ptr{$I}}, xaref::Base.RefValue{Ptr{$I}})
-        $L.$(prefixname(T, :allocateA_dist))(n, nnz, aref, asubref, xaref)
-    end
-
     function GenXtrue_dist!(xtrue::Array{$T}, n::$I, nrhs::$I, ldx = n)
         $L.$(prefixname(T, :GenXtrue_dist))(n, nrhs, xtrue, ldx)
     end
@@ -76,11 +33,23 @@ end
 end
 end
 
+"""
+    GenXtrue_dist!(xtrue::Matrix, Ti = Int)
+
+Fill `xtrue` with SuperLU_DIST's test solution (`GenXtrue_dist`), for example to build a
+right-hand side with [`FillRHS_dist!`](@ref). `Ti` selects the SuperLU_DIST library.
+"""
 function GenXtrue_dist!(xtrue, ::Type{Ti} = Int) where Ti
     GenXtrue_dist!(xtrue, Ti(size(xtrue, 1)), Ti(size(xtrue, 2)))
     return xtrue
 end
 
+"""
+    FillRHS_dist!(b, A::ReplicatedSuperMatrix, xtrue; trans = false)
+
+Compute the right-hand side `b = A * xtrue` (or `transpose(A) * xtrue`) with SuperLU_DIST's
+`FillRHS_dist`, and return `b`.
+"""
 function FillRHS_dist!(b::Array, A::AbstractSuperMatrix, xtrue::Array;
     trans = false, nrhs = size(xtrue, 2), ldx = size(xtrue, 1), ldb = size(b, 1))
     FillRHS_dist!(b, A, xtrue, trans, nrhs, ldx, ldb)

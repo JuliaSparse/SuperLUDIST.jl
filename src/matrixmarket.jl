@@ -113,6 +113,14 @@ function MatrixMarket.mmread(
   )
 end
 
+"""
+    mmread_and_generatesolution(Tv, Ti, nrhs, path, grid; root = 0)
+
+Read the Matrix Market file `path` on rank `root`, and generate a test problem for it, as
+SuperLU_DIST's example drivers do. Returns `(coo, b, xtrue)`, where `coo` is the matrix as a
+`SparseBase.CoordinateStore` on `root` (`nothing` elsewhere) and `b = A * xtrue` holds `nrhs`
+right-hand sides on every rank.
+"""
 function mmread_and_generatesolution(Tv, Ti, nrhs, path, grid; root = 0)
   comm = grid.comm
   iam = grid.iam
