@@ -34,7 +34,7 @@ For instance in order to update the size you must update the size of
     `A::DistributedSuperMatrix.store` as well as the sizes stored in `A.format` and
     `A.supermatrix`.
 """
-function DistributedSuperMatrix{Tv, Ti}(grid::Grid{Ti}) where {Tv, Ti}
+function DistributedSuperMatrix{Tv, Ti}(grid::AbstractGrid{Ti}) where {Tv, Ti}
     store = SparseBase.CSRStore{Tv, CIndex{Ti}}()
     firstrow, globalsize = 1, (0, 0)
     DistributedSuperMatrix(store, firstrow, globalsize, grid)
@@ -52,7 +52,7 @@ Construct a DistributedSuperMatrix from a finished `SparseBase.CSRStore`.
   - `globalsize` : the size of `A` across all ranks.
 """
 function DistributedSuperMatrix(
-    A::SparseBase.CSRStore{<:Any, CIndex{Ti}}, firstrow, globalsize, grid::Grid{Ti}
+    A::SparseBase.CSRStore{<:Any, CIndex{Ti}}, firstrow, globalsize, grid::AbstractGrid{Ti}
 ) where {Ti}
     L = libmodule(Ti)
     fmtref = Ref(L.NRformat_loc(
@@ -75,11 +75,11 @@ function DistributedSuperMatrix(
     }(superref, fmtref, A, Ti.(globalsize), firstrow, grid)
 end
 
-function DistributedSuperMatrix(store::SparseBase.AbstractSparseStore{Tv, <:Any, CIndex{Ti}}, firstrow, globalsize, grid::Grid{Ti}) where
+function DistributedSuperMatrix(store::SparseBase.AbstractSparseStore{Tv, <:Any, CIndex{Ti}}, firstrow, globalsize, grid::AbstractGrid{Ti}) where
     {Tv, Ti}
     return DistributedSuperMatrix(convert(SparseBase.CSRStore, store), firstrow, globalsize, grid)
 end
-function DistributedSuperMatrix(store::SparseBase.AbstractSparseStore{Tv, <:Any, Ti}, firstrow, globalsize, grid::Grid{Ti}) where
+function DistributedSuperMatrix(store::SparseBase.AbstractSparseStore{Tv, <:Any, Ti}, firstrow, globalsize, grid::AbstractGrid{Ti}) where
     {Tv, Ti}
     return DistributedSuperMatrix(convert(SparseBase.CSRStore{Tv, CIndex{Ti}}, store), firstrow, globalsize, grid)
 end
@@ -99,7 +99,7 @@ Valid element types are `{Float32, Float64, ComplexF64}`.
   - `globalsize` : the size of the matrix across all ranks.
   - `grid` : the grid on which the matrix is distributed.
 """
-function DistributedSuperMatrix(rowptr, colidx, v, firstrow, localsize, globalsize, grid::Grid{Ti}) where {Ti}
+function DistributedSuperMatrix(rowptr, colidx, v, firstrow, localsize, globalsize, grid::AbstractGrid{Ti}) where {Ti}
     return DistributedSuperMatrix(
         SparseBase.CSRStore(rowptr, colidx, v, localsize),
         firstrow,
@@ -123,7 +123,7 @@ Valid element types are `{Float32, Float64, ComplexF64}`.
   - `globalsize` : the size of the matrix across all ranks.
   - `grid` : the grid on which the matrix is distributed.
 """
-function DistributedSuperMatrix((rows, cols)::NTuple{2, <:AbstractVector}, v, firstrow, localsize, globalsize, grid::Grid{Ti}) where {Ti}
+function DistributedSuperMatrix((rows, cols)::NTuple{2, <:AbstractVector}, v, firstrow, localsize, globalsize, grid::AbstractGrid{Ti}) where {Ti}
     return DistributedSuperMatrix(
         SparseBase.CoordinateStore((rows, cols), v, localsize),
         firstrow,

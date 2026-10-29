@@ -97,6 +97,7 @@ include("structs.jl")
 include("distributedmatrix.jl")
 include("replicatedmatrix.jl")
 include("drivers.jl")
+include("drivers3d.jl")
 include("matrixmarket.jl")
 include("highlevel.jl")
 end

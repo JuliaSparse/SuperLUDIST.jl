@@ -1,6 +1,13 @@
 # Grid (gridinfo_t) functions:
 ##############################
 """
+    AbstractGrid{Ti}
+
+A SuperLU_DIST process grid with index type `Ti`: a 2D [`Grid`](@ref) or a 3D [`Grid3D`](@ref).
+"""
+abstract type AbstractGrid{I} end
+
+"""
     Grid{Ti}(nprow, npcol, comm = MPI.COMM_WORLD; batch = false, usermap = nothing)
 
 A 2D `nprow × npcol` process grid for SuperLU_DIST with index type `Ti ∈ (Int32, Int64)`,
@@ -12,7 +19,7 @@ matrix of ranks (default: row-major order).
 Fields of the underlying `gridinfo_t`, such as `iam`, `nprow` and `npcol`, are available as
 properties.
 """
-struct Grid{I, G}
+struct Grid{I, G} <: AbstractGrid{I}
     comm::MPI.Comm
     gridinfo::Base.RefValue{G}
 end
@@ -72,6 +79,65 @@ function Base.getproperty(g::Grid, s::Symbol)
     return getfield(getfield(g, :gridinfo)[], s)
 end
 Base.propertynames(g::Grid) = (:comm, :gridinfo, fieldnames(eltype(getfield(g, :gridinfo)))...)
+
+# Grid3D (gridinfo3d_t) functions:
+##################################
+"""
+    Grid3D{Ti}(nprow, npcol, npdep, comm = MPI.COMM_WORLD)
+
+A 3D `nprow × npcol × npdep` process grid for SuperLU_DIST's communication-avoiding 3D
+factorization, with index type `Ti ∈ (Int32, Int64)`, built from the first
+`nprow * npcol * npdep` ranks of `comm`. It consists of `npdep` layers of `nprow × npcol` 2D
+grids. `npdep` must be a power of two. MPI is initialized if necessary.
+
+A [`DistributedSuperMatrix`](@ref) on a `Grid3D` is solved with SuperLU_DIST's `pgssvx3d`
+drivers. Its rows must be distributed over all the ranks of the 3D grid.
+
+Fields of the underlying `gridinfo3d_t`, such as `iam`, `nprow`, `npcol`, `npdep`, `grid2d`
+(this rank's layer) and `zscp` (`zscp.Iam` is the layer number), are available as properties.
+"""
+struct Grid3D{I, G} <: AbstractGrid{I}
+    comm::MPI.Comm
+    gridinfo::Base.RefValue{G}
+end
+
+for I ∈ (:Int32, :Int64)
+L = Symbol(String(:SuperLU_) * String(I))
+@eval begin
+function Grid3D{$I}(nprow::Integer, npcol::Integer, npdep::Integer, comm = MPI.COMM_WORLD)
+    $I == Int32 && libsuperlu_dist_Int32 === nothing &&
+        (throw(ArgumentError("libsuperlu_dist_Int32 is not loaded.")))
+    $I == Int64 && libsuperlu_dist_Int64 === nothing &&
+        (throw(ArgumentError("libsuperlu_dist_Int64 is not loaded.")))
+    ispow2(npdep) || throw(ArgumentError("npdep = $npdep must be a power of two."))
+
+    !MPI.Initialized() && MPI.Init()
+    g = Grid3D{$I, $L.gridinfo3d_t}(comm, cref($L.gridinfo3d_t))
+    $L.superlu_gridinit3d(comm, nprow, npcol, npdep, g)
+    # Ranks outside the grid have iam == -1 and no communicators to free.
+    if g.iam != -1
+        finalizer(g.gridinfo) do G
+            !MPI.Finalized() && $L.superlu_gridexit3d(G)
+        end
+    end
+    return g
+end
+Base.unsafe_convert(::Type{Ptr{$L.gridinfo3d_t}}, g::Grid3D{$I}) =
+    Base.unsafe_convert(Ptr{$L.gridinfo3d_t}, getfield(g, :gridinfo))
+# Routines that work on this rank's 2D layer take the embedded `grid2d`.
+Base.unsafe_convert(::Type{Ptr{$L.gridinfo_t}}, g::Grid3D{$I}) = Ptr{$L.gridinfo_t}(
+    Base.unsafe_convert(Ptr{$L.gridinfo3d_t}, g) +
+    fieldoffset($L.gridinfo3d_t, Base.fieldindex($L.gridinfo3d_t, :grid2d))
+)
+end # end eval
+end # end for
+
+function Base.getproperty(g::Grid3D, s::Symbol)
+    s === :comm && return getfield(g, s)
+    s === :gridinfo && return getfield(g, s)
+    return getfield(getfield(g, :gridinfo)[], s)
+end
+Base.propertynames(g::Grid3D) = (:comm, :gridinfo, fieldnames(eltype(getfield(g, :gridinfo)))...)
 
 # Option functions:
 ###################
@@ -198,23 +264,31 @@ for I ∈ (:Int32, :Int64)
         function PStatPrint(options, stat::LUStat{$I}, grid)
             $L.PStatPrint(options, stat, grid)
         end
+        # As SuperLU_DIST's 3D examples do, print the statistics of layer 0 only.
+        function PStatPrint(options, stat::LUStat{$I}, grid::Grid3D{$I})
+            grid.zscp.Iam == 0 && $L.PStatPrint(options, stat, grid)
+            return nothing
+        end
     end # end eval
 end # end for
 
 # SolveData (SOLVEstruct_t) functions:
 ######################################
-mutable struct SolveData{T, I, S, O}
+mutable struct SolveData{T, I, S, O, G}
     data::Base.RefValue{S}
     options::O
+    # The `Grid3D` of a 3D solve, whose gathered matrix must be freed with the solve data.
+    grid::G
 end
-SolveData{T}(options) where T = SolveData{T, Int}(options)
+SolveData{T}(options, grid = nothing) where T = SolveData{T, Int}(options, grid)
 
-SolveData{T, I}(options) where {T, Ti, I<:CIndex{Ti}} =
-    SolveData{T, Ti}(options)
+SolveData{T, I}(options, grid = nothing) where {T, Ti, I<:CIndex{Ti}} =
+    SolveData{T, Ti}(options, grid)
 
 function Base.getproperty(g::SolveData, s::Symbol)
     s === :options && return Base.getfield(g, s)
     s === :data && return Base.getfield(g, s)
+    s === :grid && return Base.getfield(g, s)
     return getfield(g.data[], s)
 end
 
@@ -226,11 +300,18 @@ for I ∈ (:Int32, :Int64)
     Base.unsafe_convert(T::Type{Ptr{$S}}, S::SolveData{$T, $I}) =
         Base.unsafe_convert(T, S.data)
 
-    function SolveData{$T, $I}(options::O) where O <: Options{$I}
-        S = SolveData{$T, $I, $S, O}(cref($S), options)
+    function SolveData{$T, $I}(
+        options::O, grid::Union{Nothing, AbstractGrid{$I}} = nothing
+    ) where O <: Options{$I}
+        g = grid isa Grid3D ? grid : nothing
+        S = SolveData{$T, $I, $S, O, typeof(g)}(cref($S), options, g)
         return finalizer(S) do solve
-            !MPI.Finalized() && options.SolveInitialized == Common.YES &&
-            $L.$(prefixname(T, :SolveFinalize))(options, solve)
+            MPI.Finalized() && return
+            options.SolveInitialized == Common.YES &&
+                $L.$(prefixname(T, :SolveFinalize))(options, solve)
+            # `A3d` is only allocated by the first call to `pgssvx3d`.
+            g === nothing || solve.A3d == C_NULL ||
+                $L.$(prefixname(T, :Destroy_A3d_gathered_on_2d))(solve, g)
         end
     end
     end # end eval
@@ -326,7 +407,7 @@ for I ∈ (:Int32, :Int64)
     end
     for T ∈ (Float32, Float64, ComplexF64)
         @eval begin
-        function inf_norm_error_dist(n, nrhs, b, ldb, xtrue::AbstractVecOrMat{$T}, ldx, grid::Grid{$I})
+        function inf_norm_error_dist(n, nrhs, b, ldb, xtrue::AbstractVecOrMat{$T}, ldx, grid::AbstractGrid{$I})
             return $L.$(prefixname(T, :inf_norm_error_dist))(n, nrhs, b, ldb, xtrue, ldx, grid)
         end
     end

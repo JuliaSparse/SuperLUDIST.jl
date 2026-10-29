@@ -34,7 +34,7 @@ end
     $(TYPEDSIGNATURES)
 
 Solve the distributed sparse linear system `Ax = b`, overwriting `b`
-with the solution.
+with the solution. On a [`Grid3D`](@ref) this uses SuperLU_DIST's 3D `pgssvx3d` drivers.
 
 Returns `b` and the factor object which may be used
 to solve with different `b` or reuse parts of the factorization with different
@@ -44,7 +44,7 @@ function pgssvx!(
     A::DistributedSuperMatrix{Tv, Ti},
     b::VecOrMat{Tv};
     options = Options{Ti}(),
-    Solve = SolveData{Tv, Ti}(options),
+    Solve = SolveData{Tv, Ti}(options, A.grid),
     perm = ScalePerm{Tv, Ti}(size(A)...),
     LU = LUFactors{Tv, Ti}(size(A, 2), A.grid),
     stat = LUStat{Ti}(),
@@ -55,7 +55,7 @@ end
 function pgssvx!(
     A::DistributedSuperMatrix{Tv, Ti};
     options = Options{Ti}(),
-    Solve = SolveData{Tv, Ti}(options),
+    Solve = SolveData{Tv, Ti}(options, A.grid),
     perm = ScalePerm{Tv, Ti}(size(A)...),
     LU = LUFactors{Tv, Ti}(size(A, 2), A.grid),
     stat = LUStat{Ti}(),
@@ -83,10 +83,9 @@ function pgssvx!(F::SuperLUFactorization{T, I, <:DistributedSuperMatrix{T, I}}, 
         # The triangular solve communication pattern depends on nrhs.
         if options.SolveInitialized == Common.YES
             pgstrs_prep!(F)
+            m_loc, fst_row = solve_rows(F)
             pgstrs_init!(
-                F.solve,
-                reverse(Communication.localsize(F.mat))...,
-                size(b, 2), F.mat.first_row - 1, F.perm,
+                F.solve, size(F.mat, 2), m_loc, size(b, 2), fst_row, F.perm,
                 F.factors, F.mat.grid
             )
         end
@@ -98,6 +97,10 @@ function pgssvx!(F::SuperLUFactorization{T, I, <:DistributedSuperMatrix{T, I}}, 
     F.b = b
     return b, F
 end
+
+# This rank's rows of the matrix that the triangular solve works on (0-based first row).
+solve_rows(F::SuperLUFactorization{<:Any, <:Any, <:DistributedSuperMatrix}) =
+    (Communication.localsize(F.mat, 1), F.mat.first_row - 1)
 
 for T ∈ (Float32, Float64, ComplexF64)
 for I ∈ (Int32, Int64)
@@ -152,7 +155,7 @@ function pgssvx_ABdist!(
         error("Error INFO = $(info[]) from p$(prefixsymbol($T))gssvx")
     return b, perm, LU, stat
 end
-function inf_norm_error_dist(x::Array{$T}, xtrue::Array{$T}, grid::Grid{$I})
+function inf_norm_error_dist(x::Array{$T}, xtrue::Array{$T}, grid::AbstractGrid{$I})
     $L.$(prefixname(T, :inf_norm_error_dist))(
         $I(size(x, 1)), $I(size(x, 2)),
         x, $I(size(x, 1)),
@@ -165,7 +168,7 @@ function pgstrs_init!(
     n, m_local, nrhs, first_row,
     scaleperm::ScalePerm{$T, $I},
     lu::LUFactors{$T, $I},
-    grid::Grid{$I}
+    grid::AbstractGrid{$I}
 )
     $L.$(Symbol(:p, prefixsymbol(T), :gstrs_init))(
         n, m_local, nrhs, first_row, scaleperm.perm_r,
@@ -191,7 +194,7 @@ end
 end
 
 """
-    inf_norm_error_dist(x::Matrix, xtrue::Matrix, grid::Grid)
+    inf_norm_error_dist(x::Matrix, xtrue::Matrix, grid::AbstractGrid)
 
 Print the relative infinity norm error of each column of the solution `x` against `xtrue`,
 with SuperLU_DIST's `inf_norm_error_dist`. It only uses this rank's data.

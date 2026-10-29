@@ -17,6 +17,8 @@ supports:
 - matrices that are either replicated on every rank ([`ReplicatedSuperMatrix`](@ref), which uses
   the `pgssvx_ABglobal` drivers) or distributed by rows ([`DistributedSuperMatrix`](@ref), which
   uses the `pgssvx` drivers),
+- SuperLU_DIST's communication-avoiding 3D factorization, for distributed matrices on a 3D
+  process grid ([`Grid3D`](@ref), which uses the `pgssvx3d` drivers),
 - factorizations that can be reused for further right-hand sides.
 
 ## Quick start

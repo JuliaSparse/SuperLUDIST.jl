@@ -135,6 +135,13 @@ end
         @test ldiv!(F, B) === B
         @test relerr(B, xtrue) < tol
         SuperLUDIST.PStatPrint(F) # collective
+
+        # SuperLU_DIST's test problem generators.
+        x0 = SuperLUDIST.GenXtrue_dist!(Matrix{Tv}(undef, n, 2), Ti)
+        b0 = SuperLUDIST.FillRHS_dist!(similar(x0), ReplicatedSuperMatrix(S, grid), x0)
+        @test b0 ≈ S * x0
+        bt = SuperLUDIST.FillRHS_dist!(similar(x0), ReplicatedSuperMatrix(S, grid), x0; trans = true)
+        @test bt ≈ transpose(S) * x0
     end
 
     @testset "distributed matrices" begin
@@ -197,6 +204,66 @@ end
 
     @testset "threads" begin
         @test SuperLUDIST.superlu_set_num_threads(Ti, 1) === nothing
+    end
+end
+
+# 3D process grids, which use the communication-avoiding pgssvx3d drivers. The rows of the
+# matrix are distributed over all the ranks of the 3D grid.
+grids3d = nprocs == 4 ? [(1, 2, 2), (2, 1, 2), (1, 1, 4)] : [(1, 1, 1)]
+@testset "3D $dims, $Tv, $Ti" for dims in grids3d, Tv in (Float32, Float64, ComplexF64), Ti in (Int32, Int64)
+    grid = SuperLUDIST.Grid3D{Ti}(dims..., comm)
+    @test (grid.nprow, grid.npcol, grid.npdep) == dims
+    @test grid.iam == MPI.Comm_rank(comm)
+    @test 0 <= grid.zscp.Iam < dims[3]
+    @test :npdep in propertynames(grid)
+    S = testmatrix(Tv, 12)
+    n = size(S, 1)
+    xtrue = Tv[mod1(i, 7) + mod1(j, 3) for i in 1:n, j in 1:2]
+    b = S * xtrue
+    isroot = grid.iam == root
+    csr = isroot ? convert(SparseBase.CSRStore, SuperLUDIST.coostore(Tv, Ti, S)) : nothing
+    chunksizes = isroot ? distribute_evenly(n, nprocs) : nothing
+    A = scatterstore!(DistributedSuperMatrix{Tv, Ti}(grid), csr, chunksizes; root)
+    @test size(A) == size(S)
+    rows = A.first_row:(A.first_row + localsize(A, 1) - 1)
+
+    F = lu!(A, b[rows, :]; options = Options{Ti}(; quiet...))
+    GC.gc()
+    @test SuperLUDIST.isfactored(F)
+    @test relerr(F \ b[rows, :], xtrue[rows, :]) < tolerance(Tv)
+    # Other numbers of right hand sides are solved in blocks of the factorization's.
+    @test relerr(F \ b[rows, 1:1], xtrue[rows, 1:1]) < tolerance(Tv)
+    GC.gc()
+    B = [b[rows, :] b[rows, 1:1]]
+    @test ldiv!(F, B) === B
+    @test relerr(B, [xtrue[rows, :] xtrue[rows, 1:1]]) < tolerance(Tv)
+    @test relerr(F \ b[rows, 1], xtrue[rows, 1]) < tolerance(Tv) # a vector
+    SuperLUDIST.PStatPrint(F) # collective, prints on layer 0
+
+    # Factorize without a right hand side, then solve.
+    A = scatterstore!(DistributedSuperMatrix{Tv, Ti}(grid), csr, chunksizes; root)
+    _, F = pgssvx!(A; options = Options{Ti}(; quiet...))
+    GC.gc()
+    @test relerr(F \ b[rows, :], xtrue[rows, :]) < tolerance(Tv)
+end
+
+@testset "3D grid checks" begin
+    @test_throws ArgumentError SuperLUDIST.Grid3D{Int64}(1, 1, 3, comm)
+    if nprocs == 4
+        # Matrix Market files can be read straight onto a 3D grid.
+        grid = SuperLUDIST.Grid3D{Int64}(1, 2, 2, comm)
+        S = testmatrix(Float64, 12)
+        xtrue = [mod1(i, 7) + 0.0 for i in 1:size(S, 1)]
+        b = S * xtrue
+        path = MPI.bcast(grid.iam == root ? tempname() * ".mtx" : nothing, comm; root)
+        grid.iam == root && MatrixMarket.mmwrite(path, S)
+        MPI.Barrier(comm)
+        A = MatrixMarket.mmread(DistributedSuperMatrix{Float64, Int64}, path, grid)
+        rows = A.first_row:(A.first_row + localsize(A, 1) - 1)
+        x, _ = pgssvx!(A, b[rows, 1:1]; options = Options{Int64}(; quiet...))
+        @test relerr(vec(x), xtrue[rows]) < tolerance(Float64)
+        MPI.Barrier(comm)
+        grid.iam == root && rm(path)
     end
 end
 end
