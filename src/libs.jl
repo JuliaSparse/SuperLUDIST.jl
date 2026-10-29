@@ -1,4 +1,4 @@
-using Libdl: dlopen, dlclose, dlpath, dlsym, RTLD_DEEPBIND, RTLD_LAZY
+using Libdl: dlopen, dlclose, dllist, dlpath, dlsym, RTLD_DEEPBIND, RTLD_LAZY
 using Preferences
 
 const _PREFERENCE_SLUINT32 = @load_preference("libsuperlu_dist_Int32", nothing)
