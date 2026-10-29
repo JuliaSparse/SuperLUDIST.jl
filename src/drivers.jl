@@ -66,24 +66,62 @@ end
 
 # SuperLU_DIST reads and writes as many rows of each column of `b` as this rank holds of
 # the matrix: all of them for a replicated matrix, and this rank's rows for a distributed one.
-function checkrhs(A::ReplicatedSuperMatrix, b)
-    size(b, 1) == size(A, 1) || throw(DimensionMismatch(
-        "b has $(size(b, 1)) rows, but the matrix has $(size(A, 1))."
-    ))
-    return nothing
+function rhserror(A::ReplicatedSuperMatrix, b)
+    size(b, 1) == size(A, 1) && return nothing
+    return DimensionMismatch("b has $(size(b, 1)) rows, but the matrix has $(size(A, 1)).")
 end
-function checkrhs(A::DistributedSuperMatrix, b)
+function rhserror(A::DistributedSuperMatrix, b)
     m_loc = Communication.localsize(A, 1)
-    size(b, 1) == m_loc || throw(DimensionMismatch(
+    size(b, 1) == m_loc && return nothing
+    return DimensionMismatch(
         "b has $(size(b, 1)) rows, but this rank holds $m_loc rows of the matrix. " *
         "A distributed b holds this rank's rows of the right-hand side."
-    ))
+    )
+end
+
+# SuperLU_DIST tracks part of the state of `F`'s structs in its options, and reads them
+# uninitialized when the options say otherwise, as when the options of one factorization
+# are passed to another.
+function facterror(F::SuperLUFactorization)
+    (; options, solve, factors) = F
+    fact = options.Fact
+    # SamePattern only reuses the column permutation in `F.perm`.
+    if !factors.factored && fact != Common.DOFACT && fact != Common.SamePattern
+        return ArgumentError(
+            "options.Fact = $fact reuses a factorization, but this one has not been " *
+            "computed. Factorize with options.Fact = DOFACT, and new options for each " *
+            "factorization."
+        )
+    end
+    solve === nothing && return nothing
+    solve.options === options ||
+        return ArgumentError("The SolveData must be created with the options of the solve.")
+    # `gstrs_comm` is only allocated when the triangular solve is set up.
+    if options.SolveInitialized == Common.YES && solve.gstrs_comm == C_NULL
+        return ArgumentError(
+            "The options were used to solve with another SolveData. Use new options for " *
+            "each factorization."
+        )
+    end
     return nothing
+end
+
+# The drivers are collective over the grid, so throw on all of its ranks when the
+# arguments are wrong on some of them, rather than leave the others waiting in the driver.
+function checkargs(F::SuperLUFactorization, b)
+    err = something(rhserror(F.mat, b), facterror(F), Some(nothing))
+    grid = F.mat.grid
+    failed = err !== nothing
+    if ingrid(grid)
+        failed = MPI.Allreduce(Int(failed), max, gridcomm(grid)) > 0
+    end
+    failed || return nothing
+    throw(something(err, ArgumentError("The arguments are wrong on another rank of the grid.")))
 end
 
 function pgssvx!(F::SuperLUFactorization{T, I, <:ReplicatedSuperMatrix{T, I}}, b::VecOrMat{T}) where {T, I}
     (; mat, options, perm, factors, stat) = F
-    checkrhs(mat, b)
+    checkargs(F, b)
     if length(F.berr) != size(b, 2)
         F.berr = Vector{real(T)}(undef, size(b, 2))
     end
@@ -95,23 +133,23 @@ function pgssvx!(F::SuperLUFactorization{T, I, <:ReplicatedSuperMatrix{T, I}}, b
 end
 function pgssvx!(F::SuperLUFactorization{T, I, <:DistributedSuperMatrix{T, I}}, b::VecOrMat{T}) where {T, I}
     (; mat, options, solve, perm, factors, stat) = F
-    checkrhs(mat, b)
-    if F.nrhs != size(b, 2)
+    checkargs(F, b)
+    if length(F.berr) != size(b, 2)
         F.berr = Vector{real(T)}(undef, size(b, 2))
-        # The triangular solve communication pattern depends on nrhs.
-        if options.SolveInitialized == Common.YES
-            pgstrs_prep!(F)
-            pgstrs_init!(
-                F.solve, size(F.mat, 2), Communication.localsize(F.mat, 1), size(b, 2),
-                F.mat.first_row - 1, F.perm, F.factors, F.mat.grid
-            )
-        end
+    end
+    # The triangular solve communication pattern depends on nrhs.
+    if solve.nrhs != size(b, 2) && options.SolveInitialized == Common.YES
+        pgstrs_prep!(F)
+        pgstrs_init!(
+            F.solve, size(F.mat, 2), Communication.localsize(F.mat, 1), size(b, 2),
+            F.mat.first_row - 1, F.perm, F.factors, F.mat.grid
+        )
     end
 
     b, _ = pgssvx_ABdist!(options, mat, perm, b, factors, solve, F.berr, stat)
     factors.factored = true
     F.options.Fact = Common.FACTORED
-    F.nrhs = size(b, 2)
+    F.nrhs = solve.nrhs = size(b, 2)
     return b, F
 end
 

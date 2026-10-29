@@ -5,21 +5,26 @@
 const DistributedSuperMatrix3D{T, I} =
     DistributedSuperMatrix{T, I, <:Any, <:Any, <:Any, <:Grid3D{I}}
 
+function facterror(F::SuperLUFactorization{T, I, <:DistributedSuperMatrix3D{T, I}}) where {T, I}
+    # pgssvx3d sets up the gathered matrix `A3d` when it factorizes from scratch.
+    F.solve.A3d == C_NULL && F.options.Fact != Common.DOFACT && return ArgumentError(
+        "The first 3D solve must factorize from scratch, with options.Fact = DOFACT."
+    )
+    return @invoke facterror(F::SuperLUFactorization)
+end
+
 function pgssvx!(F::SuperLUFactorization{T, I, <:DistributedSuperMatrix3D{T, I}}, b::VecOrMat{T}) where {T, I}
     (; mat, options, solve, perm, factors, stat) = F
-    checkrhs(mat, b)
+    checkargs(F, b)
     nrhs = size(b, 2)
-    if solve.A3d == C_NULL
-        # pgssvx3d sets up the gathered matrix `A3d` when it factorizes from scratch.
-        options.Fact == Common.DOFACT || throw(ArgumentError(
-            "The first 3D solve must factorize from scratch, with options.Fact = DOFACT."
-        ))
-    elseif options.Fact != Common.DOFACT && nrhs > 0
+    F.nrhs = nrhs
+    if options.Fact != Common.DOFACT && nrhs > 0
         # pgssvx3d sets up the redistribution of B between the 2D layers when it factorizes
         # from scratch, for the number of right-hand sides of that call (at least 1), and
         # every later call reuses it, also to refactorize with SamePattern. Solve in blocks
-        # of that many columns, zero padding the last one.
-        k = max(F.nrhs, 1)
+        # of that many columns, zero padding the last one. Without right-hand sides it
+        # skips the redistribution.
+        k = solve.nrhs
         if nrhs != k
             B = reshape(b, size(b, 1), nrhs)
             X = zeros(T, size(b, 1), k)
@@ -44,7 +49,7 @@ function pgssvx!(F::SuperLUFactorization{T, I, <:DistributedSuperMatrix3D{T, I}}
     b, _ = pgssvx_ABdist!(options, mat, perm, b, factors, solve, F.berr, stat)
     factors.factored = true
     F.options.Fact = Common.FACTORED
-    dofact && (F.nrhs = nrhs)
+    dofact && (solve.nrhs = max(nrhs, 1))
     return b, F
 end
 
