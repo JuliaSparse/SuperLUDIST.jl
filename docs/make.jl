@@ -5,21 +5,30 @@ DocMeta.setdocmeta!(SuperLUDIST, :DocTestSetup, :(using SuperLUDIST); recursive=
 
 makedocs(;
     modules=[SuperLUDIST],
-    authors="Aadesh Deshmukh",
-    repo="https://github.com/JuliaSparse/SuperLUDIST.jl/blob/{commit}{path}#{line}",
+    authors="Raye Kimmerer, Aadesh Deshmukh and contributors",
+    repo=Remotes.GitHub("JuliaSparse", "SuperLUDIST.jl"),
     sitename="SuperLUDIST.jl",
     format=Documenter.HTML(;
         prettyurls=get(ENV, "CI", "false") == "true",
-        canonical="https://superludist.juliasparse.org",
+        canonical="https://juliasparse.github.io/SuperLUDIST.jl",
         edit_link="main",
         assets=String[],
     ),
     pages=[
         "Home" => "index.md",
+        "Installation" => "installation.md",
+        "Usage" => "usage.md",
+        "API" => "api.md",
+    ],
+    checkdocs=:exports,
+    # The Clang.jl-generated bindings carry the C header comments as docstrings.
+    checkdocs_ignored_modules=[
+        SuperLUDIST.SuperLUDIST_Common, SuperLUDIST.SuperLU_Int32, SuperLUDIST.SuperLU_Int64,
     ],
 )
 
 deploydocs(;
     repo="github.com/JuliaSparse/SuperLUDIST.jl",
     devbranch="main",
+    push_preview=true,
 )

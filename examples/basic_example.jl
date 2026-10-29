@@ -48,26 +48,24 @@ xtrue_local = xtrue[A.first_row : A.first_row + localsize(A, 1) - 1, :] # shrink
 # b_local, F = pgssvx!(A, b_local)
 F = lu!(A);
 
-# Out of place solve
-# Alternatively for in-place call: for in-place.
-# ldiv!(A, b_local) 
+# Out of place solve.
+# Alternatively, to solve in-place call:
+# ldiv!(F, b_local)
 b_local = F \ b_local
 
-if !(iam == root) || (nprow * npcol == 1)
-    SuperLUDIST.inf_norm_error_dist(b_local, xtrue_local, grid)
-    SuperLUDIST.PStatPrint(F) # printing may be messy.
-end
+# Error in the rows held by the root rank:
+isroot && SuperLUDIST.inf_norm_error_dist(b_local, xtrue_local, grid)
+# PStatPrint is collective, so it must be called on every rank.
+SuperLUDIST.PStatPrint(F)
 
 b2_local = b2[A.first_row : A.first_row + localsize(A, 1) - 1, :] # shrink b2
 xtrue2_local = x2[A.first_row : A.first_row + localsize(A, 1) - 1, :] # shrink xtrue2
 
-# Solve again, reusing the initial facctorization:
+# Solve again, reusing the initial factorization:
 b2_local = F \ b2_local
 
-if !(iam == root) || (nprow * npcol == 1)
-    SuperLUDIST.inf_norm_error_dist(b2_local, xtrue2_local, grid)
-    SuperLUDIST.PStatPrint(F) #printing may be messy.
-end
+isroot && SuperLUDIST.inf_norm_error_dist(b2_local, xtrue2_local, grid)
+SuperLUDIST.PStatPrint(F)
 
 
 # @show iam b_local xtrue_local

@@ -1,2 +1,5 @@
 Manifest.toml
 LocalPreferences.toml
+**/Manifest.toml
+**/Manifest-v*.toml
+docs/build/

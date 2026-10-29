@@ -9,9 +9,9 @@ by `A.store::SparseBase.CSCStore{T, CIndex{<:Int}}`.
 $(FIELDS)
 """
 mutable struct ReplicatedSuperMatrix{T, I, S, F, J, G} <: AbstractSuperMatrix{T, I, S}
-    """Internal: Reference to `Common.SuperMatrix{I}`"""
+    """Internal: Reference to the C `SuperMatrix`"""
     supermatrix::Base.RefValue{S}
-    """Internal: Reference to storage format `Common.NCformat{I}` held by supermatrix"""
+    """Internal: Reference to the C storage format `NCformat` held by supermatrix"""
     format::Base.RefValue{F}
     """Julia-side storage, of type `SparseBase.CSCStore. Keeps memory alive.`"""
     store::J
@@ -30,9 +30,16 @@ end
 
 function ReplicatedSuperMatrix(store::SparseBase.CSCStore{Tv, CIndex{Ti}}, grid::Grid{Ti}, mtype = Common.SLU_GE) where
     {Tv, Ti}
-    fmt, keepstore = Base.unsafe_convert(Common.NCformat, store)
+    L = libmodule(Ti)
+    # NOTE: `store` must outlive the format, it is kept alive by the ReplicatedSuperMatrix.
+    fmt = L.NCformat(
+        nstored(store),
+        Ptr{Cvoid}(pointer(store.v)),
+        Base.unsafe_convert(Ptr{Ti}, store.idx),
+        Base.unsafe_convert(Ptr{Ti}, store.ptr)
+    )
     fmtref = Ref(fmt)
-    superref = Ref(Common.SuperMatrix{Ti}(
+    superref = Ref(L.SuperMatrix(
         Common.SLU_NC,
         toslutype(Tv),
         mtype,
@@ -40,8 +47,8 @@ function ReplicatedSuperMatrix(store::SparseBase.CSCStore{Tv, CIndex{Ti}}, grid:
         Ti(size(store, 2)),
         Base.unsafe_convert(Ptr{Cvoid}, fmtref)
     ))
-    return ReplicatedSuperMatrix{Tv, Ti, eltype(superref), typeof(fmt), typeof(keepstore), typeof(grid)}(
-        superref, fmtref, keepstore, grid
+    return ReplicatedSuperMatrix{Tv, Ti, eltype(superref), typeof(fmt), typeof(store), typeof(grid)}(
+        superref, fmtref, store, grid
     )
 end
 
