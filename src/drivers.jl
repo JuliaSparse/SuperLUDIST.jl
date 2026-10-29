@@ -112,12 +112,11 @@ function pgssvx_ABglobal!(
     berr, stat::LUStat{$I}
 )
     nrhs = size(b, 2)
-    # Work around two bugs in SuperLU_DIST's single precision replicated driver
-    # (https://github.com/xiaoyeli/superlu_dist/issues/237):
-    # - psgsrfs_ABXglobal (iterative refinement) stores each `berr[j]` with an
+    # Work around two bugs in SuperLU_DIST's single precision replicated driver:
+    # - https://github.com/xiaoyeli/superlu_dist/issues/237: psgsrfs_ABXglobal (iterative refinement) stores each `berr[j]` with an
     #   `MPI_Allreduce(..., MPI_DOUBLE, ...)` into the `float *berr`, writing 4 bytes past
     #   the end of the array. Give it room for that, and a scratch buffer to write into.
-    # - With equilibration, psgssvx_ABglobal broadcasts its `float` scale factors with
+    # - https://github.com/xiaoyeli/superlu_dist/issues/238: with equilibration, psgssvx_ABglobal broadcasts its `float` scale factors with
     #   `MPI_DOUBLE`, overflowing them on every rank but the root, so turn it off there.
     berr_c = $T === Float32 ? Vector{$T}(undef, nrhs + 1) : berr
     if $T === Float32 && A.grid.nprow * A.grid.npcol > 1 && options.Equil == Common.YES
