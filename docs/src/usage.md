@@ -40,6 +40,13 @@ using MatrixMarket
 A = MatrixMarket.mmread(ReplicatedSuperMatrix{Float64, Int64}, "matrix.mtx", grid)
 ```
 
+!!! note
+    Because of a bug in SuperLU_DIST
+    ([xiaoyeli/superlu_dist#237](https://github.com/xiaoyeli/superlu_dist/issues/237)),
+    `Float32` solves of a `ReplicatedSuperMatrix` on more than one rank are done without
+    equilibration (`options.Equil` is set to `NO`). Use a [`DistributedSuperMatrix`](@ref)
+    if you need it.
+
 ## Distributed matrices
 
 A [`DistributedSuperMatrix`](@ref) holds a contiguous block of rows on each rank, in compressed

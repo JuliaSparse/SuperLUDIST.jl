@@ -99,6 +99,9 @@ See the [documentation](https://juliasparse.github.io/SuperLUDIST.jl/dev/) for m
 - OpenMP will often oversubscribe single-node setups. Set `OMP_NUM_THREADS`, or call
   `SuperLUDIST.superlu_set_num_threads(Int64, n)` (or `Int32`), to choose the number of threads
   per rank.
+- Because of a bug in SuperLU_DIST ([xiaoyeli/superlu_dist#237](https://github.com/xiaoyeli/superlu_dist/issues/237)),
+  `Float32` solves of a `ReplicatedSuperMatrix` on more than one rank are done without
+  equilibration (`Equil = NO`). Use a `DistributedSuperMatrix` if you need it.
 
 ## Development
 
