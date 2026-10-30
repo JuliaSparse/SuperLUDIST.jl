@@ -180,8 +180,8 @@ gridcomm(g::AbstractGrid) = MPI.Comm(getfield(getfield(g, :gridinfo)[], :comm))
 """
     Options{Ti}(; kwargs...)
 
-Solver options (`superlu_dist_options_t`) for SuperLU_DIST with index type `Ti`.
-They start from SuperLU_DIST's defaults (`set_default_options_dist`), and any field may be
+Solver options (`superlu_dist_options_t`) for SuperLU\\_DIST with index type `Ti`.
+They start from SuperLU\\_DIST's defaults (`set_default_options_dist`), and any field may be
 set with a keyword argument or as a property afterwards, for example
 `Options{Int64}(; ColPerm = SuperLUDIST.Common.MMD_AT_PLUS_A, PrintStat = SuperLUDIST.Common.NO)`.
 """

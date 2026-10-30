@@ -11,7 +11,7 @@ on 1 rank (a 1×1 grid) and on 4 ranks (a 2×2 grid), with `OMP_NUM_THREADS=1`. 
 every element type (`Float32`, `Float64`, `ComplexF64`) and index type (`Int32`, `Int64`),
 replicated and distributed matrices, 3D process grids (1×1×1 on 1 rank; 1×2×2, 2×1×2 and
 1×1×4 on 4 ranks), reusing factorizations with different numbers of right-hand sides, the
-Matrix Market readers and the test problem helpers. SuperLU_DIST prints as it solves, so
+Matrix Market readers and the test problem helpers. SuperLU\_DIST prints as it solves, so
 `runtests.jl` keeps each job's output in a file and prints it only if the job fails. To see it
 as it runs, run the script directly:
 
@@ -28,7 +28,7 @@ at your checkout, add `SuperLU_DIST_CUDA_jll` and `MPIPreferences` to it, set it
 
 The tests call `GC.gc()` after the replicated solves, which catches writes past the end of
 Julia-owned buffers. This is how
-[xiaoyeli/superlu_dist#237](https://github.com/xiaoyeli/superlu_dist/issues/237) was found.
+[xiaoyeli/superlu\_dist#237](https://github.com/xiaoyeli/superlu_dist/issues/237) was found.
 When debugging memory problems, also run them with forced garbage collection and with glibc's
 `MALLOC_CHECK_=3`.
 

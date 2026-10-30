@@ -36,7 +36,7 @@ end
 @doc """
     HAVE_CUDA
 
-Whether SuperLUDIST is set up for a CUDA build of SuperLU_DIST. With it, factorizations
+Whether SuperLUDIST is set up for a CUDA build of SuperLU\\_DIST. With it, factorizations
 and solves are offloaded to the GPU unless `options.superlu_acc_offload` is set to 0. If
 the CUDA build can't be used where SuperLUDIST is loaded, an error is logged and the
 libraries are not set. See [`set_gpu!`](@ref).
@@ -115,7 +115,7 @@ Choose which build of SuperLU_DIST to use:
 - `:none` (the default) uses the CPU build from `SuperLU_DIST_jll`.
 - `:cuda` uses the CUDA build from `SuperLU_DIST_CUDA_jll`. That package is not
   installed with SuperLUDIST, so add it to your environment first. The CUDA build needs
-  x86_64 Linux, an NVIDIA GPU and driver, and MPI.jl configured with MPItrampoline, and
+  x86\\_64 Linux, an NVIDIA GPU and driver, and MPI.jl configured with MPItrampoline, and
   SuperLUDIST reports an error when it is loaded where it can't be used.
 
 Libraries set with [`set_libraries!`](@ref) take precedence. [`HAVE_CUDA`](@ref) tells
@@ -139,9 +139,9 @@ end
 """
     set_libraries!(; libsuperlu_dist_Int32 = nothing, libsuperlu_dist_Int64 = nothing)
 
-Use your own builds of SuperLU_DIST instead of the ones from `SuperLU_DIST_jll` or
+Use your own builds of SuperLU\\_DIST instead of the ones from `SuperLU_DIST_jll` or
 `SuperLU_DIST_CUDA_jll`, for example to link against a system MPI on an HPC cluster. The
-libraries must be SuperLU_DIST 9.3.x, built with 32-bit and 64-bit `int_t` respectively,
+libraries must be SuperLU\\_DIST 9.3.x, built with 32-bit and 64-bit `int_t` respectively,
 and linked against the same MPI that MPI.jl uses. They may be CPU or CUDA builds, but
 both must be the same kind. Either may be omitted, in which case matrices with that
 index type are unavailable. Calling `set_libraries!()` with no arguments reverts to the

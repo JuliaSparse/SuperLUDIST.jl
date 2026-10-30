@@ -191,7 +191,7 @@ the first GPU. A few more things to know:
   `GPU3DVERSION` yourself to override this.
 - Set `superlu_acc_offload = 0` in the `Options` to factorize on the CPU with the CUDA build.
 
-See [GPUs](https://juliasparse.github.io/SuperLUDIST.jl/dev/installation/#GPUs) in the
+See [GPUs](https://juliasparse.github.io/SuperLUDIST.jl/dev/gpus/) in the
 documentation for all the settings.
 
 ## Known issues

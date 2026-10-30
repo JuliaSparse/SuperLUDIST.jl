@@ -9,9 +9,9 @@ SuperLU_DIST are collective: every rank in the grid must make them, in the same 
 
 ## Process grids
 
-SuperLU_DIST distributes the factorization over a 2D `nprow × npcol` grid of MPI ranks, which
+SuperLU\_DIST distributes the factorization over a 2D `nprow × npcol` grid of MPI ranks, which
 must use at most `MPI.Comm_size(comm)` ranks. The index type of the grid (`Int32` or `Int64`)
-selects which SuperLU_DIST build is used, and must match the index type of the matrices:
+selects which SuperLU\_DIST build is used, and must match the index type of the matrices:
 
 ```julia
 using MPI, SuperLUDIST
@@ -32,7 +32,7 @@ grid = Grid{Int64}(2, 2, MPI.COMM_WORLD; batch = true, usermap = [0 1; 2 3])
 ## Replicated matrices
 
 A [`ReplicatedSuperMatrix`](@ref) holds the whole matrix in compressed sparse column form on
-every rank, and is solved with SuperLU_DIST's `pgssvx_ABglobal` drivers. This is the simplest
+every rank, and is solved with SuperLU\_DIST's `pgssvx_ABglobal` drivers. This is the simplest
 way to get started, but it needs the whole matrix and right-hand side on every rank.
 
 ```julia
@@ -58,8 +58,8 @@ A = MatrixMarket.mmread(ReplicatedSuperMatrix{Float64, Int64}, "matrix.mtx", gri
 ```
 
 !!! note
-    Because of a bug in SuperLU_DIST
-    ([xiaoyeli/superlu_dist#238](https://github.com/xiaoyeli/superlu_dist/issues/238)),
+    Because of a bug in SuperLU\_DIST
+    ([xiaoyeli/superlu\_dist#238](https://github.com/xiaoyeli/superlu_dist/issues/238)),
     `Float32` solves of a `ReplicatedSuperMatrix` on more than one rank are done without
     equilibration (`options.Equil` is set to `NO`). Use a [`DistributedSuperMatrix`](@ref)
     if you need it.
@@ -100,16 +100,16 @@ rank and distributes its rows the same way.
 
 ## 3D process grids
 
-For large problems on many ranks, SuperLU_DIST's communication-avoiding 3D algorithm can be
+For large problems on many ranks, SuperLU\_DIST's communication-avoiding 3D algorithm can be
 much faster than the 2D one. A [`Grid3D`](@ref) arranges `nprow × npcol × npdep` ranks as
-`npdep` layers of `nprow × npcol` 2D grids. SuperLU_DIST partitions the elimination tree between
+`npdep` layers of `nprow × npcol` 2D grids. SuperLU\_DIST partitions the elimination tree between
 the layers, so that each layer factorizes its own subtrees independently, and replicates the
 top of the tree, trading some extra memory for much less communication. See
-[Sao, Li and Vuduc (2019)](https://doi.org/10.1016/j.jpdc.2019.03.004) and the SuperLU_DIST
+[Sao, Li and Vuduc (2019)](https://doi.org/10.1016/j.jpdc.2019.03.004) and the SuperLU\_DIST
 documentation for when this pays off. With the CUDA build (see [GPUs](@ref)), each layer
 factorizes on a GPU; set `SUPERLU_BIND_MPI_GPU=1` to give the ranks of a node different GPUs.
 
-A [`DistributedSuperMatrix`](@ref) on a `Grid3D` is solved with SuperLU_DIST's `pgssvx3d`
+A [`DistributedSuperMatrix`](@ref) on a `Grid3D` is solved with SuperLU\_DIST's `pgssvx3d`
 drivers, with the same functions as on a 2D grid. Its rows must be distributed over *all* the
 ranks of the 3D grid, so `MPI.Comm_size(comm)` should be `nprow * npcol * npdep`:
 
@@ -175,7 +175,7 @@ Note that SuperLU_DIST may scale and permute the values of `A` in place.
 
 ## Options
 
-[`Options`](@ref) wraps SuperLU_DIST's `superlu_dist_options_t`. It starts from SuperLU_DIST's
+[`Options`](@ref) wraps SuperLU\_DIST's `superlu_dist_options_t`. It starts from SuperLU\_DIST's
 defaults, and any field can be set with a keyword or as a property:
 
 ```julia
@@ -200,7 +200,7 @@ Some output can't be turned off with `PrintStat`:
 ## Test problems
 
 [`mmread_and_generatesolution`](@ref) reads a Matrix Market file and generates a known solution
-and matching right-hand sides, as SuperLU_DIST's own example drivers do, and
+and matching right-hand sides, as SuperLU\_DIST's own example drivers do, and
 [`inf_norm_error_dist`](@ref) prints the error of a computed solution. [`GenXtrue_dist!`](@ref)
 and [`FillRHS_dist!`](@ref) are the underlying pieces.
 
@@ -219,6 +219,6 @@ mpiexecjl -n 4 julia --project examples/basic_example.jl
 
 ## Low-level interface
 
-The complete SuperLU_DIST C API is available in the generated modules
+The complete SuperLU\_DIST C API is available in the generated modules
 `SuperLUDIST.SuperLU_Int32` and `SuperLUDIST.SuperLU_Int64`, with the shared enums in
 `SuperLUDIST.Common`. They are generated with Clang.jl, see `gen/README.md` in the repository.

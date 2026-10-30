@@ -36,8 +36,8 @@ end
 """
     GenXtrue_dist!(xtrue::Matrix, Ti = Int)
 
-Fill `xtrue` with SuperLU_DIST's test solution (`GenXtrue_dist`), for example to build a
-right-hand side with [`FillRHS_dist!`](@ref). `Ti` selects the SuperLU_DIST library.
+Fill `xtrue` with SuperLU\\_DIST's test solution (`GenXtrue_dist`), for example to build a
+right-hand side with [`FillRHS_dist!`](@ref). `Ti` selects the SuperLU\\_DIST library.
 """
 function GenXtrue_dist!(xtrue, ::Type{Ti} = Int) where Ti
     GenXtrue_dist!(xtrue, Ti(size(xtrue, 1)), Ti(size(xtrue, 2)))
@@ -47,7 +47,7 @@ end
 """
     FillRHS_dist!(b, A::ReplicatedSuperMatrix, xtrue; trans = false)
 
-Compute the right-hand side `b = A * xtrue` (or `transpose(A) * xtrue`) with SuperLU_DIST's
+Compute the right-hand side `b = A * xtrue` (or `transpose(A) * xtrue`) with SuperLU\\_DIST's
 `FillRHS_dist`, and return `b`.
 """
 function FillRHS_dist!(b::Array, A::AbstractSuperMatrix, xtrue::Array;

@@ -18,6 +18,7 @@ makedocs(;
         "Home" => "index.md",
         "Installation" => "installation.md",
         "Usage" => "usage.md",
+        "GPUs" => "gpus.md",
         "API" => "api.md",
         "Development" => "development.md",
     ],
