@@ -3,8 +3,8 @@
 
 Copy the sparse matrix `A` (anything with `SparseMatrixCSC`'s `colptr`, `rowval` and `nzval`
 fields, such as the result of `MatrixMarket.mmread`) into a `SparseBase.CSCStore` with the
-0-based `CIndex{Ti}` indices that SuperLU_DIST expects. The values are always copied,
-since SuperLU_DIST may scale and permute the matrix in place.
+0-based `CIndex{Ti}` indices that SuperLU\\_DIST expects. The values are always copied,
+since SuperLU\\_DIST may scale and permute the matrix in place.
 """
 function cscstore(::Type{Tv}, ::Type{Ti}, A) where {Tv, Ti}
     return SparseBase.CSCStore(

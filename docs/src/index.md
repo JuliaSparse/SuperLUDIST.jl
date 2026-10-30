@@ -4,21 +4,21 @@ CurrentModule = SuperLUDIST
 
 # SuperLUDIST.jl
 
-SuperLUDIST.jl is a Julia interface to [SuperLU_DIST](https://github.com/xiaoyeli/superlu_dist),
+SuperLUDIST.jl is a Julia interface to [SuperLU\_DIST](https://github.com/xiaoyeli/superlu_dist),
 the distributed-memory sparse direct solver from Lawrence Berkeley National Laboratory. It solves
 sparse linear systems ``Ax = b`` with an LU factorization, using MPI between ranks and OpenMP
 within each rank.
 
-SuperLUDIST.jl uses SuperLU_DIST 9.3.1 from `SuperLU_DIST_jll`, its optional CUDA build from
+SuperLUDIST.jl uses SuperLU\_DIST 9.3.1 from `SuperLU_DIST_jll`, its optional CUDA build from
 `SuperLU_DIST_CUDA_jll` for Linux machines with NVIDIA GPUs (see [GPUs](@ref)), or your own build
 of it, and supports:
 
 - element types `Float32`, `Float64` and `ComplexF64`,
-- index types `Int32` and `Int64`, through two separate builds of SuperLU_DIST,
+- index types `Int32` and `Int64`, through two separate builds of SuperLU\_DIST,
 - matrices that are either replicated on every rank ([`ReplicatedSuperMatrix`](@ref), which uses
   the `pgssvx_ABglobal` drivers) or distributed by rows ([`DistributedSuperMatrix`](@ref), which
   uses the `pgssvx` drivers),
-- SuperLU_DIST's communication-avoiding 3D factorization, for distributed matrices on a 3D
+- SuperLU\_DIST's communication-avoiding 3D factorization, for distributed matrices on a 3D
   process grid ([`Grid3D`](@ref), which uses the `pgssvx3d` drivers),
 - factorizations that can be reused for further right-hand sides.
 

@@ -248,7 +248,7 @@ end
     inf_norm_error_dist(x::Matrix, xtrue::Matrix, grid::AbstractGrid)
 
 Print the relative infinity norm error of each column of the solution `x` against `xtrue`,
-with SuperLU_DIST's `inf_norm_error_dist`. It only uses this rank's data and does no
+with SuperLU\\_DIST's `inf_norm_error_dist`. It only uses this rank's data and does no
 communication, so with a distributed `x` each rank prints the error of its own rows.
 """
 inf_norm_error_dist
