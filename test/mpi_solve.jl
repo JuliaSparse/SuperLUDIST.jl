@@ -65,6 +65,16 @@ const quiet = (; PrintStat = Common.NO)
         x, _ = pgssvx!(ReplicatedSuperMatrix(S, grid), copy(b); options = Options{Ti}(; quiet...))
         GC.gc()
         @test relerr(x, xtrue) < tolerance(Tv)
+
+        # A badly scaled matrix is equilibrated on any grid, and berr holds real values.
+        D = Diagonal(Tv[exp10(mod(i, 7) - 3) for i in 1:n])
+        A = ReplicatedSuperMatrix(SuperLUDIST.cscstore(Tv, Ti, D * S), grid)
+        x, F = pgssvx!(A, D * b; options = Options{Ti}(; quiet...))
+        GC.gc()
+        @test F.options.Equil == Common.YES
+        @test F.perm.DiagScale != Common.NOEQUIL
+        @test relerr(x, xtrue) < tolerance(Tv)
+        @test 0 <= maximum(F.berr) < tolerance(Tv)
     end
 
     @testset "distributed" begin

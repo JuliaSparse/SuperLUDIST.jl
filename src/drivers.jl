@@ -165,25 +165,11 @@ function pgssvx_ABglobal!(
     LU::LUFactors{$T, $I},
     berr, stat::LUStat{$I}
 )
-    nrhs = size(b, 2)
-    # Work around two bugs in SuperLU_DIST's single precision replicated driver:
-    # - psgsrfs_ABXglobal (iterative refinement) stores each `berr[j]` with an
-    #   `MPI_Allreduce(..., MPI_DOUBLE, ...)` into the `float *berr`, writing 4 bytes past
-    #   the end of the array. Give it room for that, and a scratch buffer to write into.
-    #   https://github.com/xiaoyeli/superlu_dist/issues/237
-    # - With equilibration, psgssvx_ABglobal broadcasts its `float` scale factors with
-    #   `MPI_DOUBLE`, overflowing them on every rank but the root, so turn it off there.
-    #   https://github.com/xiaoyeli/superlu_dist/issues/238
-    berr_c = $T === Float32 ? Vector{Float32}(undef, nrhs + 1) : berr
-    if $T === Float32 && A.grid.nprow * A.grid.npcol > 1 && options.Equil == Common.YES
-        options.Equil = Common.NO
-    end
     info = Ref{Int32}()
     $L.$(Symbol(:p, prefixsymbol(T), :gssvx_ABglobal))(
-        options, A, perm, b, max(1, size(b, 1)), nrhs,
-        A.grid, LU, berr_c, stat, info
+        options, A, perm, b, max(1, size(b, 1)), size(b, 2),
+        A.grid, LU, berr, stat, info
     )
-    $T === Float32 && copyto!(berr, 1, berr_c, 1, nrhs)
     info[] == 0 ||
         error("Error INFO = $(info[]) from p$(prefixsymbol($T))gssvx_ABglobal")
     return b, perm, LU, stat

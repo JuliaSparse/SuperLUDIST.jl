@@ -12,7 +12,7 @@ ranks and OpenMP within each rank. See the
 [SuperLU_DIST documentation](https://portal.nersc.gov/project/sparse/superlu/) for details of the
 underlying library.
 
-SuperLUDIST.jl uses SuperLU_DIST 9.3.1 from `SuperLU_DIST_jll`, or its optional CUDA build from
+SuperLUDIST.jl uses SuperLU_DIST 9.3.2 from `SuperLU_DIST_jll`, or its optional CUDA build from
 `SuperLU_DIST_CUDA_jll` for Linux machines with NVIDIA GPUs (see [GPUs (CUDA)](#gpus-cuda)), and
 supports `Float32`, `Float64` and `ComplexF64` matrices with either `Int32` or `Int64` indices.
 Matrices can be replicated on every rank or distributed by rows, distributed matrices can also use
@@ -42,8 +42,8 @@ julia> using MPI; MPI.install_mpiexecjl()
 On HPC clusters you will usually want your system MPI, see the
 [MPI.jl configuration docs](https://juliaparallel.org/MPI.jl/stable/configuration/). If the
 `SuperLU_DIST_jll` binaries don't work on your machine (this has been the case on NERSC
-Perlmutter), you can use your own SuperLU_DIST 9.3.x libraries, built with 32-bit and 64-bit
-indices and linked against the MPI used by MPI.jl:
+Perlmutter), you can use your own SuperLU_DIST libraries (9.3.2 or a later 9.3.x), built with
+32-bit and 64-bit indices and linked against the MPI used by MPI.jl:
 
 ```julia
 SuperLUDIST.set_libraries!(;
@@ -121,13 +121,12 @@ See the [documentation](https://juliasparse.github.io/SuperLUDIST.jl/dev/) for m
 On x86_64 Linux with an NVIDIA GPU, SuperLUDIST.jl can use the CUDA build of SuperLU_DIST, and
 both the 2D and the 3D drivers then factorize and solve on the GPU. The CUDA build is in a
 separate package, `SuperLU_DIST_CUDA_jll`, which is not installed with SuperLUDIST.jl since it
-brings in the CUDA runtime (about 2.5 GB on disk). It needs MPI.jl to use MPItrampoline. Set
-this up once in your project:
+brings in the CUDA runtime (about 2.5 GB on disk). It works with MPI.jl's default MPICH, or with
+MPIABI. Set this up once in your project:
 
 ```sh
-julia --project -e 'import Pkg; Pkg.add(["SuperLUDIST", "SuperLU_DIST_CUDA_jll", "MPI", "MPIPreferences", "SparseArrays", "SparseBase"])'
+julia --project -e 'import Pkg; Pkg.add(["SuperLUDIST", "SuperLU_DIST_CUDA_jll", "MPI", "SparseArrays", "SparseBase"])'
 julia --project -e 'using SuperLUDIST; SuperLUDIST.set_gpu!(:cuda)'
-julia --project -e 'using MPIPreferences; MPIPreferences.use_jll_binary("MPItrampoline_jll")'
 julia --project -e 'using SuperLUDIST; println(SuperLUDIST.HAVE_CUDA)'   # true
 ```
 
@@ -179,11 +178,9 @@ SUPERLU_BIND_MPI_GPU=1 OMP_NUM_THREADS=1 mpiexecjl --project -n 2 julia gpu_solv
 `SUPERLU_BIND_MPI_GPU=1` spreads the ranks of a node over its GPUs; without it every rank uses
 the first GPU. A few more things to know:
 
-- Call `set_gpu!(:cuda)` before switching MPI.jl to MPItrampoline, as above, or run
-  `Pkg.instantiate()` after switching. `SuperLUDIST.set_gpu!(:none)` goes back to the CPU
-  build (run `Pkg.instantiate()` after it if MPI.jl still uses MPItrampoline); restart Julia
-  after changing it. If SuperLUDIST.jl is set up for the CUDA build where it
-  can't be used, such as a node without a GPU, it reports an error when loaded that says what
+- The CUDA build isn't available for other MPI libraries, such as OpenMPI or MPItrampoline.
+- `SuperLUDIST.set_gpu!(:none)` goes back to the CPU build; restart Julia after changing it. If
+  SuperLUDIST.jl is set up for the CUDA build where it can't be used, such as a node without a GPU, it reports an error when loaded that says what
   to do, and calls into SuperLU_DIST fail.
 - With several ranks, SuperLU_DIST's newer GPU 3D factorization needs a CUDA-aware MPI. Unless
   MPI.jl reports one (`MPI.has_cuda()`, or `JULIA_MPI_HAS_CUDA=true`), SuperLUDIST.jl selects
@@ -196,14 +193,11 @@ documentation for all the settings.
 
 ## Known issues
 
-- GPU acceleration is CUDA only, on x86_64 Linux, needs MPI.jl to use MPItrampoline, and needs
+- GPU acceleration is CUDA only, on x86_64 Linux, needs MPI.jl to use MPICH or MPIABI, and needs
   `SuperLU_DIST_CUDA_jll` to be added separately.
 - OpenMP will often oversubscribe single-node setups. Set `OMP_NUM_THREADS`, or call
   `SuperLUDIST.superlu_set_num_threads(Int64, n)` (or `Int32`), to choose the number of threads
   per rank.
-- Because of a bug in SuperLU_DIST ([xiaoyeli/superlu_dist#238](https://github.com/xiaoyeli/superlu_dist/issues/238)),
-  `Float32` solves of a `ReplicatedSuperMatrix` on more than one rank are done without
-  equilibration (`Equil = NO`). Use a `DistributedSuperMatrix` if you need it.
 - Some output ignores `PrintStat = NO`. The 3D drivers print each iterative refinement step on
   rank 0 (set `IterRefine = NOREFINE` to turn that off), and reading or scattering a
   `DistributedSuperMatrix` prints its row partition (`part = ...`, from SparseBase).
