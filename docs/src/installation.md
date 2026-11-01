@@ -12,7 +12,7 @@ You will normally also want `MPI`, `SparseArrays` and, to read Matrix Market fil
 pkg> add MPI SparseArrays MatrixMarket
 ```
 
-The default installation uses SuperLU\_DIST 9.3.1 from `SuperLU_DIST_jll`, which is available on
+The default installation uses SuperLU\_DIST 9.3.2 from `SuperLU_DIST_jll`, which is available on
 Linux, macOS, FreeBSD and Windows. A CUDA build for x86\_64 Linux machines with NVIDIA GPUs can be
 added separately, see [GPUs](@ref).
 
@@ -34,7 +34,7 @@ SuperLUDIST.jl.
 ## Using your own SuperLU_DIST
 
 If the `SuperLU_DIST_jll` binaries don't work on your machine (this has been the case on NERSC
-Perlmutter, for example), you can use your own builds of SuperLU\_DIST 9.3.x:
+Perlmutter, for example), you can use your own builds of SuperLU\_DIST (9.3.2 or a later 9.3.x):
 
 ```julia
 using SuperLUDIST

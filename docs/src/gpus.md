@@ -15,25 +15,29 @@ installed with SuperLUDIST.jl, since it brings in the CUDA runtime (about 2.5 GB
 needs:
 
 - x86_64 Linux with an NVIDIA GPU and driver, for CUDA 12 or later, and
-- MPI.jl configured with MPItrampoline, which can forward to MPICH or to your system MPI.
+- MPI.jl configured with MPICH, its default, or with MPIABI. The CUDA build isn't available for
+  other MPI libraries, such as OpenMPI or MPItrampoline.
 
-To use it, add it to your environment, tell SuperLUDIST.jl to use it, and then switch MPI.jl
-to MPItrampoline, in that order, restarting Julia after each step:
+To use it, add it to your environment, tell SuperLUDIST.jl to use it, and restart Julia:
 
 ```julia
-pkg> add SuperLUDIST SuperLU_DIST_CUDA_jll MPI MPIPreferences SparseArrays SparseBase
+pkg> add SuperLUDIST SuperLU_DIST_CUDA_jll MPI SparseArrays SparseBase
 
 julia> using SuperLUDIST; SuperLUDIST.set_gpu!(:cuda)
-
-julia> using MPIPreferences; MPIPreferences.use_jll_binary("MPItrampoline_jll")
 ```
 
-After that, [`HAVE_CUDA`](@ref) is `true`. (Switching MPI first also works, but then run
-`Pkg.instantiate()` before loading SuperLUDIST.jl, to download the CPU build for MPItrampoline.)
-`SuperLUDIST.set_gpu!(:none)` goes back to the CPU build; if MPI.jl still uses MPItrampoline,
-run `Pkg.instantiate()` after it, for the same reason. The setting is stored with
-Preferences.jl, takes effect after restarting Julia, and is read when SuperLUDIST.jl is
-precompiled. See [`set_gpu!`](@ref) for all its values.
+After that, [`HAVE_CUDA`](@ref) is `true`. `SuperLUDIST.set_gpu!(:none)` goes back to the CPU
+build. The setting is stored with Preferences.jl, takes effect after restarting Julia, and is
+read when SuperLUDIST.jl is precompiled. See [`set_gpu!`](@ref) for all its values.
+
+To use MPIABI instead of MPICH, add MPIPreferences and switch MPI.jl to it, then restart Julia
+and run `Pkg.instantiate()` to download the matching build:
+
+```julia
+pkg> add MPIPreferences
+
+julia> using MPIPreferences; MPIPreferences.use_jll_binary("MPIABI_jll")
+```
 
 Installing `SuperLU_DIST_CUDA_jll` downloads the CUDA runtime on machines with an NVIDIA driver,
 and only `CUDA_Driver_jll` (about 450 MB on disk) on machines without one. If SuperLUDIST.jl is
@@ -106,5 +110,5 @@ the CUDA build. Some environment variables control the GPU:
 
 ## Limitations
 
-- Only CUDA is supported, on x86_64 Linux, and MPI.jl must use MPItrampoline.
+- Only CUDA is supported, on x86_64 Linux, and MPI.jl must use MPICH or MPIABI.
 - CI tests only the CPU build. See [Development](@ref) for how to test the CUDA build.

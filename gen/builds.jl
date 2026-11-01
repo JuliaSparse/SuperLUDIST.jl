@@ -7,7 +7,7 @@
 #
 # The CUDA build's headers are the same for every CUDA version, so take them from one
 # artifact picked with an explicit platform: the jll only selects an artifact on a machine
-# with a GPU and MPItrampoline.
+# with a GPU.
 using Artifacts: artifact_meta, artifact_path
 using Base.BinaryPlatforms: Platform
 using Pkg.Artifacts: ensure_artifact_installed
@@ -24,7 +24,7 @@ const STUB_INCLUDE_DIR = joinpath(@__DIR__, "cuda_stubs")
 function include_dir(build)
     build === :cpu && return normpath(joinpath(SuperLU_DIST_jll.artifact_dir, "include"))
     toml = joinpath(pkgdir(SuperLU_DIST_CUDA_jll), "Artifacts.toml")
-    platform = Platform("x86_64", "linux"; libc = "glibc", cuda = "12.0", mpi = "mpitrampoline")
+    platform = Platform("x86_64", "linux"; libc = "glibc", cuda = "12.0", mpi = "mpich")
     meta = artifact_meta("SuperLU_DIST_CUDA", toml; platform)
     meta === nothing && error("SuperLU_DIST_CUDA_jll has no artifact for $platform")
     hash = Base.SHA1(meta["git-tree-sha1"])

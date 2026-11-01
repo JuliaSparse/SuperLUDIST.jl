@@ -76,8 +76,10 @@ function _load_libraries()
         @error """
             SuperLUDIST is set up to use the CUDA build of SuperLU_DIST, which is not
             available here. It needs x86_64 Linux, an NVIDIA GPU and driver, and MPI.jl
-            configured with MPItrampoline (`MPIPreferences.use_jll_binary("MPItrampoline_jll")`).
-            Call `SuperLUDIST.set_gpu!(:none)` and restart Julia to use the CPU build."""
+            configured with MPICH, its default, or MPIABI. It isn't built for other MPI
+            libraries, such as MPItrampoline, so if MPI.jl uses one of those, go back to
+            MPICH with `MPIPreferences.use_jll_binary("MPICH_jll")`. Otherwise, call
+            `SuperLUDIST.set_gpu!(:none)` and restart Julia to use the CPU build."""
         return
     end
     # The jll is available wherever the NVIDIA driver library is installed, even without
@@ -115,8 +117,8 @@ Choose which build of SuperLU_DIST to use:
 - `:none` (the default) uses the CPU build from `SuperLU_DIST_jll`.
 - `:cuda` uses the CUDA build from `SuperLU_DIST_CUDA_jll`. That package is not
   installed with SuperLUDIST, so add it to your environment first. The CUDA build needs
-  x86\\_64 Linux, an NVIDIA GPU and driver, and MPI.jl configured with MPItrampoline, and
-  SuperLUDIST reports an error when it is loaded where it can't be used.
+  x86\\_64 Linux, an NVIDIA GPU and driver, and MPI.jl configured with MPICH, its default,
+  or MPIABI, and SuperLUDIST reports an error when it is loaded where it can't be used.
 
 Libraries set with [`set_libraries!`](@ref) take precedence. [`HAVE_CUDA`](@ref) tells
 which build is in use.
@@ -141,9 +143,9 @@ end
 
 Use your own builds of SuperLU\\_DIST instead of the ones from `SuperLU_DIST_jll` or
 `SuperLU_DIST_CUDA_jll`, for example to link against a system MPI on an HPC cluster. The
-libraries must be SuperLU\\_DIST 9.3.x, built with 32-bit and 64-bit `int_t` respectively,
-and linked against the same MPI that MPI.jl uses. They may be CPU or CUDA builds, but
-both must be the same kind. Either may be omitted, in which case matrices with that
+libraries must be SuperLU\\_DIST 9.3.2 or a later 9.3.x, built with 32-bit and 64-bit
+`int_t` respectively, and linked against the same MPI that MPI.jl uses. They may be CPU or
+CUDA builds, but both must be the same kind. Either may be omitted, in which case matrices with that
 index type are unavailable. Calling `set_libraries!()` with no arguments reverts to the
 jll builds.
 
